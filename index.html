@@ -52,6 +52,46 @@
                     <div class="import-export-players">
                         <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
                         <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
+
+                        <!-- CSV Import Help -->
+                        <div class="csv-help">
+                            <button type="button" class="btn-link" onclick="toggleCsvHelp()">
+                                ℹ️ Hoe moet mijn CSV eruit zien?
+                            </button>
+
+                            <div id="csvHelpContent" style="display: none;">
+                                <div class="help-box">
+                                    <h4>📄 CSV Formaat</h4>
+                                    <p>Je CSV moet <strong>3 kolommen</strong> hebben:</p>
+                                    <ol>
+                                        <li><strong>Voornaam</strong> (verplicht)</li>
+                                        <li><strong>Naam</strong> (verplicht)</li>
+                                        <li><strong>Klas</strong> (optioneel)</li>
+                                    </ol>
+
+                                    <h4>📝 Voorbeeld:</h4>
+                                    <pre class="csv-example">Voornaam,Naam,Klas
+Jan,Peeters,5A
+Marie,Janssens,5B
+Tom,Wouters,5A
+Lisa,Claes</pre>
+
+                                    <div class="help-notes">
+                                        <p>💡 <strong>Tips:</strong></p>
+                                        <ul>
+                                            <li>Eerste regel = kolomnamen (mag je ook weglaten)</li>
+                                            <li>Scheidingsteken: komma <code>,</code></li>
+                                            <li>Klas is optioneel (laat leeg als je geen klassen hebt)</li>
+                                            <li>Maak je CSV in Excel, Google Sheets of Notepad</li>
+                                        </ul>
+                                    </div>
+
+                                    <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
+                                        ⬇️ Download Voorbeeld CSV
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="player-list" class="player-list">
                         <!-- Players will be rendered here -->
@@ -234,6 +274,6 @@
     <script defer src="js/ui/PairingManager.js?v=20251212"></script>
 
     <!-- Finally the main app -->
-    <script defer src="js/app.js?v=20251212"></script>
+    <script defer src="js/app.js?v=20251212h"></script>
 </body>
 </html>

@@ -37,6 +37,45 @@ window.addEventListener('click', (event) => {
   }
 });
 
+/**
+ * Toggle CSV help visibility
+ */
+function toggleCsvHelp() {
+    const helpContent = document.getElementById('csvHelpContent');
+    if (helpContent.style.display === 'none') {
+        helpContent.style.display = 'block';
+    } else {
+        helpContent.style.display = 'none';
+    }
+}
+
+/**
+ * Download example CSV file
+ */
+function downloadExampleCSV() {
+    const csvContent = `Voornaam,Naam,Klas
+Jan,Peeters,5A
+Marie,Janssens,5B
+Tom,Wouters,5A
+Lisa,Claes,5B
+Peter,Van den Berg,6A
+Sophie,De Vries
+Mark,Vermeulen,6A
+Emma,Jacobs`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'voorbeeld-spelers.csv');
+    link.style.visibility = 'hidden';
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 // OLD CODE BELOW - REMOVED AND REPLACED BY UI MANAGERS
 /*
 function OLD_setupEventListeners() {
@@ -471,7 +510,7 @@ function renderAvailablePlayers() {
 
   listEl.innerHTML = available.map(p => {
     const isSelected = app.selectedAvailablePlayers.has(p.id);
-    return `<div class="available-player-item ${isSelected ? 'selected' : ''}" 
+    return `<div class="available-player-item ${isSelected ? 'selected' : ''}"
                  onclick="togglePlayerSelection(${p.id})">
       <div class="player-name">${p.getFullName()}</div>
       <div class="player-details">${p.klas || 'Geen klas'}</div>
@@ -551,5 +590,4 @@ window.deletePlayer = deletePlayer;
 window.showPlayerHistory = showPlayerHistory;
 window.setMatchResult = setMatchResult;
 // window.togglePlayerSelection = togglePlayerSelection;
-*/
 
