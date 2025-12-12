@@ -128,8 +128,8 @@ class PlayerManager {
     const naam = document.getElementById('player-naam').value.trim();
     const klas = document.getElementById('player-klas').value.trim();
 
-    if (!voornaam || !naam) {
-      alert('Voornaam en naam zijn verplicht');
+    if (!voornaam) {
+      alert('Voornaam is verplicht');
       return;
     }
 
@@ -145,7 +145,12 @@ class PlayerManager {
       }
     } else {
       // Add new player
-      tournament.addPlayer(voornaam, naam, klas);
+      const newPlayer = tournament.addPlayer(voornaam, naam, klas);
+      if (!newPlayer) {
+        // Duplicate found
+        alert(`Speler "${voornaam}${naam ? ' ' + naam : ''}" bestaat al in dit toernooi!`);
+        return;
+      }
     }
 
     this.tournamentManager.saveTournament();
@@ -199,15 +204,28 @@ class PlayerManager {
         }
 
         const tournament = this.tournamentManager.getTournament();
+        let addedCount = 0;
+        let skippedCount = 0;
+
         players.forEach(p => {
-          tournament.addPlayer(p.voornaam, p.naam, p.klas);
+          const result = tournament.addPlayer(p.voornaam, p.naam, p.klas);
+          if (result) {
+            addedCount++;
+          } else {
+            skippedCount++;
+          }
         });
 
         this.tournamentManager.saveTournament();
         this.render();
 
         window.dispatchEvent(new CustomEvent('playersUpdated'));
-        alert(`${players.length} speler(s) geïmporteerd`);
+
+        let message = `${addedCount} speler(s) geïmporteerd`;
+        if (skippedCount > 0) {
+          message += `\n${skippedCount} duplicaten genegeerd`;
+        }
+        alert(message);
       } catch (error) {
         alert('Fout bij importeren CSV: ' + error.message);
       }

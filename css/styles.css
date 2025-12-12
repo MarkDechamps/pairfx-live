@@ -870,6 +870,7 @@ header h1 {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
 }
 
 .btn-icon-help {
@@ -892,10 +893,11 @@ header h1 {
     position: absolute;
     top: 100%;
     left: 0;
-    z-index: 100;
+    z-index: 1000;
     margin-top: 8px;
     min-width: 400px;
     max-width: 500px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .help-box {
