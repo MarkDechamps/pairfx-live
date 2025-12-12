@@ -54,6 +54,28 @@ class TournamentManager {
     document.getElementById('btn-export-standings')?.addEventListener('click', () => {
       this.exportStandingsHtml();
     });
+
+    // Copy players modal
+    document.getElementById('btn-create-with-players')?.addEventListener('click', () => {
+      this.createTournamentWithPlayers();
+    });
+
+    document.getElementById('btn-cancel-copy-players')?.addEventListener('click', () => {
+      this.closeCopyPlayersModal();
+    });
+
+    document.getElementById('btn-close-copy-players-modal')?.addEventListener('click', () => {
+      this.closeCopyPlayersModal();
+    });
+
+    // Select all / deselect all buttons
+    document.getElementById('btn-select-all-players')?.addEventListener('click', () => {
+      document.querySelectorAll('.player-copy-checkbox').forEach(cb => cb.checked = true);
+    });
+
+    document.getElementById('btn-deselect-all-players')?.addEventListener('click', () => {
+      document.querySelectorAll('.player-copy-checkbox').forEach(cb => cb.checked = false);
+    });
   }
 
   createNewTournament() {
@@ -119,6 +141,7 @@ class TournamentManager {
         </div>
         <div class="tournament-actions">
           <button class="btn btn-small btn-primary" onclick="app.tournamentManager.loadTournament(${t.id})">Open</button>
+          <button class="btn btn-small btn-secondary" onclick="app.tournamentManager.showCopyPlayersModal(${t.id})" title="Nieuw toernooi met spelers van dit toernooi">📋 Kopieer</button>
           <button class="btn btn-small btn-danger" onclick="app.tournamentManager.deleteTournament(${t.id})">Verwijder</button>
         </div>
       </div>
@@ -219,8 +242,83 @@ class TournamentManager {
     URL.revokeObjectURL(url);
   }
 
+  showCopyPlayersModal(sourceTournamentId) {
+    const sourceTournament = this.storageService.loadTournament(sourceTournamentId);
+    if (!sourceTournament || sourceTournament.players.length === 0) {
+      alert('Dit toernooi heeft geen spelers om te kopiëren');
+      return;
+    }
+
+    // Store source tournament ID
+    this.copySourceTournamentId = sourceTournamentId;
+
+    // Populate modal with players
+    const playerListContainer = document.getElementById('copy-players-list');
+    playerListContainer.innerHTML = sourceTournament.players.map(p => `
+      <div class="copy-player-item">
+        <label class="checkbox-label">
+          <input type="checkbox" class="player-copy-checkbox" data-player-id="${p.id}" checked>
+          <span>${p.getFullName()}${p.klas ? ` (${p.klas})` : ''}</span>
+        </label>
+      </div>
+    `).join('');
+
+    // Update modal title
+    document.getElementById('copy-players-modal-title').textContent =
+      `Nieuw toernooi maken met spelers van "${sourceTournament.name}"`;
+
+    // Set default new tournament name
+    document.getElementById('copy-tournament-name').value = `${sourceTournament.name} - Kopie`;
+
+    // Show modal
+    document.getElementById('copy-players-modal').style.display = 'flex';
+  }
+
+  createTournamentWithPlayers() {
+    const newName = document.getElementById('copy-tournament-name').value.trim();
+    if (!newName) {
+      alert('Voer een naam in voor het nieuwe toernooi');
+      return;
+    }
+
+    // Get selected player IDs
+    const checkboxes = document.querySelectorAll('.player-copy-checkbox:checked');
+    if (checkboxes.length === 0) {
+      alert('Selecteer minstens 1 speler');
+      return;
+    }
+
+    const selectedPlayerIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.playerId));
+
+    // Load source tournament
+    const sourceTournament = this.storageService.loadTournament(this.copySourceTournamentId);
+
+    // Create new tournament
+    const newId = this.storageService.generateTournamentId();
+    const newTournament = new Tournament(newId, newName);
+
+    // Copy selected players (without their match history)
+    sourceTournament.players
+      .filter(p => selectedPlayerIds.includes(p.id))
+      .forEach(p => {
+        newTournament.addPlayer(p.voornaam, p.naam, p.klas);
+      });
+
+    // Copy settings from source tournament
+    newTournament.settings = { ...sourceTournament.settings };
+
+    // Save and load the new tournament
+    this.storageService.saveTournament(newTournament);
+    this.closeCopyPlayersModal();
+    this.loadTournament(newId);
+  }
+
+  closeCopyPlayersModal() {
+    document.getElementById('copy-players-modal').style.display = 'none';
+    this.copySourceTournamentId = null;
+  }
+
   getTournament() {
     return this.currentTournament;
   }
 }
-

@@ -569,6 +569,34 @@ header h1 {
     opacity: 0.6;
 }
 
+/* === Copy Players Modal === */
+.copy-player-item {
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--color-accent);
+    transition: background var(--transition-speed);
+}
+
+.copy-player-item:last-child {
+    border-bottom: none;
+}
+
+.copy-player-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.copy-player-item .checkbox-label {
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.copy-player-item .checkbox-label input[type="checkbox"] {
+    margin-right: var(--spacing-sm);
+}
+
 /* === Responsive Design === */
 @media (max-width: 1200px) {
     .three-column-layout {
@@ -833,4 +861,3 @@ header h1 {
 ::-webkit-scrollbar-thumb:hover {
     background: var(--color-success);
 }
-

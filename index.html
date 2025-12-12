@@ -186,6 +186,37 @@
                 </div>
             </div>
         </div>
+
+        <!-- Copy Players Modal -->
+        <div id="copy-players-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="copy-players-modal-title">Nieuw toernooi maken met spelers</h3>
+                    <button id="btn-close-copy-players-modal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="copy-tournament-name">Naam nieuw toernooi *</label>
+                        <input type="text" id="copy-tournament-name" class="form-input" placeholder="Toernooi naam" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selecteer spelers om te kopiëren</label>
+                        <div style="margin-bottom: 10px;">
+                            <button id="btn-select-all-players" class="btn btn-small btn-secondary">Alles selecteren</button>
+                            <button id="btn-deselect-all-players" class="btn btn-small btn-secondary">Alles deselecteren</button>
+                        </div>
+                        <div id="copy-players-list" style="max-height: 400px; overflow-y: auto; border: 1px solid var(--color-accent); border-radius: var(--border-radius); padding: var(--spacing-md);">
+                            <!-- Players will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-create-with-players" class="btn btn-primary">Maak Toernooi</button>
+                    <button id="btn-cancel-copy-players" class="btn btn-secondary">Annuleren</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Load models first -->
@@ -198,7 +229,7 @@
     <script defer src="js/services/PairingService.js?v=20251212"></script>
 
     <!-- Then UI managers -->
-    <script defer src="js/ui/TournamentManager.js?v=20251212"></script>
+    <script defer src="js/ui/TournamentManager.js?v=20251212e"></script>
     <script defer src="js/ui/PlayerManager.js?v=20251212"></script>
     <script defer src="js/ui/PairingManager.js?v=20251212"></script>
 
@@ -206,4 +237,3 @@
     <script defer src="js/app.js?v=20251212"></script>
 </body>
 </html>
-
