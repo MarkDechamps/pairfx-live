@@ -27,13 +27,27 @@ class Tournament {
 
   /**
    * Add a new player to the tournament
-   * @param {string} voornaam - First name
-   * @param {string} naam - Last name
+   * @param {string} voornaam - First name (required)
+   * @param {string} naam - Last name (optional)
    * @param {string} klas - Class (optional)
-   * @returns {Player} The created player
+   * @returns {Player|null} The created player or null if duplicate
    */
-  addPlayer(voornaam, naam, klas = '') {
-    const player = new Player(this.nextPlayerId++, voornaam, naam, klas);
+  addPlayer(voornaam, naam = '', klas = '') {
+    // Check for duplicates (same voornaam + naam combination)
+    const normalizedVoornaam = voornaam.trim().toLowerCase();
+    const normalizedNaam = (naam || '').trim().toLowerCase();
+
+    const isDuplicate = this.players.some(p => {
+      const pVoornaam = p.voornaam.trim().toLowerCase();
+      const pNaam = (p.naam || '').trim().toLowerCase();
+      return pVoornaam === normalizedVoornaam && pNaam === normalizedNaam;
+    });
+
+    if (isDuplicate) {
+      return null; // Duplicate found, don't add
+    }
+
+    const player = new Player(this.nextPlayerId++, voornaam, naam || '', klas);
     this.players.push(player);
     return player;
   }

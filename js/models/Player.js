@@ -6,24 +6,24 @@ class Player {
   /**
    * Create a new player
    * @param {number} id - Unique player ID
-   * @param {string} voornaam - First name
-   * @param {string} naam - Last name
+   * @param {string} voornaam - First name (required)
+   * @param {string} naam - Last name (optional)
    * @param {string} klas - Class/grade (optional)
    */
-  constructor(id, voornaam, naam, klas = '') {
+  constructor(id, voornaam, naam = '', klas = '') {
     this.id = id;
     this.voornaam = voornaam;
-    this.naam = naam;
+    this.naam = naam || '';
     this.klas = klas;
     this.afwezig = false;
   }
 
   /**
    * Get full name of player
-   * @returns {string} Full name (voornaam + naam)
+   * @returns {string} Full name (voornaam + naam if available)
    */
   getFullName() {
-    return `${this.voornaam} ${this.naam}`;
+    return this.naam ? `${this.voornaam} ${this.naam}` : this.voornaam;
   }
 
   /**

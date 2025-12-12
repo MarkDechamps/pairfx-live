@@ -866,24 +866,36 @@ header h1 {
    CSV IMPORT HELP
    ======================================== */
 
-.csv-help {
-    margin: 12px 0 20px 0;
-    text-align: center;
+.import-export-players {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.btn-link {
+.btn-icon-help {
     background: none;
     border: none;
     color: #007bff;
     cursor: pointer;
-    text-decoration: underline;
-    padding: 0;
-    font-size: 14px;
-    transition: color 0.2s;
+    padding: 4px 8px;
+    font-size: 18px;
+    transition: all 0.2s;
+    border-radius: 50%;
 }
 
-.btn-link:hover {
-    color: #0056b3;
+.btn-icon-help:hover {
+    background: rgba(0, 123, 255, 0.1);
+    transform: scale(1.2);
+}
+
+.csv-help-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 100;
+    margin-top: 8px;
+    min-width: 400px;
+    max-width: 500px;
 }
 
 .help-box {

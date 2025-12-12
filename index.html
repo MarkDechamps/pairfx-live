@@ -51,45 +51,42 @@
                     </div>
                     <div class="import-export-players">
                         <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
+                        <button type="button" class="btn-icon-help" onclick="toggleCsvHelp()" title="CSV formaat uitleg">ℹ️</button>
                         <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
 
-                        <!-- CSV Import Help -->
-                        <div class="csv-help">
-                            <button type="button" class="btn-link" onclick="toggleCsvHelp()">
-                                ℹ️ Hoe moet mijn CSV eruit zien?
-                            </button>
+                        <!-- CSV Import Help Modal -->
+                        <div id="csvHelpContent" class="csv-help-popup" style="display: none;">
+                            <div class="help-box">
+                                <h4>📄 CSV Formaat</h4>
+                                <p>Je CSV moet <strong>minimaal 1 kolom</strong> hebben:</p>
+                                <ol>
+                                    <li><strong>Voornaam</strong> (verplicht)</li>
+                                    <li><strong>Naam</strong> (optioneel)</li>
+                                    <li><strong>Klas</strong> (optioneel)</li>
+                                </ol>
 
-                            <div id="csvHelpContent" style="display: none;">
-                                <div class="help-box">
-                                    <h4>📄 CSV Formaat</h4>
-                                    <p>Je CSV moet <strong>3 kolommen</strong> hebben:</p>
-                                    <ol>
-                                        <li><strong>Voornaam</strong> (verplicht)</li>
-                                        <li><strong>Naam</strong> (verplicht)</li>
-                                        <li><strong>Klas</strong> (optioneel)</li>
-                                    </ol>
-
-                                    <h4>📝 Voorbeeld:</h4>
-                                    <pre class="csv-example">Voornaam,Naam,Klas
+                                <h4>📝 Voorbeeld:</h4>
+                                <pre class="csv-example">Voornaam,Naam,Klas
 Jan,Peeters,5A
 Marie,Janssens,5B
 Tom,Wouters,5A
-Lisa,Claes</pre>
+Lisa</pre>
 
-                                    <div class="help-notes">
-                                        <p>💡 <strong>Tips:</strong></p>
-                                        <ul>
-                                            <li>Eerste regel = kolomnamen (mag je ook weglaten)</li>
-                                            <li>Scheidingsteken: komma <code>,</code></li>
-                                            <li>Klas is optioneel (laat leeg als je geen klassen hebt)</li>
-                                            <li>Maak je CSV in Excel, Google Sheets of Notepad</li>
-                                        </ul>
-                                    </div>
-
-                                    <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
-                                        ⬇️ Download Voorbeeld CSV
-                                    </button>
+                                <div class="help-notes">
+                                    <p>💡 <strong>Tips:</strong></p>
+                                    <ul>
+                                        <li>Naam is optioneel (alleen voornaam is verplicht)</li>
+                                        <li>Duplicaten worden genegeerd</li>
+                                        <li>Scheidingsteken: komma <code>,</code></li>
+                                    </ul>
                                 </div>
+
+                                <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
+                                    ⬇️ Download Voorbeeld
+                                </button>
+                                <button class="btn btn-small btn-secondary" onclick="toggleCsvHelp()">
+                                    Sluiten
+                                </button>
                             </div>
                         </div>
                     </div>
