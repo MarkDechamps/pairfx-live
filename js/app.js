@@ -76,3 +76,14 @@ Emma,Jacobs`;
     document.body.removeChild(link);
 }
 
+// Export for testing (Node.js only)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { app, toggleCsvHelp, downloadExampleCSV };
+}
+
+// Make functions globally accessible (Browser)
+if (typeof window !== 'undefined') {
+  window.app = app;
+  window.toggleCsvHelp = toggleCsvHelp;
+  window.downloadExampleCSV = downloadExampleCSV;
+}
