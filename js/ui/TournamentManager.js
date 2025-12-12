@@ -238,6 +238,7 @@ class TournamentManager {
         </div>
         <div class="tournament-actions">
           <button class="btn btn-small btn-primary" onclick="app.tournamentManager.loadTournament(${t.id})">Open</button>
+          <button class="btn btn-small btn-secondary" onclick="app.tournamentManager.exportTournamentJsonById(${t.id})" title="Exporteer toernooi als JSON bestand">📤 Export</button>
           <button class="btn btn-small btn-secondary" onclick="app.tournamentManager.showCopyPlayersModal(${t.id})" title="Nieuw toernooi met spelers van dit toernooi">📋 Kopieer</button>
           <button class="btn btn-small btn-danger" onclick="app.tournamentManager.deleteTournament(${t.id})">Verwijder</button>
         </div>
@@ -322,6 +323,27 @@ class TournamentManager {
     const a = document.createElement('a');
     a.href = url;
     a.download = `${this.currentTournament.name}_${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Export tournament to JSON by ID (from tournament list)
+   * @param {number} tournamentId - Tournament ID to export
+   */
+  exportTournamentJsonById(tournamentId) {
+    const tournament = this.storageService.loadTournament(tournamentId);
+    if (!tournament) {
+      alert('Toernooi kan niet worden geladen');
+      return;
+    }
+
+    const json = this.storageService.exportTournamentToJson(tournament);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tournament.name}_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
