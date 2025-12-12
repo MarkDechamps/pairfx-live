@@ -10,7 +10,7 @@
     <div id="app">
         <header>
             <h1>♟ PairFX</h1>
-            <p class="subtitle">Flexibele Schaaktoernooi Manager</p>
+            <p class="subtitle">Mark Dechamps 2025 (c)</p>
         </header>
 
         <!-- Tournament Selection Screen -->
@@ -189,7 +189,22 @@
         </div>
     </div>
 
-    <script type="module" src="js/app.js"></script>
+    <!-- Load models first -->
+    <script defer src="js/models/Player.js?v=20251212"></script>
+    <script defer src="js/models/Match.js?v=20251212"></script>
+    <script defer src="js/models/Tournament.js?v=20251212"></script>
+
+    <!-- Then services -->
+    <script defer src="js/services/StorageService.js?v=20251212"></script>
+    <script defer src="js/services/PairingService.js?v=20251212"></script>
+
+    <!-- Then UI managers -->
+    <script defer src="js/ui/TournamentManager.js?v=20251212"></script>
+    <script defer src="js/ui/PlayerManager.js?v=20251212"></script>
+    <script defer src="js/ui/PairingManager.js?v=20251212"></script>
+
+    <!-- Finally the main app -->
+    <script defer src="js/app.js?v=20251212"></script>
 </body>
 </html>
 

@@ -612,6 +612,210 @@ header h1 {
     }
 }
 
+/* === Additional UI Elements === */
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--color-light);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: var(--spacing-xs);
+    transition: all var(--transition-speed);
+}
+
+.btn-icon:hover {
+    color: var(--color-success);
+    transform: scale(1.2);
+}
+
+.btn-icon.btn-danger:hover {
+    color: var(--color-danger);
+}
+
+.btn-result {
+    background: var(--color-accent);
+    color: var(--color-white);
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all var(--transition-speed);
+}
+
+.btn-result:hover {
+    background: var(--color-success);
+    transform: scale(1.05);
+}
+
+.btn-delete {
+    background: var(--color-danger);
+    color: var(--color-white);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: all var(--transition-speed);
+}
+
+.btn-delete:hover {
+    background: #a71d2a;
+    transform: rotate(90deg);
+}
+
+.btn-block {
+    width: 100%;
+    display: block;
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--color-light);
+    opacity: 0.6;
+    padding: var(--spacing-xl);
+    font-style: italic;
+}
+
+.player-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.player-item .player-info {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.player-class {
+    font-size: 0.75rem;
+    color: var(--color-info);
+    font-weight: normal;
+}
+
+.available-player {
+    background: var(--color-primary);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    border: 2px solid var(--color-accent);
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.available-player:hover {
+    border-color: var(--color-info);
+}
+
+.available-player.selected {
+    border-color: var(--color-success);
+    background: rgba(40, 167, 69, 0.2);
+}
+
+.pairing {
+    background: var(--color-primary);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border-radius: var(--border-radius);
+    border: 2px solid var(--color-accent);
+}
+
+.pairing.new {
+    border-color: var(--color-new-pairing);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
+    50% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+}
+
+.pairing.finished {
+    opacity: 0.7;
+}
+
+.pairing-info {
+    margin-bottom: var(--spacing-sm);
+}
+
+.pairing-round {
+    font-size: 0.75rem;
+    color: var(--color-warning);
+    font-weight: bold;
+    margin-bottom: var(--spacing-xs);
+}
+
+.pairing-white,
+.pairing-black {
+    padding: var(--spacing-xs) 0;
+}
+
+.pairing-results {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+}
+
+.pairing-result-display {
+    text-align: center;
+    padding: var(--spacing-sm);
+    background: var(--color-accent);
+    border-radius: var(--border-radius);
+    font-weight: bold;
+    color: var(--color-success);
+}
+
+.tournament-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-sm);
+}
+
+.tournament-card-body {
+    margin-bottom: var(--spacing-md);
+}
+
+.tournament-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.history-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: var(--spacing-sm);
+    align-items: center;
+}
+
+.history-round {
+    font-size: 0.75rem;
+    color: var(--color-warning);
+    font-weight: bold;
+}
+
+.history-opponent {
+    color: var(--color-white);
+}
+
+.history-result {
+    font-weight: bold;
+    color: var(--color-success);
+}
+
+.history-date {
+    font-size: 0.75rem;
+    color: var(--color-light);
+    opacity: 0.6;
+}
+
 /* === Scrollbar Styling === */
 ::-webkit-scrollbar {
     width: 8px;

@@ -5,12 +5,13 @@
   "main": "index.html",
   "scripts": {
     "test": "jest",
+    "test:coverage": "jest --coverage",
+    "test:watch": "jest --watch",
     "start": "powershell -ExecutionPolicy Bypass -File start.ps1"
   },
   "devDependencies": {
     "jest": "^29.0.0",
-    "ts-jest": "^29.0.0",
-    "@types/jest": "^29.0.0"
+    "jest-environment-jsdom": "^29.0.0"
   },
   "keywords": ["chess", "tournament", "pairing", "manager"],
   "author": "",
