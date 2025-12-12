@@ -177,7 +177,7 @@ Tournament {
     name: string
     creationDate: ISO string
     settings: {
-        tournamentType: 'run-through' | 'round-robin'
+        tournamentType: 'run-through'
         scoringBasis: 'points' | 'percentage'
         constraintX: number (0-10)
         constraintY: number (0-10)

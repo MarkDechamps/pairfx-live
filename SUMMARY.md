@@ -25,7 +25,7 @@ Alle gevraagde functionaliteit is succesvol geïmplementeerd als een **frontend-
 - [x] Nieuw toernooi aanmaken
 - [x] Toernooien opslaan in localStorage
 - [x] Toernooien laden/verwijderen
-- [x] Settings: Run Through / Round Robin
+- [x] Settings: Run Through (Continue pairing mode)
 - [x] Settings: Punten / Percentage weergave
 - [x] JSON export (backup/delen)
 - [x] JSON import (restore/ontvangen)

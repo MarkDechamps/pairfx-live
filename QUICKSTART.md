@@ -203,8 +203,8 @@ De applicatie houdt bij hoeveel keer elke speler wit/zwart speelde:
 - Hoge Constraint X (4-5) voor variatie
 
 ### Voor Snelle Toernooien
-- Gebruik **Round Robin** mode
 - Hogere Constraint Y (5+) voor snellere paringen
+- Lagere Constraint X (1-2) voor snellere herparingen
 - Handmatige paringen voor laatste rondes
 
 ### Voor Schoolevenementen

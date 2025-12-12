@@ -69,7 +69,6 @@ pairfx-live/
 | ID | Feature | Status |
 |----|---------|--------|
 | CF-1 | Run Through Tournament | ✅ Geïmplementeerd |
-| CF-2 | Round Robin Tournament | ✅ Geïmplementeerd |
 | - | Instellingen Scherm | ✅ Settings modal met alle opties |
 
 #### B. Paring Constraints

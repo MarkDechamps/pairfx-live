@@ -202,7 +202,7 @@ describe('Tournament Model', () => {
       const tournament = new Tournament(1, 'Test');
 
       expect(tournament.settings).toEqual({
-        format: 'run-through',
+        format: 'run-through', // Always run-through
         displayMode: 'points',
         constraintX: 3,
         constraintY: 3,

@@ -15,7 +15,7 @@ class Tournament {
     this.matches = [];
     this.creationDate = new Date().toISOString();
     this.settings = {
-      format: 'run-through', // 'run-through' or 'round-robin'
+      format: 'run-through', // Always run-through (flexible continuous pairing)
       displayMode: 'points', // 'points' or 'percentage'
       constraintX: 3, // Recent opponent constraint (rounds)
       constraintY: 3, // Point difference constraint
