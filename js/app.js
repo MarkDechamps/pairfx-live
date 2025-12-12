@@ -38,14 +38,65 @@ window.addEventListener('click', (event) => {
 });
 
 /**
- * Toggle CSV help visibility
+ * Toggle CSV help visibility in tournament screen
  */
-function toggleCsvHelp() {
-    const helpContent = document.getElementById('csvHelpContent');
-    if (helpContent.style.display === 'none') {
+function toggleCsvHelpTournament() {
+    console.log('toggleCsvHelpTournament called');
+    const helpContent = document.getElementById('csvHelpContentTournament');
+    console.log('Tournament help element:', helpContent);
+
+    if (!helpContent) {
+        console.error('csvHelpContentTournament element not found!');
+        return;
+    }
+
+    if (helpContent.style.display === 'none' || helpContent.style.display === '') {
         helpContent.style.display = 'block';
+        console.log('Tournament help: shown');
     } else {
         helpContent.style.display = 'none';
+        console.log('Tournament help: hidden');
+    }
+}
+
+/**
+ * Toggle CSV help visibility in new tournament modal
+ */
+function toggleCsvHelpModal() {
+    console.log('toggleCsvHelpModal called');
+    const helpContent = document.getElementById('csvHelpContentModal');
+    console.log('Modal help element:', helpContent);
+
+    if (!helpContent) {
+        console.error('csvHelpContentModal element not found!');
+        return;
+    }
+
+    if (helpContent.style.display === 'none' || helpContent.style.display === '') {
+        helpContent.style.display = 'block';
+        console.log('Modal help: shown');
+    } else {
+        helpContent.style.display = 'none';
+        console.log('Modal help: hidden');
+    }
+}
+
+/**
+ * Toggle CSV help visibility (generic fallback)
+ */
+function toggleCsvHelp() {
+    // Try tournament screen first
+    const tournamentHelp = document.getElementById('csvHelpContentTournament');
+    if (tournamentHelp) {
+        toggleCsvHelpTournament();
+        return;
+    }
+
+    // Try modal
+    const modalHelp = document.getElementById('csvHelpContentModal');
+    if (modalHelp) {
+        toggleCsvHelpModal();
+        return;
     }
 }
 
@@ -78,12 +129,14 @@ Emma,Jacobs`;
 
 // Export for testing (Node.js only)
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { app, toggleCsvHelp, downloadExampleCSV };
+  module.exports = { app, toggleCsvHelp, toggleCsvHelpTournament, toggleCsvHelpModal, downloadExampleCSV };
 }
 
 // Make functions globally accessible (Browser)
 if (typeof window !== 'undefined') {
   window.app = app;
   window.toggleCsvHelp = toggleCsvHelp;
+  window.toggleCsvHelpTournament = toggleCsvHelpTournament;
+  window.toggleCsvHelpModal = toggleCsvHelpModal;
   window.downloadExampleCSV = downloadExampleCSV;
 }

@@ -76,16 +76,113 @@ class TournamentManager {
     document.getElementById('btn-deselect-all-players')?.addEventListener('click', () => {
       document.querySelectorAll('.player-copy-checkbox').forEach(cb => cb.checked = false);
     });
+
+    // New tournament modal
+    document.getElementById('btn-create-tournament')?.addEventListener('click', () => {
+      this.createNewTournamentFromModal();
+    });
+
+    document.getElementById('btn-cancel-new-tournament')?.addEventListener('click', () => {
+      this.closeNewTournamentModal();
+    });
+
+    document.getElementById('btn-close-new-tournament-modal')?.addEventListener('click', () => {
+      this.closeNewTournamentModal();
+    });
+
+    // CSV import in new tournament modal
+    document.getElementById('btn-import-csv-new-tournament')?.addEventListener('click', () => {
+      document.getElementById('file-import-players-new').click();
+    });
+
+    document.getElementById('file-import-players-new')?.addEventListener('change', (e) => {
+      this.handleCsvImportNewTournament(e);
+    });
   }
 
   createNewTournament() {
-    const name = prompt('Toernooi naam:', 'Nieuw Toernooi');
-    if (!name) return;
+    // Show modal instead of prompt
+    this.showNewTournamentModal();
+  }
+
+  showNewTournamentModal() {
+    document.getElementById('new-tournament-name').value = '';
+    document.getElementById('new-tournament-modal').style.display = 'flex';
+    document.getElementById('new-tournament-name').focus();
+  }
+
+  closeNewTournamentModal() {
+    document.getElementById('new-tournament-modal').style.display = 'none';
+  }
+
+  createNewTournamentFromModal() {
+    const name = document.getElementById('new-tournament-name').value.trim();
+    if (!name) {
+      alert('Voer een naam in voor het toernooi');
+      return;
+    }
 
     const id = this.storageService.generateTournamentId();
     const tournament = new Tournament(id, name);
     this.storageService.saveTournament(tournament);
+    this.closeNewTournamentModal();
     this.loadTournament(id);
+  }
+
+  handleCsvImportNewTournament(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const name = document.getElementById('new-tournament-name').value.trim();
+    if (!name) {
+      alert('Voer eerst een toernooi naam in voordat je spelers importeert');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const players = this.storageService.parseCsvPlayers(e.target.result);
+
+        if (players.length === 0) {
+          alert('Geen geldige spelers gevonden in CSV');
+          return;
+        }
+
+        // Create new tournament
+        const id = this.storageService.generateTournamentId();
+        const tournament = new Tournament(id, name);
+
+        // Add players
+        let addedCount = 0;
+        let skippedCount = 0;
+
+        players.forEach(p => {
+          const result = tournament.addPlayer(p.voornaam, p.naam, p.klas);
+          if (result) {
+            addedCount++;
+          } else {
+            skippedCount++;
+          }
+        });
+
+        // Save and load
+        this.storageService.saveTournament(tournament);
+        this.closeNewTournamentModal();
+        this.loadTournament(id);
+
+        // Show result
+        let message = `Toernooi "${name}" aangemaakt met ${addedCount} speler(s)`;
+        if (skippedCount > 0) {
+          message += `\n${skippedCount} duplicaten genegeerd`;
+        }
+        alert(message);
+      } catch (error) {
+        alert('Fout bij importeren CSV: ' + error.message);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
   }
 
   loadTournament(tournamentId) {

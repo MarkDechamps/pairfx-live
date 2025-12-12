@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PairFX - Schaaktoernooi Manager</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=20251212m">
 </head>
 <body>
     <div id="app">
@@ -49,13 +49,15 @@
                         <h3>Klassement</h3>
                         <button id="btn-add-player" class="btn btn-small btn-primary">+ Speler</button>
                     </div>
-                    <div class="import-export-players">
-                        <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
-                        <button type="button" class="btn-icon-help" onclick="toggleCsvHelp()" title="CSV formaat uitleg">ℹ️</button>
-                        <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
+                    <div class="csv-help-container">
+                        <div class="import-export-players">
+                            <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
+                            <button type="button" class="btn-icon-help" onclick="toggleCsvHelpTournament()" title="CSV formaat uitleg">ℹ️</button>
+                            <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
+                        </div>
 
-                        <!-- CSV Import Help Modal -->
-                        <div id="csvHelpContent" class="csv-help-popup" style="display: none;">
+                        <!-- CSV Import Help Popup -->
+                        <div id="csvHelpContentTournament" class="csv-help-popup" style="display: none;">
                             <div class="help-box">
                                 <h4>📄 CSV Formaat</h4>
                                 <p>Je CSV moet <strong>minimaal 1 kolom</strong> hebben:</p>
@@ -84,7 +86,7 @@ Lisa</pre>
                                 <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
                                     ⬇️ Download Voorbeeld
                                 </button>
-                                <button class="btn btn-small btn-secondary" onclick="toggleCsvHelp()">
+                                <button class="btn btn-small btn-secondary" onclick="toggleCsvHelpTournament()">
                                     Sluiten
                                 </button>
                             </div>
@@ -254,6 +256,76 @@ Lisa</pre>
                 </div>
             </div>
         </div>
+
+        <!-- New Tournament Modal -->
+        <div id="new-tournament-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Nieuw Toernooi Aanmaken</h3>
+                    <button id="btn-close-new-tournament-modal" class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="new-tournament-name">Toernooi Naam *</label>
+                        <input type="text" id="new-tournament-name" class="form-input" placeholder="Bijv. Schaakclub Najaar 2025" required autofocus>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Of importeer spelers direct uit CSV:</label>
+                        <button id="btn-import-csv-new-tournament" class="btn btn-secondary btn-block">📥 Import CSV (Spelerslijst)</button>
+                        <input type="file" id="file-import-players-new" accept=".csv,.txt" style="display: none;">
+
+                        <!-- CSV Help -->
+                        <div class="csv-help-container" style="margin-top: 8px; text-align: center;">
+                            <small style="color: #999;">
+                                Hoe moet mijn CSV eruit zien?
+                                <button type="button" class="btn-icon-help" onclick="toggleCsvHelpModal()" title="CSV formaat uitleg" style="display: inline; padding: 2px 6px; margin-left: 4px;">ℹ️</button>
+                            </small>
+
+                            <!-- CSV Help Popup -->
+                            <div id="csvHelpContentModal" class="csv-help-popup" style="display: none;">
+                                <div class="help-box">
+                                    <h4>📄 CSV Formaat</h4>
+                                    <p>Je CSV moet <strong>minimaal 1 kolom</strong> hebben:</p>
+                                    <ol>
+                                        <li><strong>Voornaam</strong> (verplicht)</li>
+                                        <li><strong>Naam</strong> (optioneel)</li>
+                                        <li><strong>Klas</strong> (optioneel)</li>
+                                    </ol>
+
+                                    <h4>📝 Voorbeeld:</h4>
+                                    <pre class="csv-example">Voornaam,Naam,Klas
+Jan,Peeters,5A
+Marie,Janssens,5B
+Tom,Wouters,5A
+Lisa</pre>
+
+                                    <div class="help-notes">
+                                        <p>💡 <strong>Tips:</strong></p>
+                                        <ul>
+                                            <li>Naam is optioneel (alleen voornaam is verplicht)</li>
+                                            <li>Duplicaten worden genegeerd</li>
+                                            <li>Scheidingsteken: komma <code>,</code></li>
+                                        </ul>
+                                    </div>
+
+                                    <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
+                                        ⬇️ Download Voorbeeld
+                                    </button>
+                                    <button class="btn btn-small btn-secondary" onclick="toggleCsvHelpModal()">
+                                        Sluiten
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-create-tournament" class="btn btn-primary">Maak Toernooi</button>
+                    <button id="btn-cancel-new-tournament" class="btn btn-secondary">Annuleren</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Load models first -->
@@ -266,11 +338,11 @@ Lisa</pre>
     <script defer src="js/services/PairingService.js?v=20251212"></script>
 
     <!-- Then UI managers -->
-    <script defer src="js/ui/TournamentManager.js?v=20251212e"></script>
+    <script defer src="js/ui/TournamentManager.js?v=20251212k"></script>
     <script defer src="js/ui/PlayerManager.js?v=20251212i"></script>
     <script defer src="js/ui/PairingManager.js?v=20251212"></script>
 
     <!-- Finally the main app -->
-    <script defer src="js/app.js?v=20251212j"></script>
+    <script defer src="js/app.js?v=20251212m"></script>
 </body>
 </html>
