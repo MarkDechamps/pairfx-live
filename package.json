@@ -1,0 +1,19 @@
+{
+  "name": "pairfx-live",
+  "version": "1.0.0",
+  "description": "Flexible chess tournament manager - front-end only",
+  "main": "index.html",
+  "scripts": {
+    "test": "jest",
+    "start": "powershell -ExecutionPolicy Bypass -File start.ps1"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "@types/jest": "^29.0.0"
+  },
+  "keywords": ["chess", "tournament", "pairing", "manager"],
+  "author": "",
+  "license": "ISC"
+}
+

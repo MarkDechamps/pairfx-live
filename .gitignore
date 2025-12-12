@@ -1,0 +1,13 @@
+# IDE
+*.log
+# Logs
+
+Thumbs.db
+.DS_Store
+# OS
+
+*.swo
+*.swp
+.vscode/
+.idea/
+

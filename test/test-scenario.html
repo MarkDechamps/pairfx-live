@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PairFX - Test Scenario</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .step {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #28a745;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .expected {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .link:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 PairFX - Test Scenario</h1>
+    <p>Volg deze stappen om de applicatie volledig te testen.</p>
+
+    <a href="../index.html" class="link">→ Open PairFX Applicatie</a>
+
+    <div class="step">
+        <h3><span class="step-number">1</span>Start de Server</h3>
+        <p>Open PowerShell en run:</p>
+        <code>cd E:\dev\pairfx-live</code><br>
+        <code>.\start.ps1</code>
+        <p>Of gebruik VS Code Live Server</p>
+        <div class="expected">
+            ✅ Browser opent op <code>http://localhost:8000</code>
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">2</span>Maak Nieuw Toernooi</h3>
+        <p>Klik op <strong>"+ Nieuw Toernooi"</strong></p>
+        <p>Geef naam: <code>Test Toernooi December 2025</code></p>
+        <div class="expected">
+            ✅ Je ziet het toernooi scherm met 3 kolommen<br>
+            ✅ Toernooi naam staat bovenaan
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">3</span>Import Test Spelers</h3>
+        <p>Klik op <strong>"📥 Import CSV"</strong> in de linker kolom</p>
+        <p>Selecteer: <code>example-players.csv</code></p>
+        <div class="expected">
+            ✅ 10 spelers verschijnen in klassement<br>
+            ✅ Allemaal 0 punten, nog geen partijen<br>
+            ✅ Alle 10 spelers zijn beschikbaar (midden kolom)
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">4</span>Configureer Instellingen</h3>
+        <p>Klik op <strong>"⚙️ Instellingen"</strong></p>
+        <p>Zet:<br>
+        - Constraint X: <code>3</code><br>
+        - Constraint Y: <code>2</code><br>
+        - ✅ Klas constraint activeren</p>
+        <p>Klik <strong>"Opslaan"</strong></p>
+        <div class="expected">
+            ✅ Modal sluit<br>
+            ✅ Settings zijn bewaard
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">5</span>Maak Eerste Ronde Paringen</h3>
+        <p>Zorg dat geen spelers geselecteerd zijn</p>
+        <p>Klik op <strong>"🎲 Maak Paringen"</strong></p>
+        <div class="expected">
+            ✅ 5 paringen verschijnen in rechterkolom<br>
+            ✅ Alle paringen zijn groen (nieuw)<br>
+            ✅ Wit/Zwart random verdeeld (eerste ronde)<br>
+            ✅ Beschikbare spelers (midden) is nu leeg
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">6</span>Voer Resultaten In</h3>
+        <p>Voor elke paring, klik een resultaat:</p>
+        <p>Verdeel ongeveer: 2x <strong>1-0</strong>, 2x <strong>0-1</strong>, 1x <strong>½-½</strong></p>
+        <div class="expected">
+            ✅ Bij elke klik: resultaat verschijnt<br>
+            ✅ Speler komt terug bij beschikbaar<br>
+            ✅ Klassement update (links) met nieuwe scores<br>
+            ✅ Groene highlight verdwijnt
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">7</span>Test Partijgeschiedenis</h3>
+        <p>Klik op <strong>"📜 Geschiedenis"</strong> bij een speler</p>
+        <div class="expected">
+            ✅ Modal opent met gespeelde partij<br>
+            ✅ Tegenstander naam zichtbaar<br>
+            ✅ Kleur (wit/zwart) zichtbaar<br>
+            ✅ Resultaat + datum/tijd zichtbaar
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">8</span>Maak Tweede Ronde</h3>
+        <p>Alle spelers zijn weer beschikbaar</p>
+        <p>Klik opnieuw <strong>"🎲 Maak Paringen"</strong></p>
+        <div class="expected">
+            ✅ 5 nieuwe paringen (groen)<br>
+            ✅ Kleurbalans: spelers met 1x wit krijgen bij voorkeur zwart<br>
+            ✅ Constraint X: Niemand speelt tegen zelfde tegenstander<br>
+            ✅ Constraint Y: Max 2 punten verschil
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">9</span>Test Undo Functie</h3>
+        <p>Klik op <strong>"↶ Ongedaan"</strong> (rechterkolom)</p>
+        <p>Bevestig de popup</p>
+        <div class="expected">
+            ✅ Laatste 5 paringen verdwijnen<br>
+            ✅ Alle spelers weer beschikbaar<br>
+            ✅ Alert: "5 paring(en) ongedaan gemaakt"
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">10</span>Test Handmatige Paring</h3>
+        <p>Selecteer <strong>exact 2 spelers</strong> in midden kolom (klik op hun kaartjes)</p>
+        <p>Klik <strong>"🎲 Maak Paringen"</strong></p>
+        <div class="expected">
+            ✅ 1 paring gemaakt tussen die 2 spelers<br>
+            ✅ Kleurlogica toegepast<br>
+            ✅ Constraints X en Y genegeerd (kan zelfs herhaling zijn)
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">11</span>Test Afwezig Toggle</h3>
+        <p>Klik <strong>"✗ Afwezig"</strong> bij een speler (linker kolom)</p>
+        <div class="expected">
+            ✅ Speler wordt grijs/transparent<br>
+            ✅ Speler verdwijnt uit beschikbare spelers<br>
+            ✅ Knop wordt "✓ Aanwezig"
+        </div>
+        <p>Klik <strong>"✓ Aanwezig"</strong> om te herstellen</p>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">12</span>Test Filters</h3>
+        <p>In midden kolom, type <code>Jan</code> in filter veld</p>
+        <div class="expected">
+            ✅ Alleen spelers met "Jan" in naam tonen
+        </div>
+        <p>In rechter kolom, activeer <strong>"Enkel actieve partijen"</strong> checkbox</p>
+        <div class="expected">
+            ✅ Alleen niet-afgeronde paringen tonen
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">13</span>Test JSON Export</h3>
+        <p>Klik op <strong>"📤 Export JSON"</strong></p>
+        <div class="expected">
+            ✅ JSON bestand wordt gedownload<br>
+            ✅ Bestandsnaam: <code>Test Toernooi December 2025_[id].json</code><br>
+            ✅ Open in text editor: valid JSON met alle data
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">14</span>Test HTML Export</h3>
+        <p>Klik op <strong>"📊 Export Klassement"</strong></p>
+        <div class="expected">
+            ✅ HTML bestand wordt gedownload<br>
+            ✅ Open in browser: mooi opgemaakt klassement<br>
+            ✅ Print preview (Ctrl+P) ziet er goed uit
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">15</span>Test Speler Bewerken</h3>
+        <p>Klik <strong>"✏️ Bewerken"</strong> bij een speler</p>
+        <p>Wijzig de klas van <code>5A</code> naar <code>7A</code></p>
+        <p>Klik <strong>"Opslaan"</strong></p>
+        <div class="expected">
+            ✅ Modal sluit<br>
+            ✅ Klas update is zichtbaar in klassement<br>
+            ✅ Data blijft behouden bij refresh (localStorage)
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">16</span>Test Persistentie</h3>
+        <p>Refresh de pagina (<kbd>F5</kbd>)</p>
+        <div class="expected">
+            ✅ Je keert terug naar toernooi selectie scherm<br>
+            ✅ Je toernooi staat in de lijst<br>
+            ✅ Klik "Openen" → alle data is bewaard
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">17</span>Test JSON Import</h3>
+        <p>Ga terug naar toernooi selectie (<strong>"← Terug"</strong>)</p>
+        <p>Klik <strong>"📥 Importeer JSON"</strong></p>
+        <p>Selecteer eerder geëxporteerd JSON bestand</p>
+        <div class="expected">
+            ✅ Alert: "Toernooi succesvol geïmporteerd!"<br>
+            ✅ Nieuw toernooi wordt geopend<br>
+            ✅ Alle data is geïmporteerd (nieuwe ID)
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">18</span>Test Responsive Design</h3>
+        <p>Open browser DevTools (<kbd>F12</kbd>)</p>
+        <p>Toggle device toolbar (mobile view)</p>
+        <p>Test verschillende schermgroottes</p>
+        <div class="expected">
+            ✅ Desktop: 3 kolommen naast elkaar<br>
+            ✅ Tablet: 2 kolommen + 1 volle breedte<br>
+            ✅ Mobile: Alle kolommen gestapeld<br>
+            ✅ Alles blijft bruikbaar en leesbaar
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">19</span>Test Edge Case: Geen Beschikbare</h3>
+        <p>Maak paringen voor alle beschikbare spelers</p>
+        <p>Probeer opnieuw <strong>"🎲 Maak Paringen"</strong></p>
+        <div class="expected">
+            ✅ Alert: "Minimaal 2 beschikbare spelers nodig"<br>
+            ✅ Geen paringen gemaakt
+        </div>
+    </div>
+
+    <div class="step">
+        <h3><span class="step-number">20</span>Test Toernooi Verwijderen</h3>
+        <p>Ga naar toernooi selectie</p>
+        <p>Klik <strong>"Verwijderen"</strong> bij een toernooi</p>
+        <p>Bevestig</p>
+        <div class="expected">
+            ✅ Toernooi verdwijnt uit lijst<br>
+            ✅ localStorage is opgeschoond
+        </div>
+    </div>
+
+    <h2>✅ Test Compleet!</h2>
+    <p>Als alle stappen succesvol waren, is de applicatie volledig functioneel.</p>
+
+    <h3>📱 Extra: Test op Mobile</h3>
+    <p>1. Open op je smartphone/tablet via lokaal netwerk</p>
+    <p>2. Vind je local IP: <code>ipconfig</code> in PowerShell</p>
+    <p>3. Bezoek: <code>http://[YOUR_IP]:8000</code></p>
+    <p>4. Test touch interactie en responsive layout</p>
+
+    <a href="../index.html" class="link">→ Terug naar Applicatie</a>
+</body>
+</html>
+

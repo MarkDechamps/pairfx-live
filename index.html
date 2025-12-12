@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PairFX - Schaaktoernooi Manager</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>♟ PairFX</h1>
+            <p class="subtitle">Flexibele Schaaktoernooi Manager</p>
+        </header>
+
+        <!-- Tournament Selection Screen -->
+        <div id="tournament-selection-screen" class="screen">
+            <div class="container">
+                <h2>Selecteer of Creëer Toernooi</h2>
+
+                <div class="action-buttons">
+                    <button id="btn-new-tournament" class="btn btn-primary">+ Nieuw Toernooi</button>
+                    <button id="btn-import-tournament" class="btn btn-secondary">📥 Importeer JSON</button>
+                    <input type="file" id="file-import" accept=".json" style="display: none;">
+                </div>
+
+                <div id="tournament-list" class="tournament-list">
+                    <!-- Tournaments will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tournament Management Screen -->
+        <div id="tournament-screen" class="screen" style="display: none;">
+            <div class="tournament-header">
+                <button id="btn-back" class="btn btn-secondary">← Terug</button>
+                <h2 id="tournament-name">Toernooi</h2>
+                <div class="tournament-actions">
+                    <button id="btn-settings" class="btn btn-secondary">⚙️ Instellingen</button>
+                    <button id="btn-export" class="btn btn-secondary">📤 Export JSON</button>
+                    <button id="btn-export-standings" class="btn btn-secondary">📊 Export Klassement</button>
+                </div>
+            </div>
+
+            <div class="three-column-layout">
+                <!-- Left Column: Klassement & Player Management -->
+                <div class="column column-left">
+                    <div class="column-header">
+                        <h3>Klassement</h3>
+                        <button id="btn-add-player" class="btn btn-small btn-primary">+ Speler</button>
+                    </div>
+                    <div class="import-export-players">
+                        <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
+                        <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
+                    </div>
+                    <div id="player-list" class="player-list">
+                        <!-- Players will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Middle Column: Available Players -->
+                <div class="column column-middle">
+                    <div class="column-header">
+                        <h3>Beschikbare Spelers</h3>
+                        <button id="btn-pair-selected" class="btn btn-primary">🎲 Maak Paringen</button>
+                    </div>
+                    <div class="filter-section">
+                        <input type="text" id="filter-available" placeholder="Filter op naam..." class="filter-input">
+                    </div>
+                    <div id="available-players-list" class="available-players-list">
+                        <!-- Available players will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Pairings & Results -->
+                <div class="column column-right">
+                    <div class="column-header">
+                        <h3>Paringen</h3>
+                        <button id="btn-undo-last-batch" class="btn btn-small btn-warning">↶ Ongedaan</button>
+                    </div>
+                    <div class="filter-section">
+                        <input type="text" id="filter-pairings" placeholder="Filter op naam..." class="filter-input">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="filter-active-only">
+                            Enkel actieve partijen
+                        </label>
+                    </div>
+                    <div id="pairings-list" class="pairings-list">
+                        <!-- Pairings will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Toernooi Instellingen</h3>
+                    <button class="modal-close" id="btn-close-settings">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Toernooi Naam</label>
+                        <input type="text" id="setting-tournament-name" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label>Toernooi Type</label>
+                        <select id="setting-tournament-type" class="form-input">
+                            <option value="run-through">Run Through (Continue)</option>
+                            <option value="round-robin">Round Robin (Vaste Rondes)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Klassement Basis</label>
+                        <select id="setting-scoring-basis" class="form-input">
+                            <option value="points">Punten</option>
+                            <option value="percentage">Percentage</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Constraint X - Recente Tegenstander (rondes)</label>
+                        <input type="number" id="setting-constraint-x" class="form-input" min="0" max="10" value="3">
+                        <small>Spelers mogen niet tegen elkaar spelen in de laatste X rondes</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Constraint Y - Maximaal Puntenverschil</label>
+                        <input type="number" id="setting-constraint-y" class="form-input" min="0" max="10" step="0.5" value="3">
+                        <small>Maximaal puntenverschil tussen tegenstanders</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="setting-class-constraint">
+                            Vermijd paringen binnen dezelfde klas (soft constraint)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-save-settings" class="btn btn-primary">Opslaan</button>
+                    <button id="btn-cancel-settings" class="btn btn-secondary">Annuleren</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Edit Modal -->
+        <div id="player-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="player-modal-title">Speler Toevoegen</h3>
+                    <button class="modal-close" id="btn-close-player-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Voornaam *</label>
+                        <input type="text" id="player-voornaam" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Naam *</label>
+                        <input type="text" id="player-naam" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Klas</label>
+                        <input type="text" id="player-klas" class="form-input">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-save-player" class="btn btn-primary">Opslaan</button>
+                    <button id="btn-cancel-player" class="btn btn-secondary">Annuleren</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Match History Modal -->
+        <div id="history-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="history-modal-title">Partijgeschiedenis</h3>
+                    <button class="modal-close" id="btn-close-history-modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="history-list" class="history-list">
+                        <!-- Match history will be rendered here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn-close-history" class="btn btn-secondary">Sluiten</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
+
