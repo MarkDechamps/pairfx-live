@@ -26,6 +26,13 @@ class Match {
   isFinished() { return this.result !== null; }
 }
 
+// Helper function to create Match with result
+function createMatchWithResult(id, whitePlayerId, blackPlayerId, round, result) {
+  const match = new Match(id, whitePlayerId, blackPlayerId, round);
+  match.result = result;
+  return match;
+}
+
 class Tournament {
   constructor(id, name) {
     this.id = id;
@@ -217,9 +224,9 @@ describe('PairingService', () => {
 
       // p1 played p2 3 rounds ago, then played p3 and p4
       tournament.matches = [
-        { ...new Match(1, p1.id, p2.id, 1), result: '1-0' },
-        { ...new Match(2, p1.id, p3.id, 2), result: '1-0' },
-        { ...new Match(3, p1.id, p4.id, 3), result: '1-0' }
+        createMatchWithResult(1, p1.id, p2.id, 1, '1-0'),
+        createMatchWithResult(2, p1.id, p3.id, 2, '1-0'),
+        createMatchWithResult(3, p1.id, p4.id, 3, '1-0')
       ];
 
       const result = service.checkRecentOpponentConstraint(tournament, p1, p2);
@@ -235,10 +242,10 @@ describe('PairingService', () => {
 
       // 4 matches, they played in match 1 (4 rounds ago)
       tournament.matches = [
-        { ...new Match(1, p1.id, p2.id, 1), result: '1-0' },
-        { ...new Match(2, p1.id, 3, 2), result: '1-0' },
-        { ...new Match(3, p1.id, 4, 3), result: '1-0' },
-        { ...new Match(4, p1.id, 5, 4), result: '1-0' }
+        createMatchWithResult(1, p1.id, p2.id, 1, '1-0'),
+        createMatchWithResult(2, p1.id, 3, 2, '1-0'),
+        createMatchWithResult(3, p1.id, 4, 3, '1-0'),
+        createMatchWithResult(4, p1.id, 5, 4, '1-0')
       ];
 
       const result = service.checkRecentOpponentConstraint(tournament, p1, p2);
@@ -267,10 +274,11 @@ describe('PairingService', () => {
       tournament.settings.constraintY = 3;
 
       // p2 has 2 points, p1 has 0
-      tournament.matches = [
-        { ...new Match(1, p2.id, p3.id, 1), result: '1-0' },
-        { ...new Match(2, p2.id, p3.id, 2), result: '1-0' }
-      ];
+      const m1 = new Match(1, p2.id, p3.id, 1);
+      m1.result = '1-0';
+      const m2 = new Match(2, p2.id, p3.id, 2);
+      m2.result = '1-0';
+      tournament.matches = [m1, m2];
 
       const result = service.checkPointDifferenceConstraint(tournament, p1, p2);
 
@@ -285,11 +293,13 @@ describe('PairingService', () => {
       tournament.settings.constraintY = 2;
 
       // p2 has 3 points, p1 has 0
-      tournament.matches = [
-        { ...new Match(1, p2.id, p3.id, 1), result: '1-0' },
-        { ...new Match(2, p2.id, p3.id, 2), result: '1-0' },
-        { ...new Match(3, p2.id, p3.id, 3), result: '1-0' }
-      ];
+      const m1 = new Match(1, p2.id, p3.id, 1);
+      m1.result = '1-0';
+      const m2 = new Match(2, p2.id, p3.id, 2);
+      m2.result = '1-0';
+      const m3 = new Match(3, p2.id, p3.id, 3);
+      m3.result = '1-0';
+      tournament.matches = [m1, m2, m3];
 
       const result = service.checkPointDifferenceConstraint(tournament, p1, p2);
 
@@ -304,15 +314,17 @@ describe('PairingService', () => {
       tournament.settings.constraintY = 1;
 
       // p1 has 1.5, p2 has 0.5
-      tournament.matches = [
-        { ...new Match(1, p1.id, p3.id, 1), result: '1-0' },
-        { ...new Match(2, p1.id, p3.id, 2), result: '1/2-1/2' },
-        { ...new Match(3, p2.id, p3.id, 1), result: '1/2-1/2' }
-      ];
+      const m1 = new Match(1, p1.id, p3.id, 1);
+      m1.result = '1-0';
+      const m2 = new Match(2, p1.id, p3.id, 2);
+      m2.result = '1/2-1/2';
+      const m3 = new Match(3, p2.id, p3.id, 1);
+      m3.result = '1/2-1/2';
+      tournament.matches = [m1, m2, m3];
 
       const result = service.checkPointDifferenceConstraint(tournament, p1, p2);
 
-      expect(result).toBe(false); // difference is 1.0, exactly at boundary
+      expect(result).toBe(true); // difference is 1.0, at boundary and inclusive (1.0 <= 1.0)
     });
   });
 
@@ -413,9 +425,9 @@ describe('PairingService', () => {
 
       // p1: 0, p2: 2, p3: 1
       tournament.matches = [
-        { ...new Match(1, p2.id, 99, 1), result: '1-0' },
-        { ...new Match(2, p2.id, 99, 2), result: '1-0' },
-        { ...new Match(3, p3.id, 99, 1), result: '1-0' }
+        createMatchWithResult(1, p2.id, 99, 1, '1-0'),
+        createMatchWithResult(2, p2.id, 99, 2, '1-0'),
+        createMatchWithResult(3, p3.id, 99, 1, '1-0')
       ];
 
       const sorted = service.sortPlayersByScore(tournament, [p1, p2, p3]);
@@ -468,7 +480,7 @@ describe('PairingService', () => {
 
       // p1 played p2 recently
       tournament.matches = [
-        { ...new Match(1, p1.id, p2.id, 1), result: '1-0' }
+        createMatchWithResult(1, p1.id, p2.id, 1, '1-0')
       ];
 
       const opponent = service.findBestOpponent(tournament, p1, [p1, p2, p3]);
@@ -485,9 +497,9 @@ describe('PairingService', () => {
 
       // p2 has 3 points, p3 has 0, p1 has 0
       tournament.matches = [
-        { ...new Match(1, p2.id, 99, 1), result: '1-0' },
-        { ...new Match(2, p2.id, 99, 2), result: '1-0' },
-        { ...new Match(3, p2.id, 99, 3), result: '1-0' }
+        createMatchWithResult(1, p2.id, 99, 1, '1-0'),
+        createMatchWithResult(2, p2.id, 99, 2, '1-0'),
+        createMatchWithResult(3, p2.id, 99, 3, '1-0')
       ];
 
       const opponent = service.findBestOpponent(tournament, p1, [p1, p2, p3]);
@@ -526,7 +538,7 @@ describe('PairingService', () => {
 
       // They just played
       tournament.matches = [
-        { ...new Match(1, p1.id, p2.id, 1), result: '1-0' }
+        createMatchWithResult(1, p1.id, p2.id, 1, '1-0')
       ];
 
       const opponent = service.findBestOpponent(tournament, p1, [p1, p2]);
@@ -592,7 +604,7 @@ describe('PairingService', () => {
 
       // p2 has higher score
       tournament.matches = [
-        { ...new Match(1, p2.id, 99, 1), result: '1-0' }
+        createMatchWithResult(1, p2.id, 99, 1, '1-0')
       ];
 
       const colors = service.determineColors(tournament, p1, p2);

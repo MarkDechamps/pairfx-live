@@ -116,17 +116,45 @@ class StorageService {
     const separator = firstLine.includes(';') ? ';' :
                       firstLine.includes('\t') ? '\t' : ',';
 
-    // Parse header
+    // Parse header - create mapping
     const headers = lines[0].split(separator).map(h => h.trim().toLowerCase());
-    const voornaamIndex = headers.findIndex(h =>
-      h.includes('voornaam') || h.includes('firstname') || h.includes('first')
-    );
-    const naamIndex = headers.findIndex(h =>
-      h.includes('naam') || h.includes('name') || h.includes('last')
-    );
-    const klasIndex = headers.findIndex(h =>
-      h.includes('klas') || h.includes('class') || h.includes('grade')
-    );
+
+    // Strategy: Find exact column indices by checking each header
+    const columnMapping = {};
+
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+
+      // Check for voornaam/firstname columns
+      if (header === 'voornaam' || header === 'firstname' || header === 'first name' || header === 'first') {
+        columnMapping.voornaam = i;
+      }
+      // Check for naam/lastname columns (must be exact, not contain 'voornaam')
+      else if (header === 'naam' || header === 'lastname' || header === 'last name' || header === 'surname') {
+        columnMapping.naam = i;
+      }
+      // Check for generic 'name' (only if it's not 'firstname' or 'lastname')
+      else if (header === 'name') {
+        // If we don't have voornaam yet, this might be voornaam
+        if (!columnMapping.voornaam) {
+          columnMapping.voornaam = i;
+        } else {
+          columnMapping.naam = i;
+        }
+      }
+      // Check for klas/class columns
+      else if (header === 'klas' || header === 'class' || header === 'grade') {
+        columnMapping.klas = i;
+      }
+    }
+
+    // Fallback if columns not found
+    if (columnMapping.voornaam === undefined) columnMapping.voornaam = 0;
+    if (columnMapping.naam === undefined) columnMapping.naam = 1;
+
+    const voornaamIndex = columnMapping.voornaam;
+    const naamIndex = columnMapping.naam;
+    const klasIndex = columnMapping.klas !== undefined ? columnMapping.klas : -1;
 
     // Parse data rows
     const players = [];
