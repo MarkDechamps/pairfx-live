@@ -16,15 +16,6 @@ class PlayerManager {
       this.showPlayerModal();
     });
 
-    // Import CSV
-    document.getElementById('btn-import-players')?.addEventListener('click', () => {
-      document.getElementById('file-import-players').click();
-    });
-
-    document.getElementById('file-import-players')?.addEventListener('change', (e) => {
-      this.handleCsvImport(e);
-    });
-
     // Player modal
     document.getElementById('btn-save-player')?.addEventListener('click', () => {
       this.savePlayer();

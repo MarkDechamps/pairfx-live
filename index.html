@@ -49,49 +49,6 @@
                         <h3>Klassement</h3>
                         <button id="btn-add-player" class="btn btn-small btn-primary">+ Speler</button>
                     </div>
-                    <div class="csv-help-container">
-                        <div class="import-export-players">
-                            <button id="btn-import-players" class="btn btn-small">📥 Import CSV</button>
-                            <button type="button" class="btn-icon-help" onclick="toggleCsvHelpTournament()" title="CSV formaat uitleg">ℹ️</button>
-                            <input type="file" id="file-import-players" accept=".csv,.txt" style="display: none;">
-                        </div>
-
-                        <!-- CSV Import Help Popup -->
-                        <div id="csvHelpContentTournament" class="csv-help-popup" style="display: none;">
-                            <div class="help-box">
-                                <h4>📄 CSV Formaat</h4>
-                                <p>Je CSV moet <strong>minimaal 1 kolom</strong> hebben:</p>
-                                <ol>
-                                    <li><strong>Voornaam</strong> (verplicht)</li>
-                                    <li><strong>Naam</strong> (optioneel)</li>
-                                    <li><strong>Klas</strong> (optioneel)</li>
-                                </ol>
-
-                                <h4>📝 Voorbeeld:</h4>
-                                <pre class="csv-example">Voornaam,Naam,Klas
-Jan,Peeters,5A
-Marie,Janssens,5B
-Tom,Wouters,5A
-Lisa</pre>
-
-                                <div class="help-notes">
-                                    <p>💡 <strong>Tips:</strong></p>
-                                    <ul>
-                                        <li>Naam is optioneel (alleen voornaam is verplicht)</li>
-                                        <li>Duplicaten worden genegeerd</li>
-                                        <li>Scheidingsteken: komma <code>,</code></li>
-                                    </ul>
-                                </div>
-
-                                <button class="btn btn-small btn-secondary" onclick="downloadExampleCSV()">
-                                    ⬇️ Download Voorbeeld
-                                </button>
-                                <button class="btn btn-small btn-secondary" onclick="toggleCsvHelpTournament()">
-                                    Sluiten
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                     <div id="player-list" class="player-list">
                         <!-- Players will be rendered here -->
                     </div>
