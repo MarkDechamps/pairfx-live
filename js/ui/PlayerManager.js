@@ -50,6 +50,7 @@ class PlayerManager {
     // Listen for tournament events
     window.addEventListener('tournamentLoaded', () => this.render());
     window.addEventListener('tournamentUpdated', () => this.render());
+    window.addEventListener('playersUpdated', () => this.render());
   }
 
   render() {
