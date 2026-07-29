@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PairFX - Opening Selector</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>♟ PairFX Opening Selector</h1>
+    <p class="subtitle">Chess Opening Advisor</p>
+    <a href="../index.html" class="back-link">← Terug naar PairFX</a>
+  </header>
+
+  <div class="rank" id="rank" aria-hidden="true">
+    <span class="rank-square"></span><span class="rank-square"></span><span class="rank-square"></span><span class="rank-square"></span>
+    <span class="rank-square"></span><span class="rank-square"></span><span class="rank-square"></span><span class="rank-square"></span>
+  </div>
+
+  <main id="app" aria-live="polite">
+    <p class="loading">Setting up the board&hellip;</p>
+  </main>
+
+  <footer class="footer">
+    <span id="data-footnote">Loading dataset&hellip;</span>
+  </footer>
+
+</div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

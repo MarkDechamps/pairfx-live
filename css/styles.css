@@ -58,6 +58,14 @@ header h1 {
     opacity: 0.9;
 }
 
+.opening-selector-link {
+    display: inline-block;
+    margin-top: var(--spacing-xs);
+    color: var(--color-accent);
+    font-size: 0.9rem;
+    text-decoration: underline;
+}
+
 /* === Container === */
 .container {
     max-width: 1200px;

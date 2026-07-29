@@ -1,0 +1,189 @@
+{
+  "_fieldConventions": {
+    "eco": "ECO code (Encyclopaedia of Chess Openings), string. Source of record: lichess-org/chess-openings dataset (CC0), Wikipedia ECO table as fallback.",
+    "name": "Opening name, string.",
+    "color": "Which side this entry represents/owns: 'White' or 'Black'.",
+    "pgn": "Canonical move sequence reaching this opening, in SAN.",
+    "depthOfTheory": "Hard filter. One of 'Shallow' | 'Moderate' | 'Deep'. One value per entry — an opening family spanning multiple depths is represented by multiple entries at different ECO codes, not a range on one entry.",
+    "timeControls": "Hard filter. Array of eligible values from ['Bullet/Blitz', 'Rapid', 'Classical/Correspondence'].",
+    "ratingBand": "Soft-scored. Integer 1-5, matching the user rating taxonomy: 1=Beginner, 2=Intermediate, 3=Advanced, 4=Expert, 5=Master. Compared via distance against the user's own band value.",
+    "style": {
+      "tacticalVsPositional": "Soft-scored. Integer -2..+2. -2 = strongly positional, +2 = strongly tactical.",
+      "riskTolerance": "Soft-scored. Integer -2..+2. -2 = very solid/safe, +2 = very sharp/gambit-friendly.",
+      "dynamicVsStatic": "Soft-scored. Integer -2..+2. -2 = strongly static (stable structures), +2 = strongly dynamic (imbalanced, initiative-chasing structures).",
+      "forgivingVsPunishing": "Soft-scored. Integer -2..+2. -2 = very forgiving (mistakes stay recoverable), +2 = very punishing (one inaccuracy can be immediately losing)."
+    },
+    "healthAtHigherLevels": "Soft-scored (drives the Longevity criterion). Integer -2..+2. -2 = known to be dubious/refuted against strong opposition, +2 = a mainstay even at elite level. Not a boolean — graded to avoid forcing an all-or-nothing 'is this bad' call.",
+    "estimatedHoursToCompetency": "Not filtered or scored directly. Divided by the user's daily study-time budget to personalize the rationale line (e.g. 'about 2 weeks at your pace')."
+  },
+  "openings": [
+    {
+      "eco": "A04",
+      "name": "Réti Opening",
+      "color": "White",
+      "pgn": "1.Nf3",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 2,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 15
+    },
+    {
+      "eco": "A80",
+      "name": "Dutch Defense",
+      "color": "Black",
+      "pgn": "1.d4 f5",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 3,
+      "style": { "tacticalVsPositional": 1, "riskTolerance": 1, "dynamicVsStatic": 2, "forgivingVsPunishing": 1 },
+      "healthAtHigherLevels": 0,
+      "estimatedHoursToCompetency": 25
+    },
+    {
+      "eco": "B01",
+      "name": "Scandinavian Defense",
+      "color": "Black",
+      "pgn": "1.e4 d5",
+      "depthOfTheory": "Shallow",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 1,
+      "style": { "tacticalVsPositional": 0, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": -2 },
+      "healthAtHigherLevels": -1,
+      "estimatedHoursToCompetency": 3
+    },
+    {
+      "eco": "B12",
+      "name": "Caro-Kann Defense",
+      "color": "Black",
+      "pgn": "1.e4 c6 2.d4 d5 3.Nc3",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 2,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -2, "dynamicVsStatic": -2, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 10
+    },
+    {
+      "eco": "B90",
+      "name": "Najdorf Sicilian",
+      "color": "Black",
+      "pgn": "1.e4 c5 2.Nf3 d6 3.d4 cxd4 4.Nxd4 Nf6 5.Nc3 a6",
+      "depthOfTheory": "Deep",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 4,
+      "style": { "tacticalVsPositional": 2, "riskTolerance": 2, "dynamicVsStatic": 2, "forgivingVsPunishing": 2 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 80
+    },
+    {
+      "eco": "C50",
+      "name": "Italian Game (Giuoco Piano)",
+      "color": "White",
+      "pgn": "1.e4 e5 2.Nf3 Nc6 3.Bc4",
+      "depthOfTheory": "Shallow",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 1,
+      "style": { "tacticalVsPositional": 1, "riskTolerance": 0, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 5
+    },
+    {
+      "eco": "C60",
+      "name": "Ruy Lopez (Spanish Opening)",
+      "color": "White",
+      "pgn": "1.e4 e5 2.Nf3 Nc6 3.Bb5",
+      "depthOfTheory": "Deep",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 4,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 45
+    },
+    {
+      "eco": "C00",
+      "name": "French Defense",
+      "color": "Black",
+      "pgn": "1.e4 e6",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 2,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": 0 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 15
+    },
+    {
+      "eco": "C44",
+      "name": "Scotch Game",
+      "color": "White",
+      "pgn": "1.e4 e5 2.Nf3 Nc6 3.d4",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 2,
+      "style": { "tacticalVsPositional": 1, "riskTolerance": 0, "dynamicVsStatic": 1, "forgivingVsPunishing": 0 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 8
+    },
+    {
+      "eco": "D06",
+      "name": "Queen's Gambit",
+      "color": "White",
+      "pgn": "1.d4 d5 2.c4",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 3,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 20
+    },
+    {
+      "eco": "D10",
+      "name": "Slav Defense",
+      "color": "Black",
+      "pgn": "1.d4 d5 2.c4 c6",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
+      "ratingBand": 2,
+      "style": { "tacticalVsPositional": -2, "riskTolerance": -2, "dynamicVsStatic": -2, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 15
+    },
+    {
+      "eco": "E00",
+      "name": "Catalan Opening",
+      "color": "White",
+      "pgn": "1.d4 Nf6 2.c4 e6 3.g3",
+      "depthOfTheory": "Deep",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 4,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 30
+    },
+    {
+      "eco": "E20",
+      "name": "Nimzo-Indian Defense",
+      "color": "Black",
+      "pgn": "1.d4 Nf6 2.c4 e6 3.Nc3 Bb4",
+      "depthOfTheory": "Moderate",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 3,
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
+      "healthAtHigherLevels": 2,
+      "estimatedHoursToCompetency": 20
+    },
+    {
+      "eco": "E60",
+      "name": "King's Indian Defense",
+      "color": "Black",
+      "pgn": "1.d4 Nf6 2.c4 g6",
+      "depthOfTheory": "Deep",
+      "timeControls": ["Rapid", "Classical/Correspondence"],
+      "ratingBand": 4,
+      "style": { "tacticalVsPositional": 2, "riskTolerance": 1, "dynamicVsStatic": 2, "forgivingVsPunishing": 1 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 50
+    }
+  ]
+}
