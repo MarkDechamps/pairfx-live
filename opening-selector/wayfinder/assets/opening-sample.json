@@ -157,21 +157,25 @@
       "depthOfTheory": "Deep",
       "timeControls": ["Rapid", "Classical/Correspondence"],
       "ratingBand": 4,
-      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 30
+      "estimatedHoursToCompetency": 30,
+      "overview": "The Catalan Opening (1.d4 Nf6 2.c4 e6 3.g3) combines Queen's Gambit-style central play with a kingside fianchetto of the king's bishop, aiming the long diagonal at Black's queenside while keeping White's own king safe. Against the Open Catalan (...dxc4) White accepts a long-term struggle to regain the pawn with lasting positional pressure, while the Closed Catalan gives Black a solid but somewhat cramped position; that blend of patient strategic squeezing with sharp, concrete theory around the c4 pawn is why it earns both positional and genuinely deep tags.",
+      "reputationNotes": "Far from a niche sideline, the Catalan is a current top-level mainstay: Kramnik, Anand, and Carlsen have all used it in world championship play, and Carlsen made it his primary weapon against 1...Nf6/e6 setups in the late 2010s, alongside regular use by Caruana and Dubov (per Wikipedia's Catalan Opening article) — it is as healthy at the very top today as it has ever been."
     },
     {
       "eco": "E20",
       "name": "Nimzo-Indian Defense",
       "color": "Black",
       "pgn": "1.d4 Nf6 2.c4 e6 3.Nc3 Bb4",
-      "depthOfTheory": "Moderate",
+      "depthOfTheory": "Deep",
       "timeControls": ["Rapid", "Classical/Correspondence"],
-      "ratingBand": 3,
+      "ratingBand": 4,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 20
+      "estimatedHoursToCompetency": 45,
+      "overview": "The Nimzo-Indian Defense (1.d4 Nf6 2.c4 e6 3.Nc3 Bb4), developed by Aron Nimzowitsch, pins White's knight on c3 to deter e4 and typically trades the bishop for that knight, handing White the bishop pair but saddling White with doubled c-pawns that Black targets with light-square pressure and eventual blockade. That core trade-off — durable structural damage to White for the loss of Black's own bishop pair — makes it one of the most strategically rich, thoroughly explored defenses to 1.d4, which is reflected in its depth and rating tags.",
+      "reputationNotes": "It is about as healthy as an opening gets: per Wikipedia's Nimzo-Indian Defence article it has been played by every world champion since Capablanca, and both main tries against it (4.e3 Rubinstein and 4.Qc2, revived heavily in the 1990s and now just as popular) remain fully respected at the top; its reputation is strong enough that many White players now reach for 3.Nf3 or 3.g3 specifically to sidestep it."
     },
     {
       "eco": "E60",
@@ -181,9 +185,11 @@
       "depthOfTheory": "Deep",
       "timeControls": ["Rapid", "Classical/Correspondence"],
       "ratingBand": 4,
-      "style": { "tacticalVsPositional": 2, "riskTolerance": 1, "dynamicVsStatic": 2, "forgivingVsPunishing": 1 },
-      "healthAtHigherLevels": 1,
-      "estimatedHoursToCompetency": 50
+      "style": { "tacticalVsPositional": 2, "riskTolerance": 2, "dynamicVsStatic": 2, "forgivingVsPunishing": 2 },
+      "healthAtHigherLevels": 0,
+      "estimatedHoursToCompetency": 50,
+      "overview": "The King's Indian Defense (1.d4 Nf6 2.c4 g6) is the quintessential hypermodern reply to 1.d4: Black lets White build a full pawn center and then attacks it with pieces and pawn breaks, most famously racing pawn storms on opposite wings after ...O-O, ...e5, or ...c5. Because the resulting middlegames are built around opposite-side attacking plans and committal pawn breaks rather than gradual maneuvering, the family earns some of the sharpest, most dynamic, and most consequential tags of any defense in the catalog — a single lost tempo in the race can decide the game outright.",
+      "reputationNotes": "The King's Indian has a genuinely up-and-down reputation at the very top: per Wikipedia's King's Indian Defence article it was the main weapon of Fischer, Kasparov, and Tal, but Kasparov largely abandoned it after repeated losses to Kramnik's calm handling in the early 2000s; it has since recovered in the hands of Nakamura, Radjabov, and Ding Liren (with Kramnik himself scoring a notable win with it in 2012), so it's best described as a fully viable but high-variance choice whose top-level fortunes swing with current theory rather than a settled, always-safe mainstay."
     }
   ]
 }
