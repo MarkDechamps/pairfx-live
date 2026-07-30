@@ -195,6 +195,25 @@ FAMILY_TAGS = {
 ALL_TIME_CONTROLS = ["Bullet/Blitz", "Rapid", "Classical/Correspondence"]
 NO_BLITZ = ["Rapid", "Classical/Correspondence"]
 
+# ---- per-family research-backed content -----------------------------------
+# Populated per wayfinder/tickets/0005-catalog-rescoring-schema-and-process.md:
+# `overview` is reasoned chess-domain analysis; `reputationNotes` is
+# research-backed (cited sources gathered per family before writing). Every
+# key in FAMILY_TAGS must eventually have an entry in both dicts below —
+# enforced in build_catalog(). Populated incrementally, one ECO-volume ticket
+# at a time (wayfinder/tickets/0006..0010-rescore-volume-*.md).
+FAMILY_OVERVIEW = {}
+FAMILY_REPUTATION = {}
+
+# ---- promoted sub-variations ----------------------------------------------
+# key: the *exact* row name as it appears in the lichess-org/chess-openings
+# dataset (e.g. "Sicilian Defense: Najdorf Variation"). value: a dict that can
+# override any subset of the derived per-row fields (style/rating/depth/
+# overview/reputationNotes/etc.) — used when a sub-variation is promoted to
+# its own investigation per ticket 0005's tiering rule, instead of inheriting
+# its family's values verbatim.
+NOTABLE_SUBVARIATIONS = {}
+
 
 def fetch_tsv_rows():
     rows = []
@@ -231,10 +250,14 @@ def ply_count(pgn):
     return sum(1 for t in tokens if not re.match(r"^\d+\.$", t))
 
 
-def derive_row_fields(root_tags, name, pgn):
+def derive_row_fields(root_tags, name, pgn, root, overview=None, reputation_notes=None):
     (color, tactical, risk, dynamic, forgiving, health, rating_base, depth_base) = root_tags
     v_depth = variation_depth(name)
     plies = ply_count(pgn)
+    if overview is None:
+        overview = FAMILY_OVERVIEW.get(root)
+    if reputation_notes is None:
+        reputation_notes = FAMILY_REPUTATION.get(root)
 
     # Depth tracks the actual move-sequence length first (a real proxy for how
     # much there is to memorize), nudged by the family's baseline reputation
@@ -271,20 +294,43 @@ def derive_row_fields(root_tags, name, pgn):
         },
         "healthAtHigherLevels": health,
         "estimatedHoursToCompetency": hours,
+        "overview": overview,
+        "reputationNotes": reputation_notes,
     }
 
 
-def build_catalog(rows):
-    missing_families = sorted({family_root(r["name"]) for r in rows} - set(FAMILY_TAGS))
+def build_catalog(rows, require_content=True):
+    families = sorted({family_root(r["name"]) for r in rows})
+    missing_families = sorted(set(families) - set(FAMILY_TAGS))
     if missing_families:
         raise SystemExit(
             "FAMILY_TAGS is missing entries for: " + ", ".join(missing_families)
         )
+    if require_content:
+        missing_overview = sorted(f for f in families if not FAMILY_OVERVIEW.get(f))
+        missing_reputation = sorted(f for f in families if not FAMILY_REPUTATION.get(f))
+        if missing_overview:
+            raise SystemExit(
+                "FAMILY_OVERVIEW is missing entries for: " + ", ".join(missing_overview)
+            )
+        if missing_reputation:
+            raise SystemExit(
+                "FAMILY_REPUTATION is missing entries for: " + ", ".join(missing_reputation)
+            )
 
     openings = []
     for row in rows:
         root = family_root(row["name"])
-        fields = derive_row_fields(FAMILY_TAGS[root], row["name"], row["pgn"])
+        override = NOTABLE_SUBVARIATIONS.get(row["name"], {})
+        fields = derive_row_fields(
+            FAMILY_TAGS[root],
+            row["name"],
+            row["pgn"],
+            root,
+            overview=override.get("overview"),
+            reputation_notes=override.get("reputationNotes"),
+        )
+        fields.update({k: v for k, v in override.items() if k not in ("overview", "reputationNotes")})
         openings.append({
             "eco": row["eco"],
             "name": row["name"],
@@ -296,6 +342,8 @@ def build_catalog(rows):
             "style": fields["style"],
             "healthAtHigherLevels": fields["healthAtHigherLevels"],
             "estimatedHoursToCompetency": fields["estimatedHoursToCompetency"],
+            "overview": fields["overview"],
+            "reputationNotes": fields["reputationNotes"],
         })
     return openings
 
