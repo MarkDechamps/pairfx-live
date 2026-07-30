@@ -3,7 +3,7 @@ id: 0006
 title: Re-research and re-score ECO volume A families
 labels: [wayfinder:task]
 status: open
-assignee: null
+assignee: claude
 map: ../map-opening-catalog-research.md
 blocked_by: [0005]
 ---
