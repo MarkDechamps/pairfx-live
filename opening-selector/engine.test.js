@@ -44,42 +44,87 @@ test("buildSteps: Advanced+ asks all 4 style axes", () => {
   );
 });
 
+test("buildSteps: firstMoves step comes right after color", () => {
+  var steps = E.buildSteps({ rating: 2 });
+  assert.equal(steps[0], "color");
+  assert.equal(steps[1], "firstMoves");
+});
+
 test("isAdvancedPlus: true from Advanced (3) up, false below", () => {
   assert.equal(E.isAdvancedPlus({ rating: 2 }), false);
   assert.equal(E.isAdvancedPlus({ rating: 3 }), true);
   assert.equal(E.isAdvancedPlus({ rating: 5 }), true);
 });
 
+// ---- first move --------------------------------------------------------------
+
+test("firstMoveOf: extracts the first move token from a pgn string", () => {
+  assert.equal(E.firstMoveOf("1. e4 e5 2. Nf3 Nc6"), "e4");
+  assert.equal(E.firstMoveOf("1. Nh3"), "Nh3");
+  assert.equal(E.firstMoveOf("1. Nf3 c5 2. c4 g6 3. d4 Bg7 4. e4 Qb6"), "Nf3");
+});
+
+test("firstMoveOptionsFor: White gets e4/d4/c4/Nf3 plus an 'other' bucket", () => {
+  var values = E.firstMoveOptionsFor("White").map((o) => o.value);
+  assert.deepEqual(values, ["e4", "d4", "c4", "Nf3", "other"]);
+});
+
+test("firstMoveOptionsFor: Black gets exactly the 4 first moves that occur, no 'other' bucket", () => {
+  var values = E.firstMoveOptionsFor("Black").map((o) => o.value);
+  assert.deepEqual(values, ["e4", "d4", "Nf3", "c4"]);
+});
+
+test("movesOf: tokenizes a pgn into move tokens, ignoring move numbers", () => {
+  assert.deepEqual(E.movesOf("1. d4 Nf6 2. c4 c5"), ["d4", "Nf6", "c4", "c5"]);
+  assert.deepEqual(E.movesOf("1.Nh3"), ["Nh3"]);
+  assert.deepEqual(E.movesOf("1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6"), ["d4", "Nf6", "c4", "c5", "d5", "b5", "cxb5", "a6"]);
+});
+
 // ---- hard filters -----------------------------------------------------------
 
 test("passesHardFilters: excludes wrong color", () => {
   var najdorf = sample.find((o) => o.eco === "B90");
-  assert.equal(E.passesHardFilters(najdorf, baseAnswers({ color: "White" }), "Rapid"), false);
+  assert.equal(E.passesHardFilters(najdorf, baseAnswers({ color: "White" }), "Rapid", "e4"), false);
 });
 
 test("passesHardFilters: excludes openings not eligible for the requested time control", () => {
   var najdorf = sample.find((o) => o.eco === "B90"); // Rapid/Classical only, no Blitz
   var answers = baseAnswers({ color: "Black", rating: 4, depth: "Deep" });
-  assert.equal(E.passesHardFilters(najdorf, answers, "Bullet/Blitz"), false);
-  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid"), true);
+  assert.equal(E.passesHardFilters(najdorf, answers, "Bullet/Blitz", "e4"), false);
+  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid", "e4"), true);
 });
 
 test("depth is not a hard filter below Advanced — Deep opening stays eligible for a Beginner", () => {
   var najdorf = sample.find((o) => o.eco === "B90"); // Deep theory
   var answers = baseAnswers({ color: "Black", rating: 1, depth: "Shallow" });
-  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid"), true);
+  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid", "e4"), true);
 });
 
 test("depth IS a hard filter at Advanced+ — Deep opening excluded when tolerance is Shallow", () => {
   var najdorf = sample.find((o) => o.eco === "B90");
   var answers = baseAnswers({ color: "Black", rating: 4, depth: "Shallow" });
-  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid"), false);
+  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid", "e4"), false);
 });
 
 test("depth filter at Advanced+ allows openings at or below the stated tolerance", () => {
   var caroKann = sample.find((o) => o.eco === "B12"); // Moderate theory
   var answers = baseAnswers({ color: "Black", rating: 5, depth: "Moderate" });
-  assert.equal(E.passesHardFilters(caroKann, answers, "Rapid"), true);
+  assert.equal(E.passesHardFilters(caroKann, answers, "Rapid", "e4"), true);
+});
+
+test("passesHardFilters: firstMove filter matches the opening's own first move", () => {
+  var najdorf = sample.find((o) => o.eco === "B90"); // Black, 1.e4
+  var answers = baseAnswers({ color: "Black", rating: 4, depth: "Deep" });
+  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid", "e4"), true);
+  assert.equal(E.passesHardFilters(najdorf, answers, "Rapid", "d4"), false);
+});
+
+test("passesHardFilters: firstMove 'other' matches White opening whose first move isn't e4/d4/c4/Nf3", () => {
+  var flank = { color: "White", pgn: "1. b4", timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 1 };
+  var mainline = { color: "White", pgn: "1. e4 e5", timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 1 };
+  var answers = baseAnswers({ color: "White", rating: 1 });
+  assert.equal(E.passesHardFilters(flank, answers, "Rapid", "other"), true);
+  assert.equal(E.passesHardFilters(mainline, answers, "Rapid", "other"), false);
 });
 
 // ---- scoring ----------------------------------------------------------------
@@ -121,7 +166,7 @@ test("formatEstimate: long competency times render in weeks", () => {
 
 test("shortlistFor: returns at most 3 entries, sorted best-first", () => {
   var answers = baseAnswers({ color: "Black", rating: 2, depth: "Moderate", timeControls: ["Rapid"] });
-  var ranked = E.shortlistFor("Rapid", answers, sample);
+  var ranked = E.shortlistFor("Rapid", "e4", answers, sample);
   assert.ok(ranked.length <= 3);
   for (var i = 1; i < ranked.length; i++) {
     assert.ok(ranked[i - 1].score >= ranked[i].score);
@@ -136,6 +181,113 @@ test("shortlistFor: empty when no candidate survives the hard filters", () => {
     { color: "White", timeControls: ["Rapid"], depthOfTheory: "Deep", ratingBand: 1, style: E.defaultStyle(), healthAtHigherLevels: 0 }
   ];
   var answers = baseAnswers({ color: "White", rating: 5, depth: "Shallow", timeControls: ["Bullet/Blitz"] });
-  var ranked = E.shortlistFor("Bullet/Blitz", answers, openings);
+  var ranked = E.shortlistFor("Bullet/Blitz", "e4", answers, openings);
   assert.equal(ranked.length, 0);
+});
+
+test("shortlistFor: dedupes same-name openings, keeping only the higher scorer", () => {
+  var answers = baseAnswers({ color: "White", rating: 2 });
+  var weaker = {
+    name: "Nimzo-Larsen Attack: Modern Variation", color: "White", pgn: "1. b3 e5",
+    timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 5,
+    style: E.defaultStyle(), healthAtHigherLevels: -2
+  };
+  var stronger = {
+    name: "Nimzo-Larsen Attack: Modern Variation", color: "White", pgn: "1. b3 d5",
+    timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 2
+  };
+  var ranked = E.shortlistFor("Rapid", "other", answers, [weaker, stronger]);
+  assert.equal(ranked.length, 1);
+  assert.equal(ranked[0].opening, stronger);
+});
+
+test("shortlistFor: collapses a pgn-prefix chain into one family, with deeper lines attached to the root", () => {
+  var answers = baseAnswers({ color: "Black", rating: 3 });
+  var root = {
+    name: "Benko Gambit", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var accepted = {
+    name: "Benko Gambit Accepted", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var dlugy = {
+    name: "Benko Gambit Accepted: Dlugy Variation", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. f3",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var unrelated = {
+    name: "Queen's Gambit Declined", color: "Black", pgn: "1. d4 d5 2. c4 e6",
+    timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 1,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+
+  var ranked = E.shortlistFor("Rapid", "d4", answers, [root, accepted, dlugy, unrelated]);
+  assert.equal(ranked.length, 2);
+  assert.equal(ranked[0].opening, root);
+  // accepted and dlugy tie in score (same ratingBand/health) — the shallower one wins.
+  assert.deepEqual(ranked[0].deeper.map((d) => d.opening), [accepted]);
+  assert.equal(ranked[1].opening, unrelated);
+  assert.deepEqual(ranked[1].deeper, []);
+});
+
+test("shortlistFor: within a family, the highest-scoring deeper member wins, even if it's the deepest", () => {
+  var answers = baseAnswers({ color: "Black", rating: 3, longevity: "sound" });
+  var root = {
+    name: "Benko Gambit", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 0
+  };
+  var accepted = {
+    name: "Benko Gambit Accepted", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 0
+  };
+  var dlugy = {
+    // Deepest in the chain, but scores strictly higher here because
+    // longevity is "sound" and this line has the best healthAtHigherLevels.
+    name: "Benko Gambit Accepted: Dlugy Variation", color: "Black", pgn: "1. d4 Nf6 2. c4 c5 3. d5 b5 4. cxb5 a6 5. f3",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 3,
+    style: E.defaultStyle(), healthAtHigherLevels: 2
+  };
+
+  var ranked = E.shortlistFor("Rapid", "d4", answers, [root, accepted, dlugy]);
+  assert.equal(ranked.length, 1);
+  assert.equal(ranked[0].opening, root);
+  assert.deepEqual(ranked[0].deeper.map((d) => d.opening), [dlugy]);
+});
+
+test("shortlistFor: a shared move-prefix alone isn't enough to group — the name must also be a prefix", () => {
+  var answers = baseAnswers({ color: "Black", rating: 2 });
+  var indianDefense = {
+    name: "Indian Defense", color: "Black", pgn: "1. d4 Nf6",
+    timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var nimzoIndian = {
+    // Shares the "d4 Nf6" move-prefix with Indian Defense, but is an unrelated
+    // named system, not a deeper line of "Indian Defense" itself.
+    name: "Nimzo-Indian Defense", color: "Black", pgn: "1. d4 Nf6 2. c4 e6 3. Nc3 Bb4",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var indianSubline = {
+    name: "Indian Defense: Anti-Grünfeld, Alekhine Variation", color: "Black",
+    pgn: "1. d4 Nf6 2. Nf3 g6 3. Nc3 d5",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+
+  var ranked = E.shortlistFor("Rapid", "d4", answers, [indianDefense, nimzoIndian, indianSubline]);
+
+  var indianFamily = ranked.find((r) => r.opening === indianDefense);
+  assert.ok(indianFamily, "Indian Defense should be its own family root");
+  assert.deepEqual(indianFamily.deeper.map((d) => d.opening), [indianSubline]);
+
+  var nimzoFamily = ranked.find((r) => r.opening === nimzoIndian);
+  assert.ok(nimzoFamily, "Nimzo-Indian Defense should be its own separate family, not nested under Indian Defense");
+  assert.deepEqual(nimzoFamily.deeper, []);
 });

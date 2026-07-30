@@ -128,6 +128,56 @@
     });
   }
 
+  function renderFirstMovesStep() {
+    var isBlack = state.answers.color === "Black";
+    var card = makeCard(
+      "First move(s)",
+      isBlack
+        ? "Which first move(s) are you preparing to face?"
+        : "Which first move(s) do you want to play?",
+      "Select one or more — you'll get a tailored shortlist per first move."
+    );
+    var list = document.createElement("div");
+    list.className = "options";
+    var selected = state.answers.firstMoves ? state.answers.firstMoves.slice() : [];
+
+    E.firstMoveOptionsFor(state.answers.color).forEach(function (opt) {
+      var tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = "tile" + (selected.indexOf(opt.value) !== -1 ? " is-selected" : "");
+      var label = document.createElement("span");
+      label.className = "tile-label";
+      label.textContent = opt.label;
+      tile.appendChild(label);
+      tile.addEventListener("click", function () {
+        var idx = selected.indexOf(opt.value);
+        if (idx === -1) selected.push(opt.value);
+        else selected.splice(idx, 1);
+        state.answers.firstMoves = selected;
+        render();
+      });
+      list.appendChild(tile);
+    });
+
+    card.appendChild(list);
+
+    var row = document.createElement("div");
+    row.className = "continue-row";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn";
+    btn.textContent = "Continue";
+    btn.disabled = selected.length === 0;
+    btn.addEventListener("click", function () {
+      state.stepIndex += 1;
+      render();
+    });
+    row.appendChild(btn);
+    card.appendChild(row);
+
+    appEl.appendChild(card);
+  }
+
   function renderRatingStep() {
     renderChoiceStep({
       eyebrow: "Rating",
@@ -257,6 +307,7 @@
 
   var STEP_RENDERERS = {
     color: renderColorStep,
+    firstMoves: renderFirstMovesStep,
     rating: renderRatingStep,
     studyTime: renderStudyTimeStep,
     depth: renderDepthStep,
@@ -272,31 +323,31 @@
     var h1 = document.createElement("h1");
     h1.textContent = "Your " + answers.color + " shortlist";
     var p = document.createElement("p");
-    p.textContent = "Top 3 per time control, ranked by fit.";
+    p.textContent = "Top 3 per time control and first move, ranked by fit.";
     head.appendChild(h1);
     head.appendChild(p);
     return head;
   }
 
-  function renderTimeControlSection(tc, answers, openings) {
+  function renderShortlistSection(tc, firstMoveOpt, answers, openings) {
     var section = document.createElement("section");
     section.className = "timecontrol-section";
 
     var title = document.createElement("h2");
     title.className = "timecontrol-title";
-    title.textContent = tc;
+    title.textContent = tc + " · " + firstMoveOpt.label;
     section.appendChild(title);
 
-    var ranked = E.shortlistFor(tc, answers, openings);
+    var ranked = E.shortlistFor(tc, firstMoveOpt.value, answers, openings);
 
     if (ranked.length === 0) {
       var note = document.createElement("p");
       note.className = "empty-note";
-      note.textContent = "No openings in the sample match every filter for this time control — try loosening Depth of knowledge tolerance or Rating.";
+      note.textContent = "No openings in the sample match every filter for this time control and first move — try loosening Depth of knowledge tolerance or Rating.";
       section.appendChild(note);
     } else {
       ranked.forEach(function (entry, i) {
-        section.appendChild(renderResultCard(entry.opening, i + 1, answers));
+        section.appendChild(renderResultCard(entry.opening, i + 1, answers, entry.deeper));
       });
     }
 
@@ -324,13 +375,45 @@
     var openings = state.data.openings;
 
     appEl.appendChild(renderResultsHead(answers));
+    var firstMoveOptions = E.firstMoveOptionsFor(answers.color).filter(function (opt) {
+      return answers.firstMoves.indexOf(opt.value) !== -1;
+    });
     answers.timeControls.forEach(function (tc) {
-      appEl.appendChild(renderTimeControlSection(tc, answers, openings));
+      firstMoveOptions.forEach(function (firstMoveOpt) {
+        appEl.appendChild(renderShortlistSection(tc, firstMoveOpt, answers, openings));
+      });
     });
     appEl.appendChild(renderRestartButton());
   }
 
-  function renderResultCard(opening, rank, answers) {
+  function renderDeeperList(deeper) {
+    var wrap = document.createElement("div");
+    wrap.className = "result-deeper";
+
+    var label = document.createElement("p");
+    label.className = "result-deeper-label";
+    label.textContent = "Go deeper:";
+    wrap.appendChild(label);
+
+    var list = document.createElement("ul");
+    deeper.forEach(function (entry) {
+      var item = document.createElement("li");
+      var name = document.createElement("span");
+      name.className = "result-deeper-name";
+      name.textContent = entry.opening.name;
+      item.appendChild(name);
+      var pgn = document.createElement("span");
+      pgn.className = "result-deeper-pgn";
+      pgn.textContent = entry.opening.pgn;
+      item.appendChild(pgn);
+      list.appendChild(item);
+    });
+    wrap.appendChild(list);
+
+    return wrap;
+  }
+
+  function renderResultCard(opening, rank, answers, deeper) {
     var card = document.createElement("div");
     card.className = "result-card";
 
@@ -360,6 +443,10 @@
     rationale.className = "result-rationale";
     rationale.textContent = E.buildRationale(opening, answers);
     body.appendChild(rationale);
+
+    if (deeper && deeper.length > 0) {
+      body.appendChild(renderDeeperList(deeper));
+    }
 
     card.appendChild(body);
     return card;
