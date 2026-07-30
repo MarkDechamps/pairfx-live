@@ -50,18 +50,18 @@ def test_family_root_strips_at_first_colon():
     assert boc.family_root("Amar Opening") == "Amar Opening"
 
 
-def test_every_current_family_has_an_overview(restore_family_dicts):
-    missing = sorted(f for f in boc.FAMILY_TAGS if not boc.FAMILY_OVERVIEW.get(f))
-    assert missing == [], (
-        f"{len(missing)} of {len(boc.FAMILY_TAGS)} families still lack an `overview` "
+@pytest.mark.parametrize("family", sorted(boc.FAMILY_TAGS))
+def test_family_has_an_overview(family):
+    assert boc.FAMILY_OVERVIEW.get(family), (
+        f"{family!r} still lacks an `overview` "
         "(see wayfinder/tickets/0006..0010-rescore-volume-*.md)"
     )
 
 
-def test_every_current_family_has_reputation_notes(restore_family_dicts):
-    missing = sorted(f for f in boc.FAMILY_TAGS if not boc.FAMILY_REPUTATION.get(f))
-    assert missing == [], (
-        f"{len(missing)} of {len(boc.FAMILY_TAGS)} families still lack `reputationNotes` "
+@pytest.mark.parametrize("family", sorted(boc.FAMILY_TAGS))
+def test_family_has_reputation_notes(family):
+    assert boc.FAMILY_REPUTATION.get(family), (
+        f"{family!r} still lacks `reputationNotes` "
         "(see wayfinder/tickets/0006..0010-rescore-volume-*.md)"
     )
 
