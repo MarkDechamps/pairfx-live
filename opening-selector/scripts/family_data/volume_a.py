@@ -29,31 +29,31 @@ FAMILY_TAGS = {
     "English Orangutan": ("White", 0, 1, 1, 0, -1, 2, 1),
     "Englund Gambit": ("Black", 2, 2, 1, 1, -2, 1, 1),
     "Englund Gambit Declined": ("Black", 0, 0, 0, -1, 0, 1, 1),
-    "Formation": ("White", 0, 0, 0, 0, 0, 2, 1),
-    "Global Opening": ("White", 0, 0, 0, 0, -1, 1, 1),
+    "Formation": ("White", -2, -2, -2, 1, -2, 1, 1),
+    "Global Opening": ("White", -1, -1, -1, -1, -2, 1, 1),
     "Grob Opening": ("White", 1, 2, 1, -2, -2, 1, 1),
-    "Grünfeld Defense": ("Black", 1, 1, 2, 0, 2, 4, 3),
-    "Horwitz Defense": ("Black", -1, -1, -1, -1, 0, 2, 1),
-    "Hungarian Opening": ("White", -1, -1, -1, -1, 0, 2, 1),
+    "Grünfeld Defense": ("Black", 1, 1, 2, -1, 2, 5, 3),
+    "Horwitz Defense": ("Black", -1, -1, -1, 0, 0, 1, 1),
+    "Hungarian Opening": ("White", -1, -1, 0, 1, 1, 2, 1),
     "Indian Defense": ("Black", 0, 0, 0, 0, 1, 2, 1),
     "Kangaroo Defense": ("Black", 0, 0, 0, 0, 0, 3, 2),
-    "King's Indian Attack": ("White", 0, 0, 1, -1, 1, 2, 2),
-    "King's Indian Attack, with Bf5": ("White", 0, 0, 1, -1, 1, 2, 2),
-    "King's Indian Attack, with e6": ("White", 0, 0, 1, -1, 1, 2, 2),
+    "King's Indian Attack": ("White", 0, 0, 0, 1, 0, 2, 2),
+    "King's Indian Attack, with Bf5": ("White", -1, 0, -1, 1, 0, 2, 2),
+    "King's Indian Attack, with e6": ("White", 0, 0, -1, 1, 0, 2, 2),
     "Kádas Opening": ("White", -1, 0, -1, 0, -2, 1, 1),
-    "Lasker Simul Special": ("White", 0, 0, 0, 0, -1, 1, 1),
-    "London System": ("White", -1, -1, -1, -1, 1, 1, 1),
-    "London System, with Bd3": ("White", -1, -1, -1, -1, 1, 1, 1),
-    "London System, with Be2": ("White", -1, -1, -1, -1, 1, 1, 1),
-    "Marienbad System": ("White", -1, -1, -1, -1, 0, 2, 2),
-    "Mexican Defense": ("Black", 0, 1, 0, -1, -2, 1, 1),
-    "Mieses Opening": ("White", -1, -1, -1, 0, -1, 1, 1),
+    "Lasker Simul Special": ("Black", 0, 1, 0, -1, -2, 1, 1),
+    "London System": ("White", -1, -1, -1, 1, 0, 1, 1),
+    "London System, with Bd3": ("White", -1, -1, -1, 1, 0, 1, 1),
+    "London System, with Be2": ("White", -1, -1, -1, 1, 0, 1, 1),
+    "Marienbad System": ("Black", 0, 0, 0, 0, 0, 3, 2),
+    "Mexican Defense": ("Black", 0, 0, 0, 0, -1, 2, 1),
+    "Mieses Opening": ("White", -1, -1, -1, 1, 0, 1, 1),
     "Mikenas Defense": ("Black", 0, 0, 0, 0, -1, 2, 1),
     "Modern Defense": ("Black", 1, 1, 1, 0, 0, 3, 2),
     "Montevideo Defense": ("Black", 0, 0, 0, -1, -2, 1, 1),
-    "Nimzo-Larsen Attack": ("White", -1, -1, -1, -1, 1, 2, 2),
-    "Old Indian Defense": ("Black", -1, -1, -1, -1, 0, 2, 2),
-    "Paleface Attack": ("White", 0, 0, 0, 0, -1, 1, 1),
+    "Nimzo-Larsen Attack": ("White", -1, 0, 0, 1, 1, 2, 2),
+    "Old Indian Defense": ("Black", -1, -1, -1, 1, 0, 2, 2),
+    "Paleface Attack": ("White", 0, 0, 0, -1, -1, 1, 1),
     "Polish Defense": ("Black", 0, 1, 1, -1, -2, 2, 1),
     "Polish Opening": ("White", 0, 1, 1, -1, -1, 2, 1),
     "Polish Opening, with d5": ("White", 0, 1, 1, -1, -1, 2, 1),
@@ -329,6 +329,254 @@ FAMILY_OVERVIEW = {
         "comfortably or even claim a pleasant game rather than exploiting "
         "the extra pawn White was offered."
     ),
+    "Formation": (
+        "The Formation label covers White's most extreme 'wait-and-see' "
+        "setups, in which every pawn is advanced one square in some order "
+        "(a3, b3, c3, d3, e3, f3, g3, as in the Hippopotamus Attack) or a "
+        "slow fianchetto is added on top (the Shy Attack), before White "
+        "commits to any real plan. It stakes no claim on the center at "
+        "all and develops no piece for many moves, functioning purely as "
+        "a maximally flexible, reactive system that lets Black declare "
+        "intentions first."
+    ),
+    "Global Opening": (
+        "The Global Opening spends White's first two moves on "
+        "unconnected flank pawn pushes, 1.h3 e5 2.a3, developing no piece "
+        "and contesting no central square. The name reflects the sheer "
+        "flexibility this leaves White — the game can transpose into "
+        "almost any other system depending on what follows — but that "
+        "flexibility comes at the cost of two wasted tempi while Black "
+        "develops freely and naturally."
+    ),
+    "Grob Opening": (
+        "The Grob Opening, 1.g4, stakes an immediate and highly "
+        "provocative claim on the long light-squared diagonal while "
+        "permanently weakening White's own kingside, particularly the f4 "
+        "and h4 squares and the safety of a future king position. Black "
+        "can strike back immediately in the center with 1...d5, when "
+        "White's most testing try is 2.Bg2 followed by meeting a further "
+        "...Bxg4 grab or pressing on the long diagonal; the whole opening "
+        "depends far more on Black's unfamiliarity with the resulting "
+        "tactics than on any objective soundness."
+    ),
+    "Grünfeld Defense": (
+        "The Grünfeld Defense arises from 1.d4 Nf6 2.c4 g6 3.Nc3 d5, a "
+        "thoroughly hypermodern try in which Black allows White to build "
+        "a big classical pawn center only to spend the rest of the game "
+        "attacking it with pieces, most concretely in the heavily "
+        "analyzed Exchange Variation. It is one of the deepest and most "
+        "theoretically demanding replies to 1.d4, blending dynamic piece "
+        "play and long-term pressure on White's center with an enormous "
+        "body of precise, forcing theory that must be known move by move "
+        "rather than merely understood."
+    ),
+    "Horwitz Defense": (
+        "The Horwitz Defense is the modest, non-committal 1.d4 e6, "
+        "freeing the dark-squared bishop's diagonal while declining to "
+        "reveal whether Black intends a French-style ...d5, a Dutch "
+        "setup with ...f5, or an Indian fianchetto with ...Nf6 and ...g6. "
+        "Named for German master Bernhard Horwitz, who played it in the "
+        "1840s-50s, it carries essentially no independent theoretical "
+        "content of its own and functions purely as a flexible waiting "
+        "move that lets other openings absorb it by transposition."
+    ),
+    "Hungarian Opening": (
+        "The Hungarian Opening, also called Benko's Opening, is the "
+        "flexible fianchetto try 1.g3, preparing Bg2 without yet "
+        "committing to a central pawn structure. It is a fully sound, "
+        "hypermodern flank move that most often transposes into the Réti "
+        "Opening, the English Opening, the Catalan, or a King's Indian "
+        "Attack depending on how the game continues, giving White maximum "
+        "transpositional freedom at the cost of any independent "
+        "theoretical bite of its own."
+    ),
+    "Indian Defense": (
+        "Indian Defense is the umbrella label for Black's reply 1.d4 Nf6 "
+        "before any further commitment — originally coined for queen's-"
+        "pawn defenses built around fianchettoing one or both bishops, "
+        "and now used more broadly for any Black system after 1...Nf6 "
+        "that doesn't transpose into the Queen's Gambit complex. As a "
+        "bare first move it has essentially no character of its own; its "
+        "entire content depends on which specific Indian system (King's "
+        "Indian, Nimzo-Indian, Queen's Indian, Grünfeld, and so on) Black "
+        "chooses to steer toward."
+    ),
+    "Kangaroo Defense": (
+        "The Kangaroo Defense (better known as the Keres Defence) meets "
+        "1.d4 e6 2.c4 with the provocative check 2...Bb4+, forcing White "
+        "to commit early — 3.Bd2, 3.Nc3, or 3.Nd2 are the main tries — "
+        "before Black decides which mainstream complex to transpose into: "
+        "the Nimzo-Indian, Bogo-Indian, Dutch Defense, Queen's Gambit "
+        "Declined, or English Defense are all reachable depending on "
+        "White's reply. It is named for Estonian grandmaster Paul Keres, "
+        "though the underlying idea dates back to the 1840s."
+    ),
+    "King's Indian Attack": (
+        "The King's Indian Attack is a White system, not a fixed opening, "
+        "that adopts the same e4/d3/Nd2/Nf3/g3/Bg2 setup Black uses in "
+        "the King's Indian Defense — but with an extra tempo, most often "
+        "reached against the French Defense or a Sicilian with an early "
+        "...e6. White's stock plan is a slow buildup followed by the "
+        "central e4-e5 push, cramping Black and preparing a kingside "
+        "attack built with pieces (Nf1, Bf4, Qe2, h4, and eventually g4) "
+        "rather than the pawn storm typical of similar French structures."
+    ),
+    "King's Indian Attack, with Bf5": (
+        "When the opponent meets the King's Indian Attack setup by "
+        "developing the queen's bishop actively to f5 rather than boxing "
+        "it in behind the pawn chain, the resulting structure resembles a "
+        "reversed London System — calmer and more balanced than the "
+        "typical King's Indian Attack, since Black's early piece activity "
+        "blunts much of the bite White usually gets from the e4-e5 "
+        "central bind."
+    ),
+    "King's Indian Attack, with e6": (
+        "The King's Indian Attack's classic and most frequently reached "
+        "form arises against a Black setup built on an early ...e6, "
+        "typically via the French Defense move order 1.e4 e6 2.d3 d5 "
+        "3.Nd2 or an analogous Sicilian move order. This is the version "
+        "of the system where White's central e4-e5 push bites hardest, "
+        "since Black's own bishop is left boxed in behind the e6-pawn, "
+        "giving White the clearest run at the standard Nf1-h2/g4, Bf4, "
+        "Qe2, h4-h5 kingside attacking plan."
+    ),
+    "Kádas Opening": (
+        "The Kádas Opening, 1.h4 (also known as the Desprez Opening), "
+        "spends White's first move on a rook's-pawn push that develops "
+        "no piece, fights for no central square, and creates no "
+        "immediate threat. Like its close cousins among the rarest of "
+        "White's twenty legal first moves, it has essentially no "
+        "independent strategic content beyond mildly discouraging an "
+        "eventual ...g5 or ...Bg4 idea."
+    ),
+    "Lasker Simul Special": (
+        "The Lasker Simul Special arises after the perfectly sound 1.g3 "
+        "is met with the provocative 1...h5, Black's attempt to disrupt "
+        "White's fianchetto plans by grabbing kingside space and "
+        "discouraging a quiet Bg2 setup rather than replying with a "
+        "normal developing move. It is named for the second world "
+        "champion Emanuel Lasker, who is said to have used the idea in "
+        "simultaneous exhibitions, and it trades soundness for shock "
+        "value in a way that generally weakens Black's own kingside more "
+        "than it inconveniences White."
+    ),
+    "London System": (
+        "The London System is a White setup, not a fixed move order, "
+        "built around an early Bf4 (usually with Nf3), a solid pawn "
+        "triangle of d4/e3/c3, a knight on d2, and — depending on "
+        "Black's own setup — the light-squared bishop routed to d3 or "
+        "e2. It can be played against almost any Black reply and demands "
+        "little independent theory, aiming for a comfortable, "
+        "well-understood middlegame with a knight eyeing e5 rather than "
+        "a forcing fight for an early advantage."
+    ),
+    "London System, with Bd3": (
+        "In the London System's main branch, White develops the king's "
+        "bishop to d3, its most natural and active post against Black's "
+        "typical Queen's-Gambit-Declined-style or Queen's-Indian-style "
+        "setups, eyeing the h7-square and supporting a later Ne5. This is "
+        "the standard placement whenever Black hasn't fianchettoed the "
+        "king's bishop to g7, since a bishop on d3 would otherwise have a "
+        "clear diagonal to work with."
+    ),
+    "London System, with Be2": (
+        "Against a King's Indian-style Black setup with an early "
+        "kingside fianchetto, White typically reroutes the king's bishop "
+        "to the quieter e2 square instead of d3, since a bishop on d3 "
+        "would have little scope once Black's own dark-squared bishop "
+        "and pawn chain block the long diagonal it would otherwise want "
+        "to use. It is a small, practical adjustment rather than a "
+        "different strategic system, keeping the same solid pawn "
+        "structure and knight-to-e5 plans as the rest of the London "
+        "complex."
+    ),
+    "Marienbad System": (
+        "The Marienbad System is a Queen's Indian branch reached by 1.d4 "
+        "Nf6 2.Nf3 b6 3.g3 Bb7 4.Bg2 c5, where Black follows the standard "
+        "queenside fianchetto with an immediate central challenge rather "
+        "than the calmer ...e6 and ...Be7 setups. The critical Berg "
+        "Variation, 5.c4 cxd4 6.Qxd4, drags White's queen out early in "
+        "exchange for a small structural concession, leading to roughly "
+        "balanced, well-tested positions."
+    ),
+    "Mexican Defense": (
+        "The Mexican Defense (better known today as the Black Knights' "
+        "Tango) meets 1.d4 Nf6 2.c4 with the flexible 2...Nc6, keeping "
+        "Black's central pawn structure entirely undetermined while "
+        "preparing either an immediate 3...e5 or a slower ...e6 and "
+        "...d5. It is highly transpositional, able to reach King's "
+        "Indian, Nimzo-Indian, Bogo-Indian, Chigorin, Ragozin, and "
+        "Catalan structures depending on how both sides proceed, giving "
+        "it a sounder positional basis than most offbeat tries."
+    ),
+    "Mieses Opening": (
+        "The Mieses Opening, 1.d3, releases White's dark-squared bishop "
+        "and stakes a modest claim on the center without committing to "
+        "the fuller space of 1.d4. Named for German-British grandmaster "
+        "Jacques Mieses, it is a flexible, transposition-friendly try "
+        "that can easily convert into a King's Indian Attack setup while "
+        "leaving Black many equally reasonable ways to respond."
+    ),
+    "Mikenas Defense": (
+        "The Mikenas Defense (also known as the Bogoljubov–Mikenas or "
+        "Queen's Knight Defense) answers 1.d4 with the hypermodern "
+        "1...Nc6, developing a piece before committing any pawn and "
+        "leaving Black's central intentions completely open. It was "
+        "explored early on by pioneering hypermodern players including "
+        "Aron Nimzowitsch and Efim Bogoljubov, who used the flexible "
+        "knight development to delay revealing whether Black would meet "
+        "White's center with ...e5, ...d5, or a fianchetto setup."
+    ),
+    "Modern Defense": (
+        "The Modern Defense (also called the Robatsch Defense after Karl "
+        "Robatsch) lets White build the classical big pawn center with a "
+        "quick ...g6 and a kingside fianchetto, planning to attack and "
+        "undermine that center with pieces rather than occupy it "
+        "directly — the same hypermodern idea behind the closely related "
+        "Pirc Defense. Its independent character comes from delaying "
+        "...Nf6, which keeps Black's options for meeting White's center "
+        "maximally flexible at the cost of some early space."
+    ),
+    "Montevideo Defense": (
+        "The Montevideo Defense answers 1.d4 Nc6 2.d5 by voluntarily "
+        "retreating the knight all the way back to b8, undoing Black's "
+        "own first move and handing White a free tempo and a substantial "
+        "space advantage for nothing in return. It shares its "
+        "ultra-passive, tempo-wasting philosophy with the even more "
+        "extreme Zaire Defense, treating the whole opening as closer to "
+        "a joke or a deliberate handicap than a serious attempt at a "
+        "playable position."
+    ),
+    "Nimzo-Larsen Attack": (
+        "The Nimzo-Larsen Attack (or Nimzowitsch–Larsen Attack) develops "
+        "the queen's bishop to b2 with 1.b3, controlling the long "
+        "diagonal and the center from a distance in classic hypermodern "
+        "style rather than occupying it with pawns. It is highly "
+        "flexible and transposition-rich, able to reach reversed Dutch, "
+        "English, or Old Indian-style structures depending on both "
+        "players' choices, and rewards a feel for plans over memorized "
+        "theory."
+    ),
+    "Old Indian Defense": (
+        "The Old Indian Defense develops along King's Indian lines but "
+        "keeps the king's bishop on the modest e7 square rather than "
+        "fianchettoing it to g7, giving Black a solid, flexible setup "
+        "that is less ambitious than its more famous cousin. Pioneered "
+        "late in his career by Mikhail Chigorin, it is a sound but "
+        "quieter choice, and some King's Indian players use it "
+        "specifically to sidestep White's sharpest anti-King's Indian "
+        "tries such as the Sämisch and Averbakh Variations."
+    ),
+    "Paleface Attack": (
+        "The Paleface Attack meets 1...Nf6 with 2.f3, preparing a broad "
+        "e4 center supported by the f-pawn — but at the cost of blocking "
+        "White's own king's knight from its natural f3 square and "
+        "permanently loosening the e1-h4 diagonal in front of the king. "
+        "It can transpose into a Blackmar-Diemer Gambit-style structure "
+        "or the more modest Gedult Attack, but has little independent "
+        "character of its own beyond the structural compromise White "
+        "accepts on move two."
+    ),
 }
 
 FAMILY_REPUTATION = {
@@ -497,6 +745,185 @@ FAMILY_REPUTATION = {
         "correct 2.dxe5, making this branch more a product of imprecise "
         "play than a real weapon."
     ),
+    "Formation": (
+        "It has no competitive pedigree whatsoever and is essentially "
+        "unseen outside of anti-theoretical repertoires or online blitz "
+        "experiments, useful at most as a way to avoid all prepared "
+        "theory rather than as a serious try for an advantage."
+    ),
+    "Global Opening": (
+        "It carries no competitive pedigree and is rarely seen even "
+        "among devotees of offbeat openings, since Black's simplest, "
+        "most natural response already secures a comfortable edge in "
+        "development."
+    ),
+    "Grob Opening": (
+        "Modern engines evaluate 1.g4 as clearly better for Black and IM "
+        "John Watson has called it a rival to 1.h4 for White's worst "
+        "possible first move, yet it wins at least as often as it loses "
+        "in club and online practice; IM Michael Basman was its leading "
+        "advocate, memorably beating GM John Nunn with it in 1978, and "
+        "even Magnus Carlsen has only managed to draw against "
+        "well-prepared opposition in one of its sharper lines in blitz."
+    ),
+    "Grünfeld Defense": (
+        "First played by Moheschunder Bannerjee in 1855 but popularized "
+        "after Ernst Grünfeld's 1922 win over Alekhine, it has been a "
+        "mainstay of world-championship chess for Kasparov, Kramnik, "
+        "Carlsen, and Anand alike; Kasparov himself largely abandoned it "
+        "after Kramnik's novelty in their 2000 match, illustrating how "
+        "quickly its cutting-edge theory can shift and how heavily home "
+        "preparation matters at the top."
+    ),
+    "Horwitz Defense": (
+        "It has no real practical standing as an independent opening, "
+        "but is a legitimate tool for players who want to keep options "
+        "open — modern GM Simon Williams uses 1.d4 e6 specifically as a "
+        "way to reach Dutch Defense structures while sidestepping "
+        "White's aggressive Staunton Gambit."
+    ),
+    "Hungarian Opening": (
+        "Because it so readily becomes one of several genuinely "
+        "mainstream systems, it carries a solid, unobjectionable "
+        "reputation rather than a dubious one — it is a perfectly "
+        "legitimate try at any level, just rarely treated as a "
+        "destination in its own right rather than a flexible first step."
+    ),
+    "Indian Defense": (
+        "Every one of the true 'Indian' systems it can lead to is fully "
+        "sound and has been played by every world champion since "
+        "Capablanca, so the bare move itself carries no negative "
+        "reputation — it is simply the flexible on-ramp to some of the "
+        "most respected defenses in chess."
+    ),
+    "Kangaroo Defense": (
+        "It carries no independent reputation as a fighting try for an "
+        "advantage, but is a perfectly sound and flexible move-order "
+        "device for players who want to reach one of several respected "
+        "Indian-style defenses while forcing White to reveal information "
+        "first."
+    ),
+    "King's Indian Attack": (
+        "It was a mainstay for Bobby Fischer, Mikhail Botvinnik, and "
+        "Tigran Petrosian in the mid-20th century and remains genuinely "
+        "popular at club level for its repeatable, plan-driven "
+        "middlegames, though it has become relatively uncommon among "
+        "today's elite, with Egyptian GM Bassem Amin its most notable "
+        "current practitioner."
+    ),
+    "King's Indian Attack, with Bf5": (
+        "It is one of the more solid, drawish ways to meet the King's "
+        "Indian Attack in practice, favored by opponents who would "
+        "rather neutralize White's attacking chances early than accept a "
+        "cramped position and hope to hold under pressure."
+    ),
+    "King's Indian Attack, with e6": (
+        "This is the version of the King's Indian Attack most associated "
+        "with its historical successes, including several of Bobby "
+        "Fischer's best-known wins, and remains the main line club "
+        "players reach for when adopting the system as a universal "
+        "weapon against 1...e6 setups."
+    ),
+    "Kádas Opening": (
+        "It is one of the least-played and least-regarded of all legal "
+        "first moves, valued at most as a curiosity or an "
+        "anti-theoretical surprise try rather than as a serious attempt "
+        "to secure any advantage."
+    ),
+    "Lasker Simul Special": (
+        "It is very rarely seen — occurring in well under one in a "
+        "thousand recorded games — and is not considered a serious try "
+        "for Black at any level, functioning purely as an "
+        "anti-theoretical curiosity rather than a practical weapon."
+    ),
+    "London System": (
+        "Long dismissed as leading to repetitive, low-ambition games, it "
+        "has become hugely popular at club level in the 21st century for "
+        "its clear plans and low prep burden, and it is not without "
+        "elite pedigree either — Ding Liren used it to beat Ian "
+        "Nepomniachtchi in game six of the 2023 World Chess Championship."
+    ),
+    "London System, with Bd3": (
+        "It shares the London System's overall reputation — solid, "
+        "low-maintenance, and increasingly common even in elite "
+        "practice — with this Bd3 placement being the default rather "
+        "than an exception."
+    ),
+    "London System, with Be2": (
+        "It shares the London System's overall reputation for being "
+        "solid and low-theory, with this bishop placement simply "
+        "reflecting sound judgment against a fianchetto setup rather "
+        "than any change in the opening's practical standing."
+    ),
+    "Marienbad System": (
+        "Statistically it scores almost exactly even for both sides, and "
+        "while it is not among the most fashionable Queen's Indian "
+        "branches at the very top today, it is a fully sound, "
+        "well-analyzed try named for a set of important games from the "
+        "1925 Marienbad tournament."
+    ),
+    "Mexican Defense": (
+        "Named for Mexican grandmaster Carlos Torre, who used it to "
+        "beat U.S. champion Frank Marshall in just seven moves in the "
+        "1920s, it was revived and rebranded by IM Georgi Orlov in the "
+        "1990s and has since been played by grandmasters including "
+        "Victor Bologan, Joel Benjamin, and Alex Yermolinsky — the "
+        "latter even venturing it against Garry Kasparov — though it "
+        "remains an uncommon, specialist's choice rather than a "
+        "mainstream weapon."
+    ),
+    "Mieses Opening": (
+        "It ranks only tenth in popularity among White's twenty legal "
+        "first moves, but it is far from a bad try — Garry Kasparov "
+        "chose it specifically against Deep Blue in their 1997 rematch "
+        "to steer the game away from the computer's opening book, and "
+        "David Levy successfully used it against the computer Cray "
+        "Blitz in 1984."
+    ),
+    "Mikenas Defense": (
+        "It has never become popular and is generally judged to leave "
+        "Black in a slightly inferior position compared to more "
+        "mainstream 1.d4 replies, but it carries no real refutation "
+        "either — it remains a legitimate way to sidestep heavy theory "
+        "and steer the game into unfamiliar, messy territory."
+    ),
+    "Modern Defense": (
+        "Long considered somewhat passive for serious grandmaster play "
+        "compared to sharper hypermodern tries, it has nonetheless been "
+        "used successfully by strong practitioners including Alexei "
+        "Shirov, Mikhail Gurevich, and Jon Speelman, and even world "
+        "champions Bobby Fischer and Anatoly Karpov have reached for it "
+        "on occasion, though never as a primary weapon."
+    ),
+    "Montevideo Defense": (
+        "It has no competitive standing whatsoever and is essentially "
+        "never seen outside of novelty or handicap games, since Black's "
+        "voluntary loss of tempo gives an already-strong first-move "
+        "advantage a considerable further boost."
+    ),
+    "Nimzo-Larsen Attack": (
+        "Popularized by Aron Nimzowitsch in the 1920s-30s and carried to "
+        "its greatest prominence by Bent Larsen between 1968 and 1972 "
+        "(though his loss to Boris Spassky with it in 1970 dented its "
+        "reputation somewhat), it remains a fully sound practical weapon "
+        "today — Bobby Fischer used it repeatedly in 1970, and modern "
+        "elite players including Magnus Carlsen, Hikaru Nakamura, and "
+        "Ian Nepomniachtchi still reach for it as a genuine surprise try "
+        "in top-level blitz."
+    ),
+    "Old Indian Defense": (
+        "It is considered fully sound and has never gone out of fashion "
+        "at club level, but developing the bishop to e7 rather than g7 "
+        "is simply less active, so it has never come close to matching "
+        "the King's Indian Defense's popularity or its record at the "
+        "very highest levels."
+    ),
+    "Paleface Attack": (
+        "It is not highly regarded and rarely appears in serious "
+        "competition — Black gets comfortable equality with the simple, "
+        "natural 2...d5 — though it occasionally surfaces as an offbeat "
+        "surprise try in faster time controls."
+    ),
 }
 
 NOTABLE_SUBVARIATIONS = {
@@ -593,6 +1020,32 @@ NOTABLE_SUBVARIATIONS = {
             "riskTolerance": 2,
             "dynamicVsStatic": 2,
             "forgivingVsPunishing": 1,
+        },
+    },
+    "Grünfeld Defense: Exchange Variation": {
+        "overview": (
+            "The Exchange Variation is the most direct and most heavily "
+            "analyzed branch of the whole Grünfeld complex: White "
+            "captures immediately on d5 and, after 5.e4 Nxc3 6.bxc3, "
+            "builds the biggest possible classical pawn center, daring "
+            "Black to prove that hypermodern pressure on it is worth "
+            "more than the space it concedes. It is the sharpest and "
+            "most theory-dense of the family's many branches, with "
+            "entire independent sub-repertoires (the Classical, Seville, "
+            "and Spassky Variations among them) built around exactly how "
+            "and when Black strikes back at White's center."
+        ),
+        "reputationNotes": (
+            "It remains the main testing ground of the entire Grünfeld "
+            "and has been played in numerous world-championship and "
+            "Candidates games; both sides need precise, current "
+            "theoretical knowledge rather than general understanding, "
+            "since a single inaccuracy in the sharpest lines can be "
+            "immediately fatal."
+        ),
+        "style": {
+            "tacticalVsPositional": 2,
+            "forgivingVsPunishing": -2,
         },
     },
 }
