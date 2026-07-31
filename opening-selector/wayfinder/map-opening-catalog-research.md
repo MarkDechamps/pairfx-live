@@ -57,6 +57,12 @@ data, not a spec about updating it.
   sub-variations promoted (Bogo-Indian's Monticelli Trap, Catalan's Hungarian
   Gambit, and the King's Indian's Sämisch/Four Pawns Attack/Fianchetto
   Variations).
+- [Re-research and re-score ECO volume C families](tickets/0008-rescore-volume-c.md) —
+  all 30 families done (tags re-derived, overview/reputationNotes authored);
+  no promotions this batch. Doubled as a model pilot: Haiku 4.5 handled the
+  overview/reputationNotes half, output was structurally correct but
+  noticeably more generic than Sonnet's — sticking with the default model for
+  volumes A and B.
 
 ## Not yet specified
 
