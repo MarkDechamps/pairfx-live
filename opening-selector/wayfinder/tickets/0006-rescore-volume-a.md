@@ -50,21 +50,72 @@ family). Synced the `Dutch Defense` entry in `wayfinder/assets/opening-sample.js
 Verified via `pytest scripts/test_build_opening_catalog.py` — all 50
 tests for these 25 families pass.
 
-**Remaining (50 families, batches 2-3, not yet started):** Formation, Global
-Opening, Grob Opening, Grünfeld Defense, Horwitz Defense, Hungarian Opening,
-Indian Defense, Kangaroo Defense, King's Indian Attack, King's Indian Attack
-(with Bf5), King's Indian Attack (with e6), Kádas Opening, Lasker Simul
-Special, London System (plus "with Bd3" / "with Be2"), Marienbad System,
-Mexican Defense, Mieses Opening, Mikenas Defense, Modern Defense, Montevideo
-Defense, Nimzo-Larsen Attack, Old Indian Defense, Paleface Attack, Polish
-Defense, Polish Opening (plus "with d5"), Pseudo Queen's Indian Defense,
-Pterodactyl Defense, Queen's Indian Accelerated, Queen's Pawn Game, Rat
-Defense, Robatsch Defense, Réti Opening, Saragossa Opening, Slav Indian,
-Sodium Attack, Torre Attack, Trompowsky Attack, Valencia Opening, Van Geet
-Opening, Van't Kruijs Opening, Vulture Defense, Wade Defense, Ware Opening,
+**Batch 2 of 3 (25 families) — done:** Formation, Global Opening, Grob
+Opening, Grünfeld Defense, Horwitz Defense, Hungarian Opening, Indian
+Defense, Kangaroo Defense, King's Indian Attack, King's Indian Attack (with
+Bf5), King's Indian Attack (with e6), Kádas Opening, Lasker Simul Special,
+London System, London System (with Bd3), London System (with Be2),
+Marienbad System, Mexican Defense, Mieses Opening, Mikenas Defense, Modern
+Defense, Montevideo Defense, Nimzo-Larsen Attack, Old Indian Defense,
+Paleface Attack.
+
+Re-derived `FAMILY_TAGS` values and authored `FAMILY_OVERVIEW`/
+`FAMILY_REPUTATION` for all 25 in `scripts/family_data/volume_a.py`.
+Research-backed via `scripts/research_cache/*.md` where the cache hit the
+right article (King's Indian Attack and its two sub-families, Mieses
+Opening, Old Indian Defense) or turned out to genuinely describe the family
+despite being flagged **LOW-CONFIDENCE MATCH** (Kangaroo Defense — the cache
+hit the Keres Defence article, which is the same opening under its other
+name; Mexican Defense — the cache hit the Black Knights' Tango article,
+likewise the same opening under its modern name). All other flagged
+low-confidence families, plus a few more that weren't flagged but whose
+cache content turned out to be off-topic on inspection (Grünfeld Defense,
+Nimzo-Larsen Attack), were re-researched directly via WebSearch/WebFetch —
+including pulling exact PGN move orders straight from lichess-org's
+`a.tsv`/`d.tsv` source data to confirm several families whose names alone
+are ambiguous (Mikenas Defense, Montevideo Defense, Marienbad System,
+Paleface Attack, Kádas Opening, Lasker Simul Special, Global Opening,
+Hungarian Opening, Indian Defense).
+
+Also fixed a pre-existing data bug while re-deriving tags: Marienbad System
+(a Queen's Indian branch defined entirely by Black's moves, 1.d4 Nf6 2.Nf3
+b6 3.g3 Bb7 4.Bg2 c5) was mis-tagged `color: "White"`; corrected to
+`"Black"`. Reassigned `Lasker Simul Special`'s color from White to Black too,
+since the position (1.g3 h5) is a sound White try defined by Black's
+provocative, family-naming ...h5 reply — consistent with how other
+Black-defined replies (e.g. Kangaroo Defense) are tagged elsewhere in this
+file.
+
+Promoted one sub-variation to `NOTABLE_SUBVARIATIONS`: Grünfeld Defense's
+Exchange Variation (1.d4 Nf6 2.c4 g6 3.Nc3 d5 4.cxd5 Nxd5, ECO D85) — the
+family's sharpest, most heavily analyzed main line, genuinely more tactical
+and punishing than the Grünfeld's other branches (per ticket 0005's
+discussion, Grünfeld Defense was specifically called out as worth a real
+look). King's Indian Attack was also looked at per that same callout, but
+its two genuinely-divergent branches (the calmer "reversed London" with
+...Bf5, and the sharper classic ...e6 form) already exist as separate
+top-level `FAMILY_TAGS` entries from before this ticket, so no further
+promotion was made there.
+
+Checked `wayfinder/assets/opening-sample.json`'s 14 entries against this
+batch's 25 families (and the one promoted sub-variation) — none belong to
+this batch, so no sample-file sync was needed this round. (`Réti Opening`
+remains flagged from a prior batch's notes as still needing sync — not this
+batch's families, left as-is for whichever batch covers it.)
+
+Verified via `pytest scripts/test_build_opening_catalog.py` — all 50 tests
+for these 25 families pass.
+
+**Remaining (25 families, batch 3, not yet started):** Polish Defense,
+Polish Opening (plus "with d5"), Pseudo Queen's Indian Defense, Pterodactyl
+Defense, Queen's Indian Accelerated, Queen's Pawn Game, Rat Defense,
+Robatsch Defense, Réti Opening, Saragossa Opening, Slav Indian, Sodium
+Attack, Torre Attack, Trompowsky Attack, Valencia Opening, Van Geet Opening,
+Van't Kruijs Opening, Vulture Defense, Wade Defense, Ware Opening,
 Yusupov-Rubinstein System, Zaire Defense, Zukertort Defense, Zukertort
 Opening. Note: `Réti Opening` also appears in `opening-sample.json` and will
-need its overview/reputationNotes synced whichever batch covers it.
+need its overview/reputationNotes synced whichever batch covers it (carried
+over from batch 1's notes, still unresolved).
 
-Ticket stays open — 50 of volume A's 75 families remain across the next two
-batches.
+Ticket stays open — 25 of volume A's 75 families remain for the final
+batch.
