@@ -225,12 +225,31 @@
     return shorterMoves.every(function (move, i) { return move === longerMoves[i]; });
   }
 
-  // Groups entries whose pgn is a strict move-prefix of another's into one
-  // "family" — same underlying idea, played to increasing depth (e.g. "Benko
-  // Gambit" -> "Benko Gambit Accepted" -> "...: Dlugy Variation"). Processing
-  // shortest-first means each entry's root, once assigned, is guaranteed a
-  // prefix of everything deeper that could ever attach to it — no entry can
-  // match two different roots, so groups never need merging after the fact.
+  // The name up to (not including) the first ": " — same "family" concept
+  // scripts/build_opening_catalog.py uses to inherit tags/overview/
+  // reputationNotes across a family's rows. Two entries sharing this root
+  // are the same family regardless of their actual move order: a handful of
+  // named sub-variations in the upstream lichess-org dataset are filed under
+  // a family name their own moves don't literally extend (e.g. "Scotch
+  // Game: Benima Defense" heads into 3.Bc4, not the Scotch's own 3.d4) — an
+  // upstream naming quirk, not a data error — so relying on move-prefix
+  // alone would wrongly split them into separate top-level shortlist slots.
+  function familyRootOf(name) {
+    return name.split(":")[0].trim();
+  }
+
+  // Groups entries into one "family" — same underlying idea, played to
+  // increasing depth — if either (a) they share a family root name (see
+  // familyRootOf), or (b) one's pgn is a strict move-prefix of the other's
+  // AND the name is also a prefix (e.g. "Benko Gambit" -> "Benko Gambit
+  // Accepted" -> "...: Dlugy Variation", none of which share a family root
+  // by (a) since none of their names contain ":" before the divergence).
+  // A shared move-prefix or name-prefix *alone* is never enough — see
+  // engine.test.js for the Indian Defense / Nimzo-Indian Defense case.
+  // Processing shortest-first means each entry's root, once assigned, is
+  // guaranteed a prefix of everything deeper that could ever attach to it —
+  // no entry can match two different roots, so groups never need merging
+  // after the fact.
   function groupIntoFamilies(entries) {
     var byLength = entries.slice().sort(function (a, b) {
       return movesOf(a.opening.pgn).length - movesOf(b.opening.pgn).length;
@@ -238,7 +257,9 @@
     var groups = [];
     byLength.forEach(function (entry) {
       var entryMoves = movesOf(entry.opening.pgn);
+      var entryRoot = familyRootOf(entry.opening.name);
       var group = groups.filter(function (g) {
+        if (familyRootOf(g.root.opening.name) === entryRoot) return true;
         return isMovePrefix(movesOf(g.root.opening.pgn), entryMoves) &&
           entry.opening.name.indexOf(g.root.opening.name) === 0;
       })[0];

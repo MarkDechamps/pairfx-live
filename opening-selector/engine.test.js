@@ -291,3 +291,41 @@ test("shortlistFor: a shared move-prefix alone isn't enough to group — the nam
   assert.ok(nimzoFamily, "Nimzo-Indian Defense should be its own separate family, not nested under Indian Defense");
   assert.deepEqual(nimzoFamily.deeper, []);
 });
+
+test("shortlistFor: a shared family-root name groups entries even when the moves diverge (upstream naming quirk)", () => {
+  // Real case from wayfinder/assets/opening-catalog.json: the upstream
+  // lichess-org/chess-openings dataset files "Scotch Game: Benima Defense"
+  // under the Scotch Game name even though its actual moves (3.Bc4) don't
+  // extend the Scotch Game's own 3.d4 — a genuine naming quirk, not a data
+  // error. Without family-root grouping, this used to show as its own
+  // separate top-3 shortlist slot (with the Scotch family's inherited
+  // overview text, which then described a move — 3.d4 — the row doesn't
+  // actually play), crowding out a genuinely different opening.
+  var answers = baseAnswers({ color: "White", rating: 2 });
+  var scotchGame = {
+    name: "Scotch Game", color: "White", pgn: "1. e4 e5 2. Nf3 Nc6 3. d4",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var benimaDefense = {
+    name: "Scotch Game: Benima Defense", color: "White",
+    pgn: "1. e4 e5 2. Nf3 Nc6 3. Bc4 Be7 4. d4 exd4",
+    timeControls: ["Rapid"], depthOfTheory: "Moderate", ratingBand: 2,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+  var italianGame = {
+    name: "Italian Game", color: "White", pgn: "1. e4 e5 2. Nf3 Nc6 3. Bc4",
+    timeControls: ["Rapid"], depthOfTheory: "Shallow", ratingBand: 1,
+    style: E.defaultStyle(), healthAtHigherLevels: 1
+  };
+
+  var ranked = E.shortlistFor("Rapid", "e4", answers, [scotchGame, benimaDefense, italianGame]);
+
+  assert.equal(ranked.length, 2, "Benima Defense should collapse into the Scotch Game family, not stand alone");
+  var scotchFamily = ranked.find((r) => r.opening === scotchGame);
+  assert.ok(scotchFamily, "Scotch Game should be the family root");
+  assert.deepEqual(scotchFamily.deeper.map((d) => d.opening), [benimaDefense]);
+
+  var italianFamily = ranked.find((r) => r.opening === italianGame);
+  assert.ok(italianFamily, "Italian Game should remain its own separate family");
+});
