@@ -51,7 +51,9 @@
       "ratingBand": 1,
       "style": { "tacticalVsPositional": 0, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": -2 },
       "healthAtHigherLevels": -1,
-      "estimatedHoursToCompetency": 3
+      "estimatedHoursToCompetency": 3,
+      "overview": "The Scandinavian Defense (or Center Counter, 1.e4 d5) strikes at White's e-pawn immediately, forcing matters in the center on move one; after 2.exd5, Black chooses between recapturing at once with 2...Qxd5 (accepting an early loss of time when White plays 3.Nc3) or the Modern Scandinavian, 2...Nf6, which delays the recapture to avoid that tempo loss altogether. It is one of the oldest documented openings in chess, appearing in a 15th-century poem describing a game with the modern queen and bishop moves.",
+      "reputationNotes": "Long treated as a slightly passive, second-tier option next to the French or Caro-Kann, it has been steadily rehabilitated since Bent Larsen's win over Anatoly Karpov in 1979 and now enjoys genuine elite respectability — Magnus Carlsen in particular has used it repeatedly to beat and draw top-level opposition, including at classical and blitz world championship level."
     },
     {
       "eco": "B12",
@@ -63,7 +65,9 @@
       "ratingBand": 2,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -2, "dynamicVsStatic": -2, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 10
+      "estimatedHoursToCompetency": 10,
+      "overview": "The Caro-Kann meets 1.e4 with 1...c6, preparing to challenge the center with ...d5 while, unlike the French Defense, keeping the light-squared bishop free to develop outside the pawn chain before the structure locks up. Play typically continues 2.d4 d5, after which White chooses between the main 3.Nc3/3.Nd2 lines, the space-grabbing 3.e5 Advance Variation, or the simplifying 3.exd5 Exchange Variation. It is one of the most solid and reliable answers to 1.e4, trading a small loss of time for a resilient structure with few lasting weaknesses.",
+      "reputationNotes": "Long known as a slightly passive but rock-solid choice, it has been rehabilitated as a fully fashionable top-level weapon in the hands of players such as Alireza Firouzja and Ding Liren, and remains an excellent, low-maintenance choice at club level too."
     },
     {
       "eco": "B90",
@@ -75,7 +79,9 @@
       "ratingBand": 4,
       "style": { "tacticalVsPositional": 2, "riskTolerance": 2, "dynamicVsStatic": 2, "forgivingVsPunishing": 2 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 80
+      "estimatedHoursToCompetency": 80,
+      "overview": "The Najdorf is the most studied and arguably most prestigious branch of the entire Sicilian complex: 5...a6 is a subtle, flexible move that rules out Bb5+ checks and keeps every option open — ...e5, ...e6, a fianchetto, queenside expansion with ...b5 — before Black commits to a specific structure. Both sides typically play for a full-blooded fight with chances to attack on opposite wings, making it the definitive vehicle for players who want maximal winning chances with either color.",
+      "reputationNotes": "Made famous above all by Bobby Fischer and Garry Kasparov, who both used it as a primary weapon for most of their careers, it remains the single deepest-theory main line in the entire Sicilian Defense — a lifetime study for those who take it up seriously, and a line where memorized preparation matters enormously even at club level."
     },
     {
       "eco": "C50",
