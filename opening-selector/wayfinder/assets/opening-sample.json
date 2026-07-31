@@ -25,9 +25,11 @@
       "depthOfTheory": "Moderate",
       "timeControls": ["Bullet/Blitz", "Rapid", "Classical/Correspondence"],
       "ratingBand": 2,
-      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
       "healthAtHigherLevels": 1,
-      "estimatedHoursToCompetency": 15
+      "estimatedHoursToCompetency": 15,
+      "overview": "The Réti Opening, 1.Nf3 d5 2.c4, is the signature independent line of the broader Zukertort Opening complex, attacking Black's central d5-pawn from the flank rather than meeting it with a pawn of White's own. Named for Richard Réti, who pioneered these hypermodern ideas of controlling the center with pieces and a fianchettoed king's bishop, it splits into two contrasting continuations: the more open 2...dxc4, and the more closed 2...d4, which keeps the position locked and strategically rich.",
+      "reputationNotes": "It earned its reputation in one stroke when Réti used it to defeat the reigning World Champion José Raúl Capablanca at New York 1924, and it has been a fully respectable, flexible weapon in top-level chess ever since, prized for the practical move-order choices it gives White."
     },
     {
       "eco": "A80",
