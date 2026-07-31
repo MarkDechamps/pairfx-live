@@ -63,6 +63,10 @@ data, not a spec about updating it.
   overview/reputationNotes half, output was structurally correct but
   noticeably more generic than Sonnet's — sticking with the default model for
   volumes A and B.
+- [Re-research and re-score ECO volume B families](tickets/0007-rescore-volume-b.md) —
+  all 19 families done; 6 sub-variations promoted (Sicilian's Najdorf/Dragon/
+  Sveshnikov/Alapin, Caro-Kann's Panov Attack, Scandinavian's Portuguese
+  Gambit); Duras Gambit's `color` corrected White→Black.
 
 ## Not yet specified
 
