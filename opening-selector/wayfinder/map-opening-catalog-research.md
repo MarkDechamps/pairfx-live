@@ -1,7 +1,7 @@
 ---
 title: Opening Catalog Re-Research — Map
 labels: [wayfinder:map]
-status: open
+status: closed
 ---
 
 ## Destination
@@ -39,6 +39,14 @@ data, not a spec about updating it.
 
 ## Decisions so far
 
+- [Re-research and re-score ECO volume A families](tickets/0006-rescore-volume-a.md) —
+  closed; all 75 volume-A families re-scored and re-authored across 3 batches
+  of 25, with 7 sub-variations promoted in total (Dutch Defense's Leningrad/
+  Stonewall/Classical Variations, Benko Gambit Declined's Sosonko Variation,
+  Grünfeld Defense's Exchange Variation, Polish Defense's Spassky Variation,
+  and Trompowsky Attack's Raptor Variation); `Dutch Defense` and `Réti
+  Opening` synced in `opening-sample.json`. Completes the last of the five
+  volume tickets.
 - [Catalog re-scoring schema and process design](tickets/0005-catalog-rescoring-schema-and-process.md) —
   tiered per-family investigation (named sub-variations + research-surfaced
   divergence get promoted to their own investigation; everything else inherits
@@ -70,10 +78,9 @@ data, not a spec about updating it.
 
 ## Not yet specified
 
-- Individual investigations for promoted sub-variations (named lines, or ones
-  a volume's family research finds genuinely diverge from their family) — not
-  ticketed yet; they surface as each ECO-volume ticket is resolved and
-  actually uncovers which sub-variations qualify.
+(none — all five volume tickets (0006-0010) resolved, every promoted
+sub-variation surfaced and investigated during its volume's own research
+rather than left as separate fog, destination reached)
 
 ## Out of scope
 

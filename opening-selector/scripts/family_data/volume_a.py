@@ -54,30 +54,30 @@ FAMILY_TAGS = {
     "Nimzo-Larsen Attack": ("White", -1, 0, 0, 1, 1, 2, 2),
     "Old Indian Defense": ("Black", -1, -1, -1, 1, 0, 2, 2),
     "Paleface Attack": ("White", 0, 0, 0, -1, -1, 1, 1),
-    "Polish Defense": ("Black", 0, 1, 1, -1, -2, 2, 1),
-    "Polish Opening": ("White", 0, 1, 1, -1, -1, 2, 1),
-    "Polish Opening, with d5": ("White", 0, 1, 1, -1, -1, 2, 1),
+    "Polish Defense": ("Black", 0, 1, 1, -2, -2, 2, 1),
+    "Polish Opening": ("White", 0, 1, 0, 0, -1, 2, 1),
+    "Polish Opening, with d5": ("White", -1, -1, -1, 0, -1, 2, 1),
     "Pseudo Queen's Indian Defense": ("Black", -1, -1, -1, -1, 0, 2, 2),
-    "Pterodactyl Defense": ("Black", 1, 1, 1, -1, -1, 3, 2),
+    "Pterodactyl Defense": ("Black", 1, 1, 1, -1, 0, 3, 2),
     "Queen's Indian Accelerated": ("Black", -1, -1, -1, -1, 1, 3, 2),
     "Queen's Pawn Game": ("White", 0, 0, 0, 0, 1, 1, 1),
-    "Rat Defense": ("Black", 0, 0, 0, 0, -1, 2, 1),
+    "Rat Defense": ("Black", 0, 0, 0, 0, 1, 2, 1),
     "Robatsch Defense": ("Black", 1, 1, 1, 0, 0, 3, 2),
-    "Réti Opening": ("White", -1, -1, 0, -1, 1, 2, 2),
+    "Réti Opening": ("White", -1, -1, 0, 0, 1, 2, 2),
     "Saragossa Opening": ("White", -1, -1, -1, 0, -1, 1, 1),
-    "Slav Indian": ("Black", -1, -1, -1, -1, 0, 3, 2),
-    "Sodium Attack": ("White", 0, 0, 0, 0, -1, 2, 1),
+    "Slav Indian": ("Black", -1, -1, -1, -1, 1, 3, 2),
+    "Sodium Attack": ("White", -1, 0, -1, -1, -2, 1, 1),
     "Torre Attack": ("White", -1, -1, -1, -1, 1, 2, 2),
     "Trompowsky Attack": ("White", 0, 1, 1, 0, 1, 2, 2),
-    "Valencia Opening": ("White", 0, 0, 0, 0, -1, 1, 1),
-    "Van Geet Opening": ("White", 0, 0, 0, 0, -1, 1, 1),
+    "Valencia Opening": ("White", -1, -1, -1, 1, -1, 1, 1),
+    "Van Geet Opening": ("White", 0, 0, 0, 0, 0, 2, 1),
     "Van't Kruijs Opening": ("White", -1, -1, -1, 0, -1, 1, 1),
     "Vulture Defense": ("Black", 1, 1, 1, -1, -2, 2, 1),
-    "Wade Defense": ("Black", 0, 0, 0, 0, -1, 2, 1),
-    "Ware Opening": ("White", -1, 0, -1, 0, -2, 1, 1),
+    "Wade Defense": ("Black", 0, 0, 0, 0, 1, 2, 1),
+    "Ware Opening": ("White", -1, 0, -1, -1, -2, 1, 1),
     "Yusupov-Rubinstein System": ("White", -1, -1, -1, -1, 1, 3, 2),
-    "Zaire Defense": ("Black", 0, 0, 0, -1, -2, 1, 1),
-    "Zukertort Defense": ("Black", 0, 0, 0, 0, -1, 2, 1),
+    "Zaire Defense": ("Black", -1, -1, -2, 1, -2, 1, 1),
+    "Zukertort Defense": ("Black", 0, 0, 0, 0, 0, 2, 1),
     "Zukertort Opening": ("White", -1, -1, -1, -1, 1, 2, 2),
 }
 
@@ -577,6 +577,283 @@ FAMILY_OVERVIEW = {
         "character of its own beyond the structural compromise White "
         "accepts on move two."
     ),
+    "Polish Defense": (
+        "The Polish Defense answers 1.d4 with the provocative 1...b5, "
+        "immediately staking a claim on the c4-square and the queenside "
+        "light squares rather than contesting the center with a pawn. "
+        "Named after Polish analyst Alexander Wagner, who debuted it in "
+        "the 1913 Swiss Correspondence Championship and published his "
+        "analysis the following year, it is essentially a color-reversed "
+        "echo of the standalone Polish Opening (1.b4). Playing 1...b5 on "
+        "the very first move runs into the concrete problem that 2.e4 "
+        "immediately attacks the pawn, which is why the sounder, more "
+        "modern versions of the idea delay ...b5 by a move or two "
+        "instead."
+    ),
+    "Polish Opening": (
+        "The Polish Opening (also called the Sokolsky Opening after its "
+        "leading Soviet analyst Alexei Sokolsky, or the Orangutan "
+        "Opening) begins 1.b4, grabbing queenside space and preparing to "
+        "fianchetto the queen's bishop to b2 to press the long diagonal. "
+        "Black's most popular reply, 1...e5, lets White choose between "
+        "the calm 2.Bb2 or the sharper Tartakower Gambit line (2.Bb2 f6 "
+        "3.e4 Bxb4), while other replies such as 1...c6 (the Outflank "
+        "Variation) or 1...Nf6 keep the game flexible and "
+        "transposition-rich. It is a legitimate, if unambitious, way to "
+        "sidestep mainstream theory rather than a forcing try for an "
+        "opening advantage."
+    ),
+    "Polish Opening, with d5": (
+        "When Black meets the Polish Opening with the direct central "
+        "response 1.b4 d5, staking an immediate claim on the center "
+        "rather than testing White's queenside space grab with 1...e5, "
+        "the game takes on a calmer, more classically balanced character "
+        "than the opening's sharper main lines. White typically "
+        "continues with Bb2 to keep pressing the long diagonal, but the "
+        "early b4 push is now a genuine structural commitment rather "
+        "than a free tempo, since Black's central pawn restrains White's "
+        "usual plans."
+    ),
+    "Pseudo Queen's Indian Defense": (
+        "The Pseudo Queen's Indian Defense reaches a queen's-bishop "
+        "fianchetto with 1.d4 Nf6 2.Nf3 b6, adopting the same "
+        "...b6/...Bb7 idea as the real Queen's Indian Defense but "
+        "against a White move order that has not yet committed to c4. "
+        "Because White retains extra flexibility — able to meet the "
+        "fianchetto with 3.Bf4, 3.g3, or other setups instead of the "
+        "main Queen's Indian's characteristic pawn structure — the "
+        "position carries a distinct, less-forcing character even "
+        "though it shares the Queen's Indian's basic hypermodern logic "
+        "of controlling the center with pieces rather than pawns."
+    ),
+    "Pterodactyl Defense": (
+        "The Pterodactyl Defense pushes the Modern Defense's dark-square "
+        "strategy to its logical extreme: after 1.e4 g6 2.d4 Bg7 3.Nc3 "
+        "c5, Black follows up with ...Qa5, so that the bishop, pawn, and "
+        "queen all needle White's d4- and c3-points at once — the "
+        "fancifully descriptive name comes from this beak-like "
+        "formation of pieces pecking at the center. It is a genuinely "
+        "universal system that can be reached against several different "
+        "first moves, not just 1.e4, but committing the queen to a5 so "
+        "early is a real structural pledge, and Black is often obliged "
+        "to hand over the bishop pair with ...Bxc3+ or scramble to "
+        "regain a pawn after White's 4.dxc5."
+    ),
+    "Queen's Indian Accelerated": (
+        "The Queen's Indian Accelerated reaches the same ...b6/...Bb7 "
+        "queenside fianchetto as the main Queen's Indian Defense, but by "
+        "the reversed move order 1.d4 b6 2.c4 Nf6, delaying the knight's "
+        "development in favor of the fianchetto itself. This move-order "
+        "trick can sidestep some of White's specific anti-Queen's-Indian "
+        "tries that rely on an early ...Nf6 being on the board, at the "
+        "cost of allowing White independent options (such as an "
+        "immediate 2.e4) that the standard order avoids."
+    ),
+    "Queen's Pawn Game": (
+        "Queen's Pawn Game is the umbrella label for 1.d4 before Black "
+        "or White commit to any further specific system — historically "
+        "used for any 1.d4 opening that wasn't the Queen's Gambit, and "
+        "narrowing further over the 20th century as the individual "
+        "Indian Defenses earned their own names. As a bare first move it "
+        "stakes an immediate, direct claim on the center and is the "
+        "second most popular opening move in chess after 1.e4, but it "
+        "carries no character of its own beyond whichever concrete "
+        "system (Queen's Gambit, London System, Colle, Torre, or any "
+        "Indian Defense) the players steer toward."
+    ),
+    "Rat Defense": (
+        "The Rat Defense keeps Black's setup maximally uncommitted with "
+        "1...d6, most concretely realized as the English Rat (1.d4 d6 "
+        "2.c4 e5), which strikes back in the center immediately rather "
+        "than fianchettoing first as in the related Modern Defense. It "
+        "can also be reached from an English Opening move order (1.c4 "
+        "d6 2.d4 e5) or even by transposition from the Englund Gambit "
+        "(1.d4 e5 2.c4 d6), and after the simplifying 3.dxe5 dxe5 "
+        "4.Qxd8+ Black's central pawn on e5 and White's slightly loose "
+        "c4-pawn keep the resulting endgame comfortably level."
+    ),
+    "Robatsch Defense": (
+        "The Robatsch Defense is simply an older name for the Modern "
+        "Defense (1.e4 g6), letting White build the classical big pawn "
+        "center while Black prepares to attack it from a kingside "
+        "fianchetto rather than occupying the center directly. The name "
+        "honors Austrian master Karl Robatsch, who made major "
+        "contributions to the opening's theory in the 1960s-70s, to the "
+        "point that the tenth edition of Modern Chess Openings (1965) "
+        "grouped it together with the closely related Pirc Defense as "
+        "the 'Pirc-Robatsch Defense.'"
+    ),
+    "Réti Opening": (
+        "The Réti Opening, 1.Nf3 d5 2.c4, is the signature independent "
+        "line of the broader Zukertort Opening complex, attacking "
+        "Black's central d5-pawn from the flank rather than meeting it "
+        "with a pawn of White's own. Named for Richard Réti, who "
+        "pioneered these hypermodern ideas of controlling the center "
+        "with pieces and a fianchettoed king's bishop, it splits into "
+        "two contrasting continuations: the more open 2...dxc4, and the "
+        "more closed 2...d4, which keeps the position locked and "
+        "strategically rich."
+    ),
+    "Saragossa Opening": (
+        "The Saragossa Opening, 1.c3, is one of the mildest possible "
+        "first moves — it opens a diagonal for the queen and prepares "
+        "d4, without doing anything a simple 1.d4 wouldn't accomplish "
+        "more directly. It takes its name from the Saragossa Chess Club "
+        "in Zaragoza, Spain, where it became a local favorite starting "
+        "in 1919, and it functions much like a reversed Caro-Kann or "
+        "Slav Defense with an extra tempo whenever Black replies in "
+        "kind."
+    ),
+    "Slav Indian": (
+        "The Slav Indian reaches the Slav Defense's characteristic "
+        "c6/d5 structure by an Indian-style move order, 1.d4 Nf6 2.c4 "
+        "c6, keeping options open a move longer than the direct 1.d4 d5 "
+        "2.c4 c6 before committing to the central ...d5 break. Since it "
+        "transposes freely into the same deeply analyzed Slav "
+        "positions — played by 11 of the first 13 world champions and a "
+        "mainstay of Kramnik's 2006 title defense — it carries the same "
+        "fundamental character as the Slav proper: solid, resilient, "
+        "and built to avoid structural weaknesses rather than to seek "
+        "early imbalance."
+    ),
+    "Sodium Attack": (
+        "The Sodium Attack, 1.Na3 (also called the Durkin Opening, "
+        "after its main practitioner Robert Durkin), develops White's "
+        "queen's knight to the rim of the board where it neither "
+        "controls a central square nor prepares a natural follow-up, "
+        "since the knight will typically need to move again via c2 or "
+        "c4 to do anything useful. The cute nickname simply reads the "
+        "algebraic notation 'Na3' as the chemical symbol for sodium, "
+        "coined by chess writer Eric Schiller in his 1998 book on "
+        "unorthodox openings."
+    ),
+    "Torre Attack": (
+        "The Torre Attack develops the dark-squared bishop actively to "
+        "g5 against Black's king's-knight development, 1.d4 Nf6 2.Nf3 "
+        "followed by 3.Bg5, whether Black has played 2...e6 (the "
+        "Tartakower Variation, ECO D03), 2...d5 (transposing to a "
+        "Queen's Pawn Game), or 2...g6 (the East Indian branch, ECO "
+        "A48). Named for Mexican grandmaster Carlos Torre — who also "
+        "lent his name to the unrelated Mexican Defense — it offers "
+        "White a solid, well-worked-out plan of development and central "
+        "control that sidesteps the sharpest, most heavily theorized "
+        "Indian systems."
+    ),
+    "Trompowsky Attack": (
+        "The Trompowsky Attack, 1.d4 Nf6 2.Bg5, develops the "
+        "dark-squared bishop immediately to pin or trade for Black's "
+        "king's knight, threatening to inflict doubled pawns and "
+        "sidestepping the vast bodies of Indian-Defense theory (Queen's "
+        "Indian, King's Indian, Nimzo-Indian, Grünfeld) that follow "
+        "2.c4 or 2.Nf3 instead. Named for one-time Brazilian champion "
+        "Octávio Trompowsky, who played it in the 1930s-40s (it was "
+        "independently developed around the same time by Karel "
+        "Opočenský and William Allen Ruth, giving it several alternate "
+        "names), it is a genuine surprise weapon that trades some "
+        "objective bite for the practical value of forcing Black out "
+        "of well-trodden preparation."
+    ),
+    "Valencia Opening": (
+        "The Valencia Opening reaches a quiet King's-Indian-Attack-style "
+        "structure by a queen's-pawn move order, 1.d3 e5 2.Nd2, "
+        "developing modestly and keeping options open for a later Nf3, "
+        "g3, and Bg2 fianchetto rather than staking any immediate claim "
+        "on the center. Like its close relative the Mieses Opening "
+        "(1.d3), it has essentially no independent theoretical content, "
+        "functioning as a flexible, transposition-friendly system that "
+        "lets White decide on a plan only after seeing how Black "
+        "continues."
+    ),
+    "Van Geet Opening": (
+        "The Van Geet Opening, 1.Nc3 (also widely known as the Dunst "
+        "Opening, among a dozen or more other regional names), develops "
+        "the queen's knight to its natural square while keeping White's "
+        "pawn structure completely undetermined, ready to transpose "
+        "into an e4 or d4 opening depending on how Black responds. It "
+        "takes its most common Dutch name from International Master "
+        "and correspondence grandmaster Dick van Geet, who played it "
+        "constantly throughout his career, while English-language "
+        "sources more often credit Ted Dunst."
+    ),
+    "Van't Kruijs Opening": (
+        "The Van't Kruijs Opening, 1.e3, is a modest, sound pawn move "
+        "that opens the diagonal for White's dark-squared bishop "
+        "without yet fighting for the center the way 1.e4 does. Named "
+        "for the leading 19th-century Dutch player Maarten van 't "
+        "Kruijs, one of the strongest players in the world in his day, "
+        "it has essentially no independent theoretical content of its "
+        "own, instead functioning as a flexible on-ramp into an "
+        "enormous range of other systems depending on how the game "
+        "continues."
+    ),
+    "Vulture Defense": (
+        "The Vulture Defense is one of a family of provocative "
+        "early-knight-sortie tries in the Modern Benoni complex — "
+        "alongside the Hawk and the Woozle — reached by 1.d4 Nf6 2.c4 "
+        "c5 3.d5 Ne4, when Black's knight leaps forward before White's "
+        "center has even been challenged, typically followed up with "
+        "...Qa5 and ...Nd6 to harass White's queenside. It is a sharp, "
+        "committal try that invites immediate complications rather than "
+        "settling into a standard Benoni structure."
+    ),
+    "Wade Defense": (
+        "The Wade Defense develops Black's bishop actively to g4 before "
+        "committing to a pawn structure, 1.d4 d6 2.Nf3 Bg4, getting the "
+        "bishop outside the pawn chain in a way that Old-Indian- or "
+        "Pirc-style setups with an early ...Nf6 and ...g6 normally "
+        "can't manage. It is named for British IM Bob Wade, originally "
+        "from New Zealand, who played the line for over thirty years."
+    ),
+    "Ware Opening": (
+        "The Ware Opening, 1.a4 (also called the Meadow Hay Opening), "
+        "spends White's first move preparing to swing the a1-rook into "
+        "play while doing nothing to contest the center or develop a "
+        "minor piece; the b5-square it eyes is not an important one, "
+        "and Black's simplest replies simply gain space and time in the "
+        "center for free. It is named for 19th-century American player "
+        "Preston Ware, known for his taste in unusual openings."
+    ),
+    "Yusupov-Rubinstein System": (
+        "The Yusupov-Rubinstein System reaches a Colle-like structure "
+        "within the Indian Game complex, 1.d4 Nf6 2.Nf3 e6 3.e3, "
+        "developing quietly behind a solid pawn triangle rather than "
+        "staking an early claim with c4. It is named for two strong "
+        "players associated with its ideas, the legendary Akiba "
+        "Rubinstein and modern grandmaster and trainer Artur Yusupov, "
+        "and shares the Colle System's basic virtue of reaching a "
+        "comfortable, well-understood middlegame without deep "
+        "memorization."
+    ),
+    "Zaire Defense": (
+        "The Zaire Defense takes the tempo-wasting idea of the "
+        "Montevideo Defense to its logical extreme: after 1.d4 Nc6 "
+        "2.d5 Nb8, retreating the queen's knight all the way home, "
+        "Black continues 3.e4 Nf6 4.e5 Ng8, retreating the king's "
+        "knight as well and undoing both of Black's first two "
+        "developing moves in a row. It hands White a dominant space "
+        "advantage and a substantial lead in development for nothing "
+        "whatsoever in return."
+    ),
+    "Zukertort Defense": (
+        "The Zukertort Defense is Black's most flexible, non-committal "
+        "reply to the Zukertort Opening, 1.Nf3 Nf6, mirroring White's "
+        "own flank development instead of staking any claim on the "
+        "center. Since it commits Black to nothing in particular, the "
+        "position functions as a transpositional crossroads that can "
+        "turn into almost any major queen-pawn, English, or "
+        "Indian-style system depending on how both sides continue."
+    ),
+    "Zukertort Opening": (
+        "The Zukertort Opening, 1.Nf3, develops White's king's knight "
+        "to its most natural square while keeping every central pawn "
+        "structure available, named for 19th-century master Johannes "
+        "Zukertort. It is the third most popular of White's twenty "
+        "legal first moves, functioning above all as a transpositional "
+        "device — its principal independent lines are the Réti Opening "
+        "(1.Nf3 d5 2.c4), the King's Indian Attack, and the "
+        "Nimzo-Larsen Attack — that lets White delay committing to e4, "
+        "d4, or c4 until Black's intentions are clearer."
+    ),
 }
 
 FAMILY_REPUTATION = {
@@ -924,6 +1201,177 @@ FAMILY_REPUTATION = {
         "natural 2...d5 — though it occasionally surfaces as an offbeat "
         "surprise try in faster time controls."
     ),
+    "Polish Defense": (
+        "The immediate 1.d4 b5 has long been judged dubious once White "
+        "finds 2.e4, and early editions of Modern Chess Openings "
+        "dismissed it outright — though by 1965 it was conceded merely "
+        "flawed rather than refuted — so in practice it survives mainly "
+        "as a surprise weapon against an unprepared opponent."
+    ),
+    "Polish Opening": (
+        "It ranks ninth in popularity among White's twenty legal first "
+        "moves and owes its 'Orangutan' nickname to a colorful (if "
+        "apocryphal) 1924 New York tournament story about Savielly "
+        "Tartakower consulting a Bronx Zoo orangutan named Susan before "
+        "the game; it has no real elite pedigree today but is a "
+        "perfectly sound offbeat choice at club level."
+    ),
+    "Polish Opening, with d5": (
+        "It is considered the soundest and most solid way for Black to "
+        "meet 1.b4, denying White the freer game that follows 1...e5, "
+        "though like the rest of the Polish Opening complex it remains "
+        "a rarely tested, club-level sideline rather than a heavily "
+        "analyzed main line."
+    ),
+    "Pseudo Queen's Indian Defense": (
+        "It carries no independent reputation apart from the genuinely "
+        "respected Queen's Indian ideas it borrows, functioning mainly "
+        "as a sound, low-theory move-order choice for Queen's Indian "
+        "players facing a White setup that avoids an early c4."
+    ),
+    "Pterodactyl Defense": (
+        "It is regarded as a fully sound, well-worked-out way to "
+        "sidestep the Maróczy Bind lines of the Accelerated Dragon, "
+        "though its sharp, committal nature makes it more of a "
+        "specialist's weapon than a mainstream choice."
+    ),
+    "Queen's Indian Accelerated": (
+        "It inherits the fundamentally sound, hypermodern reputation of "
+        "the Queen's Indian complex that world champions from "
+        "Capablanca onward have relied on, and is simply a specialist's "
+        "move-order choice within that same respected family rather "
+        "than a distinct weapon with its own track record."
+    ),
+    "Queen's Pawn Game": (
+        "Every serious main line reachable from 1.d4 is fully respected "
+        "at every level of play, so the bare move carries no negative "
+        "reputation of its own — it is simply the flexible on-ramp "
+        "shared by nearly all of White's most reliable long-term "
+        "repertoires."
+    ),
+    "Rat Defense": (
+        "Despite its unassuming name, the English Rat has been played "
+        "by a genuinely strong list of practitioners, including Levon "
+        "Aronian, Viswanathan Anand, Peter Svidler, Richárd Rapport, "
+        "and Ilia Smirin, making it a perfectly credible way to "
+        "sidestep heavy 1.d4 theory rather than a mere curiosity."
+    ),
+    "Robatsch Defense": (
+        "It carries exactly the same practical standing as the Modern "
+        "Defense it's synonymous with — a fully playable, if slightly "
+        "passive by elite standards, hypermodern system — and has been "
+        "particularly associated with British grandmasters Nigel "
+        "Davies and Colin McNab."
+    ),
+    "Réti Opening": (
+        "It earned its reputation in one stroke when Réti used it to "
+        "defeat the reigning World Champion José Raúl Capablanca at "
+        "New York 1924, and it has been a fully respectable, flexible "
+        "weapon in top-level chess ever since, prized for the practical "
+        "move-order choices it gives White."
+    ),
+    "Saragossa Opening": (
+        "It has essentially no independent competitive pedigree — its "
+        "one notable outing was a 1922 Mannheim theme tournament "
+        "requiring 1.c3, won by Siegbert Tarrasch over Paul Leonhardt "
+        "and Jacques Mieses — and it survives today mainly as a way to "
+        "delay commitment rather than as a serious attempt at an "
+        "opening edge."
+    ),
+    "Slav Indian": (
+        "It carries the Slav's own excellent reputation wholesale, "
+        "since the two converge on identical positions; the only real "
+        "difference is the move-order flexibility it offers players "
+        "who'd rather see White's intentions with an early c4 before "
+        "committing to ...d5."
+    ),
+    "Sodium Attack": (
+        "Engines assess 1.Na3 at roughly -0.4, a small but real "
+        "giveaway of White's first-move advantage, and it has "
+        "essentially never been played by anyone besides its New "
+        "Jersey originator — it survives purely as a curiosity for fans "
+        "of anti-theoretical first moves."
+    ),
+    "Torre Attack": (
+        "It has never been a top-choice weapon at the very highest "
+        "level but is a fully sound, popular system at club and master "
+        "level alike, prized for its clear plans and comparatively "
+        "modest memorization burden."
+    ),
+    "Trompowsky Attack": (
+        "It has real elite pedigree — Julian Hodgson built much of his "
+        "career around it, and even Magnus Carlsen chose it for game "
+        "one of his 2016 World Championship match against Sergey "
+        "Karjakin — making it a fully credible weapon at every level "
+        "rather than a mere sideline."
+    ),
+    "Valencia Opening": (
+        "It carries no real competitive pedigree of its own and is "
+        "rarely seen outside of club-level and offbeat repertoires, "
+        "useful mainly as a low-maintenance way to reach a comfortable "
+        "middlegame without memorizing sharp theory."
+    ),
+    "Van Geet Opening": (
+        "It is a genuinely flexible, theory-light try that is "
+        "particularly popular in faster time controls, where White is "
+        "equally happy transposing into a mainstream e4 or d4 game and "
+        "is simply making Black commit first."
+    ),
+    "Van't Kruijs Opening": (
+        "It has never been a common choice even among strong players, "
+        "but its sheer transpositional flexibility has attracted "
+        "occasional use from the likes of Aron Nimzowitsch, Bent "
+        "Larsen, and modern IM Pavel Blatny, keeping it a legitimate if "
+        "unambitious option rather than a discredited one."
+    ),
+    "Vulture Defense": (
+        "Analysis has generally found that the Vulture, like its "
+        "cousin the Woozle, does not fully equalize for Black, in "
+        "contrast to the more soundly regarded Hawk; it remains a "
+        "specialist's surprise weapon rather than a mainstream choice."
+    ),
+    "Wade Defense": (
+        "It has attracted a genuinely strong following of grandmasters "
+        "over the decades, most notably Julian Hodgson (whose many "
+        "dynamic wins with it earned it the alternate name 'Hodgson "
+        "Variation'), as well as Michael Adams, Vlastimil Jansa, and "
+        "Tony Miles, giving it real standing as a flexible, "
+        "offbeat-but-sound weapon."
+    ),
+    "Ware Opening": (
+        "It is normally played only by players completely new to the "
+        "game, and even a Ware devotee will typically abandon the plan "
+        "after one move, following up with a normal 2.d4 or 2.e4 rather "
+        "than committing further to the idea — it has essentially no "
+        "serious competitive standing."
+    ),
+    "Yusupov-Rubinstein System": (
+        "It has never been a fashionable main try, but its "
+        "Colle-adjacent solidity and the pedigree of the players it's "
+        "named for keep it a perfectly respectable, low-maintenance "
+        "choice for players who want to sidestep heavier "
+        "Indian-Defense theory."
+    ),
+    "Zaire Defense": (
+        "It has no competitive standing of any kind and is essentially "
+        "never seen outside of novelty games or deliberate handicap "
+        "play, functioning as a curiosity rather than any kind of "
+        "serious try."
+    ),
+    "Zukertort Defense": (
+        "It carries no independent reputation of its own, whether good "
+        "or bad — it is simply the most popular and most flexible way "
+        "to meet 1.Nf3, favored at every level precisely because it "
+        "commits to nothing while White is made to reveal intentions "
+        "first."
+    ),
+    "Zukertort Opening": (
+        "It has been praised by strong players and writers alike, from "
+        "Aron Nimzowitsch (who called 1.e4 and 1.d4 both 'compromising' "
+        "by comparison) to Edmar Mednis (who called it 'a perfect and "
+        "flexible opening'), and remains a fully mainstream, "
+        "top-level-tested way to begin a game."
+    ),
 }
 
 NOTABLE_SUBVARIATIONS = {
@@ -1046,6 +1494,57 @@ NOTABLE_SUBVARIATIONS = {
         "style": {
             "tacticalVsPositional": 2,
             "forgivingVsPunishing": -2,
+        },
+    },
+    "Polish Defense: Spassky Variation": {
+        "overview": (
+            "The Spassky Variation reaches the Polish Defense's "
+            "queenside fianchetto by a safer route than the immediate "
+            "1...b5, most typically 1.Nf3 Nf6 2.g3 b5, delaying the "
+            "pawn thrust until White's central pawn hasn't yet reached "
+            "e4 to attack it outright. This deferred move order keeps "
+            "Black's original idea — meeting a flank opening with an "
+            "equal and opposite flank thrust — while sidestepping the "
+            "tactical problem that dooms the immediate main line."
+        ),
+        "reputationNotes": (
+            "Unlike the dubious immediate 1.d4 b5, this deferred "
+            "approach has earned real respectability and a genuinely "
+            "elite list of practitioners, including Boris Spassky, "
+            "Mikhail Tal, Anatoly Karpov, and Magnus Carlsen."
+        ),
+        "style": {
+            "tacticalVsPositional": -1,
+            "riskTolerance": -1,
+            "dynamicVsStatic": -1,
+            "forgivingVsPunishing": 1,
+        },
+        "healthAtHigherLevels": 1,
+    },
+    "Trompowsky Attack: Raptor Variation": {
+        "overview": (
+            "The Raptor Variation meets Black's immediate central "
+            "strike 2...Ne4 with the provocative 3.h4!?, refusing to "
+            "retreat the bishop and instead offering a pawn to keep it "
+            "active; the sharpest branch, the Hergert Gambit (3...Nxg5 "
+            "4.hxg5), leaves White with doubled g-pawns and an open "
+            "h-file in exchange for a permanent lead in development and "
+            "attacking chances down the kingside. This is a much more "
+            "direct, tactical fight than the Trompowsky's calmer main "
+            "lines, where White is usually content to trade the bishop "
+            "for a small structural concession."
+        ),
+        "reputationNotes": (
+            "It remains a niche, sharply analyzed try even by "
+            "Trompowsky standards, appealing to players on the White "
+            "side who want to punish 2...Ne4 immediately rather than "
+            "simply retreat the bishop."
+        ),
+        "style": {
+            "tacticalVsPositional": 2,
+            "riskTolerance": 2,
+            "dynamicVsStatic": 2,
+            "forgivingVsPunishing": -1,
         },
     },
 }
