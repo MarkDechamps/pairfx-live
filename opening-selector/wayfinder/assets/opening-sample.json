@@ -135,7 +135,9 @@
       "ratingBand": 3,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 20
+      "estimatedHoursToCompetency": 20,
+      "overview": "1.d4 d5 2.c4 is only a 'gambit' in name — Black cannot hold the c4-pawn without conceding a worse position, so the real fight is positional: White presses for central and spatial control while Black looks to free the game with ...c5 or ...e5 breaks. It's one of the oldest, most thoroughly explored tries against 1...d5, and the umbrella under which Black must choose to accept, decline, or counter-gambit.",
+      "reputationNotes": "One of the most enduring, respected openings in chess — a mainstay of world-championship play since the 1920s (it covered all but two games of the 1927 Capablanca-Alekhine match) and still a completely sound, frequently played choice at every level today, even though Indian defenses have taken some of its share of top-level popularity since the mid-20th century."
     },
     {
       "eco": "D10",
@@ -147,7 +149,9 @@
       "ratingBand": 2,
       "style": { "tacticalVsPositional": -2, "riskTolerance": -2, "dynamicVsStatic": -2, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 15
+      "estimatedHoursToCompetency": 15,
+      "overview": "1.d4 d5 2.c4 c6 defends the d5-pawn without blocking in the light-squared bishop, which Black can develop actively to f5 or g4 before playing ...e6 — solving the exact problem that dogs the orthodox Queen's Gambit Declined. It's a fundamentally solid, positional structure, but extremely well worked out, with deep and current theory at the highest level.",
+      "reputationNotes": "One of the most respected defenses in chess history — played by eleven of the first thirteen world champions, a particular favourite of Botvinnik and Smyslov, and still a first-choice weapon for elite players today (Kramnik used it in six of his eight Black games in the 2006 world championship match)."
     },
     {
       "eco": "E00",

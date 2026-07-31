@@ -48,6 +48,10 @@ data, not a spec about updating it.
   `overview` and `reputationNotes`; both `opening-catalog.json` and
   `opening-sample.json` upgraded; work batched into 5 tickets by ECO volume
   (A-E), each independent, all blocked on this design ticket.
+- [Re-research and re-score ECO volume D families](tickets/0009-rescore-volume-d.md) —
+  all 15 families re-investigated; 3 sub-variations promoted (Albin
+  Countergambit, Ryder Gambit, Botvinnik Variation); Queen's Gambit and Slav
+  Defense synced in `opening-sample.json`.
 - [Re-research and re-score ECO volume E families](tickets/0010-rescore-volume-e.md) —
   closed; all 10 volume-E families re-scored and re-authored, with 5
   sub-variations promoted (Bogo-Indian's Monticelli Trap, Catalan's Hungarian
