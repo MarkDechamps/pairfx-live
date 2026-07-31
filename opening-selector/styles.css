@@ -369,8 +369,39 @@ h1.question {
     margin-bottom: var(--spacing-sm);
 }
 
+.result-overview {
+    font-size: 0.88rem;
+    color: var(--color-light);
+    opacity: 0.85;
+    margin: 0 0 var(--spacing-sm);
+}
+
 .result-rationale {
     font-size: 0.92rem;
+    color: var(--color-light);
+    margin: 0;
+}
+
+.result-reputation {
+    margin-top: var(--spacing-sm);
+    padding: 6px 10px;
+    background: var(--color-secondary);
+    border-left: 3px solid var(--color-warning);
+    border-radius: 4px;
+}
+
+.result-reputation-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-warning);
+    margin-bottom: 2px;
+}
+
+.result-reputation p {
+    font-size: 0.85rem;
     color: var(--color-light);
     margin: 0;
 }

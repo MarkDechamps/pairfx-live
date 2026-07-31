@@ -439,10 +439,30 @@
     pgn.textContent = opening.pgn;
     body.appendChild(pgn);
 
+    if (opening.overview) {
+      var overview = document.createElement("p");
+      overview.className = "result-overview";
+      overview.textContent = opening.overview;
+      body.appendChild(overview);
+    }
+
     var rationale = document.createElement("p");
     rationale.className = "result-rationale";
     rationale.textContent = E.buildRationale(opening, answers);
     body.appendChild(rationale);
+
+    if (opening.reputationNotes) {
+      var reputation = document.createElement("div");
+      reputation.className = "result-reputation";
+      var reputationLabel = document.createElement("span");
+      reputationLabel.className = "result-reputation-label";
+      reputationLabel.textContent = "Reputation";
+      reputation.appendChild(reputationLabel);
+      var reputationText = document.createElement("p");
+      reputationText.textContent = opening.reputationNotes;
+      reputation.appendChild(reputationText);
+      body.appendChild(reputation);
+    }
 
     if (deeper && deeper.length > 0) {
       body.appendChild(renderDeeperList(deeper));
