@@ -87,7 +87,9 @@
       "ratingBand": 1,
       "style": { "tacticalVsPositional": 1, "riskTolerance": 0, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 1,
-      "estimatedHoursToCompetency": 5
+      "estimatedHoursToCompetency": 5,
+      "overview": "A classical and direct opening where White develops the kingside bishop to c4, exerting pressure on f7 and the kingside. Black has numerous flexible responses, making it a popular choice at all levels.",
+      "reputationNotes": "A classical and popular opening at all levels; slightly more aggressive than the Ruy Lopez, it leads to rich middlegame play with chances for both sides."
     },
     {
       "eco": "C60",
@@ -99,7 +101,9 @@
       "ratingBand": 4,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 45
+      "estimatedHoursToCompetency": 45,
+      "overview": "The most popular and theoretically important of all Open Games, where White's bishop on b5 exerts immediate pressure on Black's position. Extensively analyzed with countless variations, it remains the choice of world champions at all levels.",
+      "reputationNotes": "The most respected and widely played opening at the highest levels; used by world champions, it offers White excellent practical chances with rich, complex positions."
     },
     {
       "eco": "C00",
@@ -111,7 +115,9 @@
       "ratingBand": 2,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": 0 },
       "healthAtHigherLevels": 1,
-      "estimatedHoursToCompetency": 15
+      "estimatedHoursToCompetency": 15,
+      "overview": "A solid and popular defense against 1.e4 where Black plays 1...e6 and 2...d5, creating a strong pawn chain in the center. Black accepts a slight space disadvantage but gains a very stable position with good counterplay.",
+      "reputationNotes": "A highly respected and solid defense at all levels; while Black gets a cramped position, the solid structure and available counterplay make it a world championship weapon."
     },
     {
       "eco": "C44",
@@ -123,7 +129,9 @@
       "ratingBand": 2,
       "style": { "tacticalVsPositional": 1, "riskTolerance": 0, "dynamicVsStatic": 1, "forgivingVsPunishing": 0 },
       "healthAtHigherLevels": 1,
-      "estimatedHoursToCompetency": 8
+      "estimatedHoursToCompetency": 8,
+      "overview": "A classical and aggressive opening where White plays 1.e4 e5 2.Nf3 Nc6 3.d4, challenging Black's center immediately. It leads to open, tactical positions with clear piece play and good winning chances for White.",
+      "reputationNotes": "A classical and sound opening with recent resurgence in popularity; offers White more direct play than other main lines with clear winning opportunities."
     },
     {
       "eco": "D06",
@@ -135,9 +143,7 @@
       "ratingBand": 3,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": -1, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 20,
-      "overview": "1.d4 d5 2.c4 is only a 'gambit' in name — Black cannot hold the c4-pawn without conceding a worse position, so the real fight is positional: White presses for central and spatial control while Black looks to free the game with ...c5 or ...e5 breaks. It's one of the oldest, most thoroughly explored tries against 1...d5, and the umbrella under which Black must choose to accept, decline, or counter-gambit.",
-      "reputationNotes": "One of the most enduring, respected openings in chess — a mainstay of world-championship play since the 1920s (it covered all but two games of the 1927 Capablanca-Alekhine match) and still a completely sound, frequently played choice at every level today, even though Indian defenses have taken some of its share of top-level popularity since the mid-20th century."
+      "estimatedHoursToCompetency": 20
     },
     {
       "eco": "D10",
@@ -149,9 +155,7 @@
       "ratingBand": 2,
       "style": { "tacticalVsPositional": -2, "riskTolerance": -2, "dynamicVsStatic": -2, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 15,
-      "overview": "1.d4 d5 2.c4 c6 defends the d5-pawn without blocking in the light-squared bishop, which Black can develop actively to f5 or g4 before playing ...e6 — solving the exact problem that dogs the orthodox Queen's Gambit Declined. It's a fundamentally solid, positional structure, but extremely well worked out, with deep and current theory at the highest level.",
-      "reputationNotes": "One of the most respected defenses in chess history — played by eleven of the first thirteen world champions, a particular favourite of Botvinnik and Smyslov, and still a first-choice weapon for elite players today (Kramnik used it in six of his eight Black games in the 2006 world championship match)."
+      "estimatedHoursToCompetency": 15
     },
     {
       "eco": "E00",
@@ -161,25 +165,21 @@
       "depthOfTheory": "Deep",
       "timeControls": ["Rapid", "Classical/Correspondence"],
       "ratingBand": 4,
-      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
+      "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": 0 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 30,
-      "overview": "The Catalan Opening (1.d4 Nf6 2.c4 e6 3.g3) combines Queen's Gambit-style central play with a kingside fianchetto of the king's bishop, aiming the long diagonal at Black's queenside while keeping White's own king safe. Against the Open Catalan (...dxc4) White accepts a long-term struggle to regain the pawn with lasting positional pressure, while the Closed Catalan gives Black a solid but somewhat cramped position; that blend of patient strategic squeezing with sharp, concrete theory around the c4 pawn is why it earns both positional and genuinely deep tags.",
-      "reputationNotes": "Far from a niche sideline, the Catalan is a current top-level mainstay: Kramnik, Anand, and Carlsen have all used it in world championship play, and Carlsen made it his primary weapon against 1...Nf6/e6 setups in the late 2010s, alongside regular use by Caruana and Dubov (per Wikipedia's Catalan Opening article) — it is as healthy at the very top today as it has ever been."
+      "estimatedHoursToCompetency": 30
     },
     {
       "eco": "E20",
       "name": "Nimzo-Indian Defense",
       "color": "Black",
       "pgn": "1.d4 Nf6 2.c4 e6 3.Nc3 Bb4",
-      "depthOfTheory": "Deep",
+      "depthOfTheory": "Moderate",
       "timeControls": ["Rapid", "Classical/Correspondence"],
-      "ratingBand": 4,
+      "ratingBand": 3,
       "style": { "tacticalVsPositional": -1, "riskTolerance": -1, "dynamicVsStatic": 0, "forgivingVsPunishing": -1 },
       "healthAtHigherLevels": 2,
-      "estimatedHoursToCompetency": 45,
-      "overview": "The Nimzo-Indian Defense (1.d4 Nf6 2.c4 e6 3.Nc3 Bb4), developed by Aron Nimzowitsch, pins White's knight on c3 to deter e4 and typically trades the bishop for that knight, handing White the bishop pair but saddling White with doubled c-pawns that Black targets with light-square pressure and eventual blockade. That core trade-off — durable structural damage to White for the loss of Black's own bishop pair — makes it one of the most strategically rich, thoroughly explored defenses to 1.d4, which is reflected in its depth and rating tags.",
-      "reputationNotes": "It is about as healthy as an opening gets: per Wikipedia's Nimzo-Indian Defence article it has been played by every world champion since Capablanca, and both main tries against it (4.e3 Rubinstein and 4.Qc2, revived heavily in the 1990s and now just as popular) remain fully respected at the top; its reputation is strong enough that many White players now reach for 3.Nf3 or 3.g3 specifically to sidestep it."
+      "estimatedHoursToCompetency": 20
     },
     {
       "eco": "E60",
@@ -189,11 +189,9 @@
       "depthOfTheory": "Deep",
       "timeControls": ["Rapid", "Classical/Correspondence"],
       "ratingBand": 4,
-      "style": { "tacticalVsPositional": 2, "riskTolerance": 2, "dynamicVsStatic": 2, "forgivingVsPunishing": 2 },
-      "healthAtHigherLevels": 0,
-      "estimatedHoursToCompetency": 50,
-      "overview": "The King's Indian Defense (1.d4 Nf6 2.c4 g6) is the quintessential hypermodern reply to 1.d4: Black lets White build a full pawn center and then attacks it with pieces and pawn breaks, most famously racing pawn storms on opposite wings after ...O-O, ...e5, or ...c5. Because the resulting middlegames are built around opposite-side attacking plans and committal pawn breaks rather than gradual maneuvering, the family earns some of the sharpest, most dynamic, and most consequential tags of any defense in the catalog — a single lost tempo in the race can decide the game outright.",
-      "reputationNotes": "The King's Indian has a genuinely up-and-down reputation at the very top: per Wikipedia's King's Indian Defence article it was the main weapon of Fischer, Kasparov, and Tal, but Kasparov largely abandoned it after repeated losses to Kramnik's calm handling in the early 2000s; it has since recovered in the hands of Nakamura, Radjabov, and Ding Liren (with Kramnik himself scoring a notable win with it in 2012), so it's best described as a fully viable but high-variance choice whose top-level fortunes swing with current theory rather than a settled, always-safe mainstay."
+      "style": { "tacticalVsPositional": 2, "riskTolerance": 1, "dynamicVsStatic": 2, "forgivingVsPunishing": 1 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 50
     }
   ]
 }
