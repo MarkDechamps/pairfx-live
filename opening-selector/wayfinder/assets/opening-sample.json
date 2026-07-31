@@ -37,9 +37,11 @@
       "depthOfTheory": "Moderate",
       "timeControls": ["Rapid", "Classical/Correspondence"],
       "ratingBand": 3,
-      "style": { "tacticalVsPositional": 1, "riskTolerance": 1, "dynamicVsStatic": 2, "forgivingVsPunishing": 1 },
-      "healthAtHigherLevels": 0,
-      "estimatedHoursToCompetency": 25
+      "style": { "tacticalVsPositional": 1, "riskTolerance": 1, "dynamicVsStatic": 1, "forgivingVsPunishing": 1 },
+      "healthAtHigherLevels": 1,
+      "estimatedHoursToCompetency": 25,
+      "overview": "The Dutch Defense answers 1.d4 with 1...f5, staking an early claim on e4 and preparing kingside activity at the cost of a small permanent weakness on the e8-h5 diagonal in front of Black's own king. It produces the lowest draw rate of any of the common replies to 1.d4, since it commits Black to unbalanced, fighting positions rather than symmetrical equality, and it splits into sharply different characters depending on Black's setup — from the hypermodern fianchetto systems of the Leningrad Variation to the locked, static center of the Stonewall. First recommended in print by Elias Stein in 1789, it was dismissed as unsound by Siegbert Tarrasch in 1931 but has been rehabilitated many times since.",
+      "reputationNotes": "It has never been a true main line against 1.d4 and is rarely seen at the very top today, but it has attracted a genuinely strong list of practitioners over the decades — Alekhine, Larsen, Najdorf, and more recently Nakamura and Carlsen (especially in Stonewall setups) — and remains entirely viable at club and master level alike."
     },
     {
       "eco": "B01",
