@@ -10,7 +10,8 @@
   var state = {
     data: null,
     answers: {},
-    stepIndex: 0
+    stepIndex: 0,
+    styleTouched: {}
   };
 
   var appEl = document.getElementById("app");
@@ -78,10 +79,17 @@
     return card;
   }
 
-  function advance(value, key) {
-    state.answers[key] = value;
-    state.stepIndex += 1;
-    render();
+  function renderContinueRow(isEnabled, onContinue) {
+    var row = document.createElement("div");
+    row.className = "continue-row";
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn";
+    btn.textContent = "Continue";
+    btn.disabled = !isEnabled;
+    btn.addEventListener("click", onContinue);
+    row.appendChild(btn);
+    return row;
   }
 
   function renderChoiceStep(opts) {
@@ -106,12 +114,17 @@
         tile.appendChild(sub);
       }
       tile.addEventListener("click", function () {
-        advance(choice.value, opts.key);
+        state.answers[opts.key] = choice.value;
+        render();
       });
       list.appendChild(tile);
     });
 
     card.appendChild(list);
+    card.appendChild(renderContinueRow(current !== undefined, function () {
+      state.stepIndex += 1;
+      render();
+    }));
     appEl.appendChild(card);
   }
 
@@ -160,20 +173,10 @@
     });
 
     card.appendChild(list);
-
-    var row = document.createElement("div");
-    row.className = "continue-row";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn";
-    btn.textContent = "Continue";
-    btn.disabled = selected.length === 0;
-    btn.addEventListener("click", function () {
+    card.appendChild(renderContinueRow(selected.length > 0, function () {
       state.stepIndex += 1;
       render();
-    });
-    row.appendChild(btn);
-    card.appendChild(row);
+    }));
 
     appEl.appendChild(card);
   }
@@ -238,20 +241,10 @@
     });
 
     card.appendChild(list);
-
-    var row = document.createElement("div");
-    row.className = "continue-row";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn";
-    btn.textContent = "Continue";
-    btn.disabled = selected.length === 0;
-    btn.addEventListener("click", function () {
+    card.appendChild(renderContinueRow(selected.length > 0, function () {
       state.stepIndex += 1;
       render();
-    });
-    row.appendChild(btn);
-    card.appendChild(row);
+    }));
 
     appEl.appendChild(card);
   }
@@ -275,7 +268,8 @@
 
     var row = document.createElement("div");
     row.className = "scale-row";
-    var current = state.answers.style ? state.answers.style[axisId] : undefined;
+    var touched = !!state.styleTouched[axisId];
+    var current = touched ? state.answers.style[axisId] : undefined;
 
     [-2, -1, 0, 1, 2].forEach(function (val) {
       var pt = document.createElement("button");
@@ -285,7 +279,7 @@
       pt.addEventListener("click", function () {
         if (!state.answers.style) state.answers.style = E.defaultStyle();
         state.answers.style[axisId] = val;
-        state.stepIndex += 1;
+        state.styleTouched[axisId] = true;
         render();
       });
       row.appendChild(pt);
@@ -293,6 +287,10 @@
 
     scale.appendChild(row);
     card.appendChild(scale);
+    card.appendChild(renderContinueRow(touched, function () {
+      state.stepIndex += 1;
+      render();
+    }));
     appEl.appendChild(card);
   }
 
@@ -364,6 +362,7 @@
     restartBtn.addEventListener("click", function () {
       state.answers = {};
       state.stepIndex = 0;
+      state.styleTouched = {};
       render();
     });
     restartRow.appendChild(restartBtn);
@@ -501,7 +500,6 @@
     })
     .then(function (data) {
       state.data = data;
-      state.answers.style = E.defaultStyle();
       footnoteEl.textContent = data.openings.length + " openings, ECO A–E · lichess-org/chess-openings (CC0)";
       render();
     })
