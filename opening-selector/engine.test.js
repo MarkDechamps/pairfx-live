@@ -154,12 +154,80 @@ test("scoreOpening: 'stays sound as I improve' rewards high healthAtHigherLevels
 
 // ---- study-time estimate -----------------------------------------------------
 
-test("formatEstimate: short competency times render in days", () => {
-  assert.equal(E.formatEstimate(3, "2plus"), "about 2 days at your pace");
+test("formatEstimate: short competency times render in days, naming the actual pace", () => {
+  assert.equal(E.formatEstimate(3, "2plus"), "≈3 hours total — about 2 days at 2+ hours a day.");
 });
 
-test("formatEstimate: long competency times render in weeks", () => {
-  assert.equal(E.formatEstimate(80, "30to60"), "about 15 weeks at your pace");
+test("formatEstimate: long competency times render in weeks, naming the actual pace", () => {
+  assert.equal(E.formatEstimate(80, "30to60"), "≈80 hours total — about 15 weeks at 30-60 minutes a day.");
+});
+
+test("formatEstimate: falls back to a neutral total when no study time is stored", () => {
+  assert.equal(E.formatEstimate(24), "≈24 hours total to competency.");
+});
+
+// ---- search -------------------------------------------------------------------
+
+test("searchOpenings: empty query returns no results", () => {
+  assert.deepEqual(E.searchOpenings("", sample), []);
+  assert.deepEqual(E.searchOpenings("   ", sample), []);
+});
+
+test("searchOpenings: matches by substring anywhere in the name, case-insensitively", () => {
+  var results = E.searchOpenings("queen", sample);
+  assert.deepEqual(results.map((o) => o.name), ["Queen's Gambit"]);
+});
+
+test("searchOpenings: matches earlier in the name sort before matches later in the name", () => {
+  var results = E.searchOpenings("defense", sample);
+  assert.ok(results.length > 1);
+  for (var i = 1; i < results.length; i++) {
+    var prevIndex = results[i - 1].name.toLowerCase().indexOf("defense");
+    var curIndex = results[i].name.toLowerCase().indexOf("defense");
+    assert.ok(prevIndex <= curIndex);
+  }
+});
+
+test("searchOpenings: caps results at the given limit", () => {
+  var results = E.searchOpenings("e", sample, 2);
+  assert.equal(results.length, 2);
+});
+
+// ---- persisted answers ----------------------------------------------------------
+
+function fakeStorage(initial) {
+  var store = Object.assign({}, initial);
+  return {
+    getItem: function (key) {
+      return Object.prototype.hasOwnProperty.call(store, key) ? store[key] : null;
+    },
+    setItem: function (key, value) {
+      store[key] = String(value);
+    }
+  };
+}
+
+test("loadPersistedAnswers: empty storage yields an empty object", () => {
+  assert.deepEqual(E.loadPersistedAnswers(fakeStorage()), {});
+});
+
+test("loadPersistedAnswers: tolerates corrupt JSON instead of throwing", () => {
+  var storage = fakeStorage();
+  storage.setItem(E.STORAGE_KEY, "{not json");
+  assert.deepEqual(E.loadPersistedAnswers(storage), {});
+});
+
+test("savePersistedAnswers + loadPersistedAnswers: round-trips exactly the persistable fields", () => {
+  var storage = fakeStorage();
+  var answers = baseAnswers({ color: "Black", firstMoves: ["e4"] });
+  E.savePersistedAnswers(storage, answers);
+  assert.deepEqual(E.loadPersistedAnswers(storage), answers);
+});
+
+test("savePersistedAnswers: drops keys outside the known answer fields", () => {
+  var storage = fakeStorage();
+  E.savePersistedAnswers(storage, { color: "White", bogus: "nope" });
+  assert.deepEqual(E.loadPersistedAnswers(storage), { color: "White" });
 });
 
 // ---- shortlist ----------------------------------------------------------------

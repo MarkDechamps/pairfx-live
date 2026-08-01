@@ -461,6 +461,92 @@ h1.question {
     text-align: center;
 }
 
+/* ---------- start screen ---------- */
+
+.start-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.start-option {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    width: 100%;
+    text-align: left;
+    background: var(--color-primary);
+    border: 2px solid var(--color-accent);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-lg);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.start-option:hover { border-color: var(--color-info); transform: translateY(-2px); }
+.start-option:focus-visible { outline: 2px solid var(--color-info); outline-offset: 2px; }
+
+.start-option-title { font-weight: 700; font-size: 1.1rem; color: var(--color-white); }
+.start-option-sub { color: var(--color-light); opacity: 0.75; font-size: 0.88rem; }
+
+/* ---------- search screen ---------- */
+
+.search-input {
+    display: block;
+    width: 100%;
+    margin-top: var(--spacing-md);
+    background: var(--color-primary);
+    border: 2px solid var(--color-accent);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--color-white);
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.search-input:focus { outline: none; border-color: var(--color-info); }
+.search-input::placeholder { color: var(--color-light); opacity: 0.5; }
+
+.search-results {
+    margin-top: var(--spacing-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.search-result {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    text-align: left;
+    background: var(--color-primary);
+    border: 1px solid var(--color-accent);
+    border-radius: 6px;
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-speed);
+}
+
+.search-result:hover { border-color: var(--color-info); }
+.search-result:focus-visible { outline: 2px solid var(--color-info); outline-offset: 2px; }
+
+.search-result-name { color: var(--color-white); font-size: 0.95rem; }
+.search-result-meta {
+    font-family: 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: var(--color-light);
+    opacity: 0.6;
+    white-space: nowrap;
+}
+
 /* ---------- footer ---------- */
 
 .footer {

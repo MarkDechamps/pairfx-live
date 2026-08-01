@@ -20,11 +20,19 @@
   ];
 
   var STUDY_TIME_OPTIONS = [
-    { value: "under30", label: "Under 30 min/day", hoursPerDay: 0.4 },
-    { value: "30to60", label: "30-60 min/day", hoursPerDay: 0.75 },
-    { value: "1to2", label: "1-2 hours/day", hoursPerDay: 1.5 },
-    { value: "2plus", label: "2+ hours/day", hoursPerDay: 2.5 }
+    { value: "under30", label: "Under 30 min/day", hoursPerDay: 0.4, paceLabel: "under 30 minutes a day" },
+    { value: "30to60", label: "30-60 min/day", hoursPerDay: 0.75, paceLabel: "30-60 minutes a day" },
+    { value: "1to2", label: "1-2 hours/day", hoursPerDay: 1.5, paceLabel: "1-2 hours a day" },
+    { value: "2plus", label: "2+ hours/day", hoursPerDay: 2.5, paceLabel: "2+ hours a day" }
   ];
+
+  // Only these fields are ever saved to/loaded from local storage — a
+  // whitelist, not just "whatever's in state.answers", so a future stray key
+  // in app.js's state can never leak into (or crash) persisted data.
+  var PERSISTED_ANSWER_KEYS = [
+    "color", "firstMoves", "rating", "studyTime", "depth", "timeControls", "style", "longevity"
+  ];
+  var STORAGE_KEY = "wayfinder:wizardAnswers";
 
   var DEPTH_OPTIONS = [
     { value: "Shallow", label: "Shallow", sub: "General understanding, few forced moves" },
@@ -170,12 +178,30 @@
     return match ? match.hoursPerDay : 1;
   }
 
+  function paceLabelFor(studyTimeValue) {
+    var match = STUDY_TIME_OPTIONS.filter(function (o) { return o.value === studyTimeValue; })[0];
+    return match ? match.paceLabel : null;
+  }
+
+  // studyTimeValue is optional — the search screen (wayfinder/tickets/0013)
+  // calls this without one when the user has never touched the wizard and so
+  // has no stored study time, getting a neutral total instead of a fabricated
+  // pace.
   function formatEstimate(hoursToCompetency, studyTimeValue) {
+    var totalHours = Math.round(hoursToCompetency);
+    var totalPhrase = "≈" + totalHours + " hour" + (totalHours === 1 ? "" : "s") + " total";
+    var pace = paceLabelFor(studyTimeValue);
+    if (!pace) return totalPhrase + " to competency.";
+
     var hoursPerDay = hoursPerDayFor(studyTimeValue);
     var days = Math.max(1, Math.ceil(hoursToCompetency / hoursPerDay));
-    if (days < 14) return "about " + days + " day" + (days === 1 ? "" : "s") + " at your pace";
-    var weeks = Math.round(days / 7);
-    return "about " + weeks + " weeks at your pace";
+    var timePhrase;
+    if (days < 14) {
+      timePhrase = "about " + days + " day" + (days === 1 ? "" : "s");
+    } else {
+      timePhrase = "about " + Math.round(days / 7) + " weeks";
+    }
+    return totalPhrase + " — " + timePhrase + " at " + pace + ".";
   }
 
   function ratingLabelFor(band) {
@@ -277,6 +303,70 @@
     });
   }
 
+  // Name-only substring search over the full catalog (wayfinder/tickets/0013)
+  // — filter-free, no color/rating/style gating. Matches earlier in the name
+  // rank first (typing "najdorf" should surface the Najdorf line above a
+  // family whose name merely contains "najdorf" further in), tied names
+  // broken by shorter-then-alphabetical so a family root outranks its own
+  // longer sub-variation names.
+  var DEFAULT_SEARCH_LIMIT = 20;
+
+  function searchOpenings(query, openings, limit) {
+    var q = (query || "").trim().toLowerCase();
+    if (!q) return [];
+    return openings
+      .map(function (o) { return { opening: o, index: o.name.toLowerCase().indexOf(q) }; })
+      .filter(function (entry) { return entry.index !== -1; })
+      .sort(function (a, b) {
+        if (a.index !== b.index) return a.index - b.index;
+        if (a.opening.name.length !== b.opening.name.length) return a.opening.name.length - b.opening.name.length;
+        return a.opening.name < b.opening.name ? -1 : a.opening.name > b.opening.name ? 1 : 0;
+      })
+      .slice(0, limit || DEFAULT_SEARCH_LIMIT)
+      .map(function (entry) { return entry.opening; });
+  }
+
+  // Reads/writes the wizard's answers via an injected storage object (real
+  // usage passes window.localStorage; tests inject an in-memory fake) so
+  // this stays a pure function of its arguments like the rest of engine.js —
+  // wayfinder/tickets/0012.
+  function loadPersistedAnswers(storage) {
+    if (!storage) return {};
+    var raw;
+    try {
+      raw = storage.getItem(STORAGE_KEY);
+    } catch (e) {
+      return {};
+    }
+    if (!raw) return {};
+    var parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      return {};
+    }
+    if (!parsed || typeof parsed !== "object") return {};
+    var result = {};
+    PERSISTED_ANSWER_KEYS.forEach(function (key) {
+      if (parsed[key] !== undefined) result[key] = parsed[key];
+    });
+    return result;
+  }
+
+  function savePersistedAnswers(storage, answers) {
+    if (!storage) return;
+    var toStore = {};
+    PERSISTED_ANSWER_KEYS.forEach(function (key) {
+      if (answers[key] !== undefined) toStore[key] = answers[key];
+    });
+    try {
+      storage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+    } catch (e) {
+      // Storage unavailable/full/disabled — persistence is a convenience,
+      // never a requirement for the app to function.
+    }
+  }
+
   function shortlistFor(timeControl, firstMove, answers, openings) {
     var candidates = openings
       .filter(function (o) { return passesHardFilters(o, answers, timeControl, firstMove); })
@@ -311,6 +401,10 @@
     formatEstimate: formatEstimate,
     ratingLabelFor: ratingLabelFor,
     buildRationale: buildRationale,
-    shortlistFor: shortlistFor
+    shortlistFor: shortlistFor,
+    searchOpenings: searchOpenings,
+    STORAGE_KEY: STORAGE_KEY,
+    loadPersistedAnswers: loadPersistedAnswers,
+    savePersistedAnswers: savePersistedAnswers
   };
 });
