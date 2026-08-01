@@ -193,6 +193,51 @@ test("searchOpenings: caps results at the given limit", () => {
   assert.equal(results.length, 2);
 });
 
+test("searchOpeningFamilies: collapses same-named rows into one family, others attached as deeper", () => {
+  // Real-world shape (wayfinder/assets/opening-catalog.json): many rows share
+  // the exact same name — e.g. 8 different "Sicilian Defense: Closed" rows at
+  // increasing PGN depth, differing only by ECO code — which used to make the
+  // search dropdown look like the same result repeated with nothing to tell
+  // them apart.
+  var shallow = { name: "Sicilian Defense: Closed", eco: "B23", color: "Black", pgn: "1. e4 c5 2. Nc3" };
+  var medium = { name: "Sicilian Defense: Closed", eco: "B24", color: "Black", pgn: "1. e4 c5 2. Nc3 Nc6 3. g3" };
+  var deep = { name: "Sicilian Defense: Closed", eco: "B25", color: "Black", pgn: "1. e4 c5 2. Nc3 Nc6 3. g3 g6 4. Bg2" };
+  var unrelated = { name: "French Defense", eco: "C00", color: "Black", pgn: "1. e4 e6" };
+
+  var families = E.searchOpeningFamilies("sicilian", [medium, unrelated, deep, shallow]);
+
+  assert.equal(families.length, 1);
+  assert.equal(families[0].opening, shallow);
+  assert.deepEqual(families[0].deeper.map((d) => d.opening), [medium, deep]);
+});
+
+test("searchOpeningFamilies: distinct families stay separate and keep search-relevance order", () => {
+  var najdorf = { name: "Sicilian Defense: Najdorf Variation", eco: "B90", color: "Black", pgn: "1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6" };
+  var sicilian = { name: "Sicilian Defense", eco: "B20", color: "Black", pgn: "1. e4 c5" };
+
+  var families = E.searchOpeningFamilies("sicilian", [najdorf, sicilian]);
+
+  assert.deepEqual(families.map((f) => f.opening), [sicilian, najdorf]);
+  assert.deepEqual(families[0].deeper, []);
+  assert.deepEqual(families[1].deeper, []);
+});
+
+test("searchOpeningFamilies: limit caps the number of families, not raw rows", () => {
+  var shallow = { name: "Sicilian Defense: Closed", eco: "B23", color: "Black", pgn: "1. e4 c5 2. Nc3" };
+  var deeper1 = { name: "Sicilian Defense: Closed", eco: "B24", color: "Black", pgn: "1. e4 c5 2. Nc3 Nc6 3. g3" };
+  var deeper2 = { name: "Sicilian Defense: Closed", eco: "B25", color: "Black", pgn: "1. e4 c5 2. Nc3 Nc6 3. g3 g6" };
+  // Matches "sicilian" later in the name (not at index 0 like the others
+  // above), so it reliably sorts after them regardless of name-length
+  // tie-breaking — isolating the thing this test actually checks (the
+  // families list, not raw rows, gets capped).
+  var other = { name: "English Opening: Sicilian Reversed", eco: "A15", color: "White", pgn: "1. Nf3" };
+
+  var families = E.searchOpeningFamilies("sicilian", [shallow, deeper1, deeper2, other], 1);
+  assert.equal(families.length, 1);
+  assert.equal(families[0].opening, shallow);
+  assert.deepEqual(families[0].deeper.map((d) => d.opening), [deeper1, deeper2]);
+});
+
 // ---- persisted answers ----------------------------------------------------------
 
 function fakeStorage(initial) {

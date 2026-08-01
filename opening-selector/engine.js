@@ -276,7 +276,12 @@
   // guaranteed a prefix of everything deeper that could ever attach to it —
   // no entry can match two different roots, so groups never need merging
   // after the fact.
-  function groupIntoFamilies(entries) {
+  // Clusters any array of { opening, ... } entries into families, shallowest
+  // member as root — the shared core both shortlistFor (below, picks the
+  // single best-scoring deeper member) and searchOpeningFamilies (further
+  // down, keeps every deeper member — search has no score to rank them by)
+  // build on.
+  function clusterByFamily(entries) {
     var byLength = entries.slice().sort(function (a, b) {
       return movesOf(a.opening.pgn).length - movesOf(b.opening.pgn).length;
     });
@@ -295,7 +300,11 @@
         groups.push({ root: entry, deeper: [] });
       }
     });
-    return groups.map(function (group) {
+    return groups;
+  }
+
+  function groupIntoFamilies(entries) {
+    return clusterByFamily(entries).map(function (group) {
       var best = group.deeper.reduce(function (running, entry) {
         return !running || entry.score > running.score ? entry : running;
       }, null);
@@ -324,6 +333,49 @@
       })
       .slice(0, limit || DEFAULT_SEARCH_LIMIT)
       .map(function (entry) { return entry.opening; });
+  }
+
+  // Same search, but collapses matches sharing the exact same name into one
+  // family (root = shallowest PGN, deeper = the rest, sorted shallow-to-deep)
+  // before capping at `limit` — otherwise typing e.g. "Sicilian" surfaces the
+  // same family name many times over with nothing but an ECO code to tell
+  // them apart (the catalog genuinely has several distinct PGNs sharing one
+  // exact name — see engine.test.js). Deliberately *exact*-name grouping,
+  // not shortlistFor's family-root-prefix grouping (clusterByFamily/
+  // familyRootOf) — that would also merge e.g. "Sicilian Defense" with
+  // "Sicilian Defense: Najdorf Variation", which is right for a 3-slot
+  // shortlist but wrong here: those are meaningfully different results a
+  // searcher can already tell apart by name, and merging them would bury the
+  // exact one they typed for under an unrelated sibling's info.
+  function searchOpeningFamilies(query, openings, limit) {
+    var matches = searchOpenings(query, openings, Infinity);
+    var order = [];
+    var byName = {};
+    matches.forEach(function (opening, rank) {
+      var family = byName[opening.name];
+      if (!family) {
+        byName[opening.name] = { opening: opening, deeper: [], rank: rank };
+        order.push(opening.name);
+        return;
+      }
+      if (movesOf(opening.pgn).length < movesOf(family.opening.pgn).length) {
+        family.deeper.push({ opening: family.opening });
+        family.opening = opening;
+      } else {
+        family.deeper.push({ opening: opening });
+      }
+      family.rank = Math.min(family.rank, rank);
+    });
+    return order
+      .map(function (name) { return byName[name]; })
+      .sort(function (a, b) { return a.rank - b.rank; })
+      .slice(0, limit || DEFAULT_SEARCH_LIMIT)
+      .map(function (family) {
+        var deeper = family.deeper.slice().sort(function (a, b) {
+          return movesOf(a.opening.pgn).length - movesOf(b.opening.pgn).length;
+        });
+        return { opening: family.opening, deeper: deeper };
+      });
   }
 
   // Reads/writes the wizard's answers via an injected storage object (real
@@ -403,6 +455,7 @@
     buildRationale: buildRationale,
     shortlistFor: shortlistFor,
     searchOpenings: searchOpenings,
+    searchOpeningFamilies: searchOpeningFamilies,
     STORAGE_KEY: STORAGE_KEY,
     loadPersistedAnswers: loadPersistedAnswers,
     savePersistedAnswers: savePersistedAnswers

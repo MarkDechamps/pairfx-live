@@ -470,7 +470,10 @@
   function renderOpeningCard(opening, options) {
     options = options || {};
     var card = document.createElement("div");
-    card.className = "result-card";
+    // .result-card's grid reserves a rank-badge column; without a rank
+    // (the search screen's detail card) that column would otherwise still
+    // claim the body, squeezing all its text into ~44px.
+    card.className = "result-card" + (options.rank ? "" : " result-card--no-rank");
 
     if (options.rank) {
       var badge = document.createElement("div");
@@ -580,18 +583,19 @@
 
   // ---- rendering: search screen (wayfinder/tickets/0013) ----------------------
 
-  function renderSearchDetail(opening) {
-    appEl.appendChild(renderOpeningCard(opening, {
-      rationale: E.formatEstimate(opening.estimatedHoursToCompetency, state.answers.studyTime)
+  function renderSearchDetail(family) {
+    appEl.appendChild(renderOpeningCard(family.opening, {
+      rationale: E.formatEstimate(family.opening.estimatedHoursToCompetency, state.answers.studyTime),
+      deeper: family.deeper
     }));
   }
 
   function renderSearchResults(query) {
-    var matches = E.searchOpenings(query, state.data.openings);
+    var families = E.searchOpeningFamilies(query, state.data.openings);
     var list = document.createElement("div");
     list.className = "search-results";
 
-    if (matches.length === 0) {
+    if (families.length === 0) {
       var note = document.createElement("p");
       note.className = "empty-note";
       note.textContent = "No openings match \"" + query.trim() + "\".";
@@ -599,7 +603,8 @@
       return list;
     }
 
-    matches.forEach(function (opening) {
+    families.forEach(function (family) {
+      var opening = family.opening;
       var item = document.createElement("button");
       item.type = "button";
       item.className = "search-result";
@@ -609,10 +614,11 @@
       item.appendChild(name);
       var meta = document.createElement("span");
       meta.className = "search-result-meta";
-      meta.textContent = opening.color + " · " + opening.eco;
+      meta.textContent = opening.color + " · " + opening.eco +
+        (family.deeper.length > 0 ? " · +" + family.deeper.length + " more" : "");
       item.appendChild(meta);
       item.addEventListener("click", function () {
-        state.searchSelected = opening;
+        state.searchSelected = family;
         render();
       });
       list.appendChild(item);

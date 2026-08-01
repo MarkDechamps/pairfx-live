@@ -48,3 +48,21 @@ Not automated: no headless-browser tooling exists in this environment (no jsdom/
 Puppeteer, and none installed for this), so the DOM/interaction layer was verified by careful
 manual trace rather than an actual browser run. Recommend a quick manual click-through before
 relying on this in production.
+
+## Follow-up
+
+User feedback after using it: typing e.g. "Sicilian" showed the same result repeated many
+times with only the ECO code differing — the catalog genuinely has several distinct PGN rows
+sharing one exact name (e.g. 8 rows literally named "Sicilian Defense: Closed"). Fixed by
+adding `searchOpeningFamilies` (TDD, `node --test`) — groups matches by *exact* name equality
+(not `shortlistFor`'s family-root-prefix grouping, which would wrongly also merge e.g.
+"Sicilian Defense" with "Sicilian Defense: Najdorf Variation" — genuinely different, already
+distinguishable results). The dropdown now shows one entry per distinct name with a "+N more"
+hint; selecting it shows the shallowest row plus the rest as a "Go deeper" list, reusing
+`renderOpeningCard`'s existing `deeper` option.
+
+Also fixed: the detail card's text rendered ~4 characters per line on mobile. Root cause —
+`.result-card`'s CSS grid hardcodes a 44px first column for the rank badge; the search detail
+card has no badge (no `rank` option), so the grid still reserved that column and squeezed the
+whole body into it. Fixed with a `.result-card--no-rank` class collapsing the grid to one
+column when there's no rank.
