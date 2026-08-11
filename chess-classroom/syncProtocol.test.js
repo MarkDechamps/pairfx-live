@@ -65,8 +65,14 @@ test("defaultPointer starts at the start position with no annotations", () => {
   });
 });
 
-test("defaultOverlayPrefs starts with all three overlays on", () => {
-  assert.deepEqual(defaultOverlayPrefs(), { moveNumber: true, lastMove: true, arrows: true });
+// The projector used to also show a "last move: e2-e4" text overlay, but it
+// was redundant with the highlighted from/to squares already drawn on the
+// board itself (that highlighting comes from the pointer's own `lastMove`
+// field below, not from an overlay preference - it's not toggleable and
+// never was). Removed per direct product feedback; only moveNumber/arrows
+// remain as checkboxes.
+test("defaultOverlayPrefs starts with both remaining overlays on", () => {
+  assert.deepEqual(defaultOverlayPrefs(), { moveNumber: true, arrows: true });
 });
 
 test("buildPointer is render-ready: a FEN plus display text, not a move path (projector needs no tree)", () => {
@@ -94,11 +100,11 @@ test("readInitialState reads whatever was last written, synchronously, before an
   const storage = fakeStorage();
   const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5", orientation: "black" });
   storage.setItem(POINTER_STORAGE_KEY, JSON.stringify(pointer));
-  storage.setItem(OVERLAYS_STORAGE_KEY, JSON.stringify({ moveNumber: false, lastMove: true, arrows: false }));
+  storage.setItem(OVERLAYS_STORAGE_KEY, JSON.stringify({ moveNumber: false, arrows: false }));
 
   const state = readInitialState(storage);
   assert.deepEqual(state.pointer, pointer);
-  assert.deepEqual(state.overlays, { moveNumber: false, lastMove: true, arrows: false });
+  assert.deepEqual(state.overlays, { moveNumber: false, arrows: false });
 });
 
 test("readInitialState tolerates corrupted JSON by falling back to defaults", () => {
@@ -146,11 +152,9 @@ test("publishOverlays writes/broadcasts independently of position", () => {
   const projectorChannel = bus.open();
   projectorChannel.addEventListener("message", (event) => received.push(event.data));
 
-  teacher.publishOverlays({ moveNumber: false, lastMove: true, arrows: true });
+  teacher.publishOverlays({ moveNumber: false, arrows: true });
 
-  assert.deepEqual(received, [
-    { type: MESSAGE_TYPE.OVERLAYS, payload: { moveNumber: false, lastMove: true, arrows: true } },
-  ]);
+  assert.deepEqual(received, [{ type: MESSAGE_TYPE.OVERLAYS, payload: { moveNumber: false, arrows: true } }]);
 });
 
 test("createProjectorSync catches up from storage at construction time", () => {
@@ -179,10 +183,10 @@ test("createProjectorSync dispatches live position/overlay messages to the right
 
   const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5" });
   teacher.publishPosition(pointer);
-  teacher.publishOverlays({ moveNumber: true, lastMove: false, arrows: true });
+  teacher.publishOverlays({ moveNumber: true, arrows: false });
 
   assert.deepEqual(positions, [pointer]);
-  assert.deepEqual(overlays, [{ moveNumber: true, lastMove: false, arrows: true }]);
+  assert.deepEqual(overlays, [{ moveNumber: true, arrows: false }]);
 });
 
 test("ignores malformed messages without a type instead of throwing", () => {

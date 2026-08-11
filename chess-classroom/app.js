@@ -114,7 +114,6 @@ const el = {
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
   overlayMoveNumber: document.getElementById("overlayMoveNumber"),
-  overlayLastMove: document.getElementById("overlayLastMove"),
   overlayArrows: document.getElementById("overlayArrows"),
   gameListCard: document.getElementById("gameListCard"),
   gameList: document.getElementById("gameList"),
@@ -544,7 +543,6 @@ function publishOverlays() {
 
 [
   [el.overlayMoveNumber, "moveNumber"],
-  [el.overlayLastMove, "lastMove"],
   [el.overlayArrows, "arrows"],
 ].forEach(([input, key]) => {
   input.addEventListener("change", () => {
@@ -645,7 +643,6 @@ async function boot() {
   setLanguage(lang);
   state.overlays = teacherSync.readOverlays();
   el.overlayMoveNumber.checked = state.overlays.moveNumber;
-  el.overlayLastMove.checked = state.overlays.lastMove;
   el.overlayArrows.checked = state.overlays.arrows;
   // Default ON (preserves the pre-existing "board must match the loaded
   // PGN" behavior for anyone who never touches the checkbox) — but a

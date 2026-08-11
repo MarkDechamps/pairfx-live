@@ -13,7 +13,7 @@
 //   doesn't walk variations, doesn't know what a "path" is — it just paints
 //   whatever FEN/label/squares/annotations it was handed. Written every time
 //   the teacher moves, jumps, or draws/erases an annotation while Sync is on.
-// - OVERLAYS: the three projector-overlay checkboxes' state. This is a display
+// - OVERLAYS: the projector-overlay checkboxes' state. This is a display
 //   *preference*, not a lesson position — it is written/broadcast regardless of
 //   the Sync toggle (ticket 0003: "remembered", not gated by Sync).
 
@@ -29,7 +29,7 @@ export const MESSAGE_TYPE = {
 };
 
 export function defaultOverlayPrefs() {
-  return { moveNumber: true, lastMove: true, arrows: true };
+  return { moveNumber: true, arrows: true };
 }
 
 export function defaultPointer() {

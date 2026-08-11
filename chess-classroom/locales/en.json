@@ -24,7 +24,6 @@
   "previewCaptionOff": "Sync is off — this preview is frozen until Sync is on again.",
   "overlays": "Projector overlays",
   "showMoveNumber": "Show move number",
-  "showLastMove": "Show last move",
   "showArrows": "Show arrows",
   "variations": "Variations",
   "showMore": "Show more…",
@@ -34,6 +33,5 @@
   "invalidPgn": "This PGN file could not be read",
   "someGamesFailed": "{count} of {total} games in this file could not be read and were skipped.",
   "renamePrompt": "New name for this game:",
-  "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
-  "lastMoveLabel": "last move"
+  "deleteConfirm": "Delete \"{name}\"? This cannot be undone."
 }

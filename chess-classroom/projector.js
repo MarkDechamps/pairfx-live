@@ -30,7 +30,6 @@ const MARKER_TYPE_BY_COLOR = {
 const el = {
   board: document.getElementById("board"),
   ovMoveNumber: document.getElementById("ovMoveNumber"),
-  ovLastMove: document.getElementById("ovLastMove"),
 };
 
 const board = new Chessboard(el.board, {
@@ -73,16 +72,15 @@ let lastPointer = Sync.defaultPointer();
 function renderPointer(pointer) {
   lastPointer = pointer;
   board.setPosition(pointer.fen, true);
-  paintLastMove(overlays.lastMove ? pointer.lastMove : null);
+  // Always shown now, not gated by an overlay checkbox: the highlighted
+  // from/to squares are the board's own visual language, not a separate
+  // "last move" readout - the old text pill duplicating them as words
+  // ("last move: e2-e4") was removed as redundant with this.
+  paintLastMove(pointer.lastMove);
   paintAnnotations(pointer);
 
   el.ovMoveNumber.hidden = !overlays.moveNumber || !pointer.moveLabel;
   el.ovMoveNumber.textContent = pointer.moveLabel || "";
-
-  el.ovLastMove.hidden = !overlays.lastMove || !pointer.lastMove;
-  if (pointer.lastMove) {
-    el.ovLastMove.innerHTML = `${t("lastMoveLabel")}: <strong>${pointer.lastMove.from}–${pointer.lastMove.to}</strong>`;
-  }
 }
 
 function renderOverlays(prefs) {
