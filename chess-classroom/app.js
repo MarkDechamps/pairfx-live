@@ -6,7 +6,11 @@
 
 import { Chess } from "./vendor/chess-js/chess.js";
 import { Chessboard, INPUT_EVENT_TYPE, COLOR } from "./vendor/cm-chessboard/src/Chessboard.js";
-import { RightClickAnnotator } from "./vendor/cm-chessboard/src/extensions/right-click-annotator/RightClickAnnotator.js";
+import {
+  RightClickAnnotator,
+  ARROW_TYPE,
+  MARKER_TYPE,
+} from "./vendor/cm-chessboard/src/extensions/right-click-annotator/RightClickAnnotator.js";
 import { Markers } from "./vendor/cm-chessboard/src/extensions/markers/Markers.js";
 
 import * as I18n from "./i18n.js";
@@ -37,18 +41,21 @@ function colorKeyFromClassName(className) {
   if (className.includes("warning")) return "warning";
   return "success";
 }
-const ARROW_TYPE_BY_COLOR = {
-  success: { class: "arrow-success" },
-  info: { class: "arrow-info" },
-  danger: { class: "arrow-danger" },
-  warning: { class: "arrow-warning" },
-};
-const MARKER_TYPE_BY_COLOR = {
-  success: { class: "marker-circle-success", slice: "markerCircle" },
-  info: { class: "marker-circle-info", slice: "markerCircle" },
-  danger: { class: "marker-circle-danger", slice: "markerCircle" },
-  warning: { class: "marker-circle-warning", slice: "markerCircle" },
-};
+// Must be the *exact same* objects RightClickAnnotator draws with, not
+// merely identically-shaped look-alikes - cm-chessboard's Arrows/Markers
+// extensions identify a type by object reference (Arrow.matches()/
+// Marker.matches() use `!==`), not by the class string inside it. This used
+// to be two separate literal objects with the same .class strings; the
+// moment an annotation survived one render() cycle (Keep checked for at
+// least one move), applyAnnotationsToBoard re-added it typed with these
+// local objects instead of RightClickAnnotator's own ARROW_TYPE/MARKER_TYPE
+// - from then on RightClickAnnotator.removeOwnArrows()/removeOwnMarkers()
+// (used by both the clear-annotations button and "clear on move") could
+// never match it again by reference, so it got stuck on the board
+// permanently. Aliasing to the real objects instead of re-declaring them
+// keeps every annotation removable through any of the clear paths.
+const ARROW_TYPE_BY_COLOR = ARROW_TYPE;
+const MARKER_TYPE_BY_COLOR = MARKER_TYPE;
 
 function serializeBoardAnnotations(board) {
   const { arrows, markers } = board.getAnnotations();
