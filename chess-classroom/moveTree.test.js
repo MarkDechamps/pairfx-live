@@ -13,6 +13,7 @@ import {
   continuationsFrom,
   findContinuationBySan,
   formatMoveLabel,
+  formatSequentialMoveLabel,
   sanitizeCyrillicHomoglyphs,
   normalizeEvaluationSymbols,
   stripUnrecognizedMoveGlyphs,
@@ -468,6 +469,38 @@ test("formatMoveLabel matches the prototype's notation exactly: '8.c3' / '8...d6
   assert.equal(formatMoveLabel(tree.mainLine[4]), "3.Bb5");
   assert.equal(formatMoveLabel(tree.mainLine[5]), "3...a6");
   assert.equal(formatMoveLabel(null), null);
+});
+
+// Standard chess-notation convention (the requester's own report): a black
+// move only needs the "N..." ellipsis when something separates it from its
+// own white move in the rendered sequence — a comment, a sideline entry
+// point, a "show more" resume point. Immediately after its own white move,
+// in the same rendered line, plain SAN reads correctly on its own: "1.d4
+// Nf6", not "1.d4 1...Nf6".
+test("formatSequentialMoveLabel: white always gets 'N.san', regardless of what precedes it", () => {
+  const tree = buildTree();
+  assert.equal(formatSequentialMoveLabel(tree.mainLine[4], tree.mainLine[3]), "3.Bb5");
+  assert.equal(formatSequentialMoveLabel(tree.mainLine[0], null), "1.e4");
+});
+
+test("formatSequentialMoveLabel: black omits the ellipsis right after its own white move", () => {
+  const tree = buildTree();
+  // mainLine[4] = 3.Bb5, mainLine[5] = 3...a6, consecutive in the same line.
+  assert.equal(formatSequentialMoveLabel(tree.mainLine[5], tree.mainLine[4]), "a6");
+});
+
+test("formatSequentialMoveLabel: black keeps the ellipsis at the start of a rendered segment (no previous node)", () => {
+  const tree = buildTree();
+  const berlin = tree.mainLine[5].variations[0]; // the 3...Nf6 sideline
+  assert.equal(formatSequentialMoveLabel(berlin[0], null), "3...Nf6");
+});
+
+test("formatSequentialMoveLabel: black keeps the ellipsis when the previous node isn't its own white move", () => {
+  const tree = buildTree();
+  // Contrived: a black move whose "previous" is another black move (e.g.
+  // resumed after a collapse-and-expand at the wrong parity, or simply a
+  // caller passing the wrong neighbor) must not be misread as adjacent.
+  assert.equal(formatSequentialMoveLabel(tree.mainLine[5], tree.mainLine[5]), "3...a6");
 });
 
 // ---- addMove ("Lock PGN" off: free play grows the tree) -------------------

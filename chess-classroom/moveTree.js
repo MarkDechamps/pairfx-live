@@ -53,6 +53,29 @@ export function formatMoveLabel(node) {
   return node.turn === "w" ? `${node.moveNumber}.${node.san}` : `${node.moveNumber}...${node.san}`;
 }
 
+// The label to show for one move *inline in a running rendered sequence*
+// (the variations panel), as opposed to formatMoveLabel's always-fully-
+// disambiguated form (used for the standalone move badge and the
+// projector's move-number overlay, where there's no "previous move" to
+// read it against). Standard chess-notation convention: black's "N..."
+// ellipsis is only needed when something separates a black move from its
+// own white move — a comment, a sideline branching off, a "show more"
+// resume point. Immediately after its own white move in the same
+// sequence, plain SAN is unambiguous on its own: "1.d4 Nf6", not
+// "1.d4 1...Nf6". White is never ambiguous, so it always gets the full
+// "N.san" form regardless of what precedes it.
+export function formatSequentialMoveLabel(node, previousNode) {
+  if (!node) {
+    return null;
+  }
+  if (node.turn === "w") {
+    return formatMoveLabel(node);
+  }
+  const followsOwnWhiteMove =
+    previousNode && previousNode.turn === "w" && previousNode.moveNumber === node.moveNumber;
+  return followsOwnWhiteMove ? node.san : formatMoveLabel(node);
+}
+
 // Real-world PGNs copied or OCR'd from Russian-language chess sources
 // sometimes carry Cyrillic letters that are visually indistinguishable from
 // their Latin look-alikes (a book export was reported with "Qхb4" — Cyrillic

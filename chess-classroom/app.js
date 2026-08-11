@@ -392,7 +392,12 @@ function renderLine(lineNodes, isSideline, forceExpand = false) {
       }
       return;
     }
-    container.appendChild(renderMoveEntry(node));
+    // Previous move *in this same rendered line*, not across a sideline
+    // boundary or a "show more" fold - i === 0 correctly has no previous
+    // node here, which is exactly when black's move still needs its "N..."
+    // ellipsis (see formatSequentialMoveLabel).
+    const previousNode = i > 0 ? lineNodes[i - 1] : null;
+    container.appendChild(renderMoveEntry(node, previousNode));
     node.variations.forEach((variation) => {
       container.appendChild(document.createElement("br"));
       container.appendChild(renderLine(variation, true));
@@ -401,13 +406,13 @@ function renderLine(lineNodes, isSideline, forceExpand = false) {
   return container;
 }
 
-function renderMoveEntry(node) {
+function renderMoveEntry(node, previousNode) {
   const btn = document.createElement("button");
   btn.className = "var-line";
   btn.dataset.pathKey = node.pathKey;
   const num = document.createElement("span");
   num.className = "num";
-  num.textContent = MoveTree.formatMoveLabel(node).split(node.san)[0];
+  num.textContent = MoveTree.formatSequentialMoveLabel(node, previousNode).split(node.san)[0];
   btn.appendChild(num);
   btn.appendChild(document.createTextNode(node.san));
   btn.title = node.commentAfter || "";
