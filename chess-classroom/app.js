@@ -114,6 +114,7 @@ const el = {
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
   overlayMoveNumber: document.getElementById("overlayMoveNumber"),
+  overlayGameTitle: document.getElementById("overlayGameTitle"),
   overlayArrows: document.getElementById("overlayArrows"),
   gameListCard: document.getElementById("gameListCard"),
   gameList: document.getElementById("gameList"),
@@ -360,6 +361,10 @@ function publishIfSynced(fen, lastMove, moveLabel) {
     moveLabel,
     lastMove,
     orientation: "white",
+    // Same "White vs Black - Event" text already shown next to the move
+    // badge - read straight off that element rather than re-deriving it,
+    // so there's exactly one source of truth for the label.
+    gameTitle: el.gameTitle.textContent || null,
     arrows: state.overlays.arrows ? state.annotations.arrows : [],
     markers: state.overlays.arrows ? state.annotations.markers : [],
   });
@@ -546,6 +551,7 @@ function publishOverlays() {
 
 [
   [el.overlayMoveNumber, "moveNumber"],
+  [el.overlayGameTitle, "gameTitle"],
   [el.overlayArrows, "arrows"],
 ].forEach(([input, key]) => {
   input.addEventListener("change", () => {
@@ -596,6 +602,7 @@ el.renameBtn.addEventListener("click", () => {
   // the same way, so refresh it too.
   el.gameTitle.textContent = currentGameLabel(renamed);
   renderGameList();
+  render(); // republishes the pointer so the projector's title overlay updates too
 });
 
 el.deleteBtn.addEventListener("click", async () => {
@@ -646,6 +653,7 @@ async function boot() {
   setLanguage(lang);
   state.overlays = teacherSync.readOverlays();
   el.overlayMoveNumber.checked = state.overlays.moveNumber;
+  el.overlayGameTitle.checked = state.overlays.gameTitle;
   el.overlayArrows.checked = state.overlays.arrows;
   // Default ON (preserves the pre-existing "board must match the loaded
   // PGN" behavior for anyone who never touches the checkbox) — but a

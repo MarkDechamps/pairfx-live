@@ -29,7 +29,7 @@ export const MESSAGE_TYPE = {
 };
 
 export function defaultOverlayPrefs() {
-  return { moveNumber: true, arrows: true };
+  return { moveNumber: true, gameTitle: true, arrows: true };
 }
 
 export function defaultPointer() {
@@ -38,6 +38,7 @@ export function defaultPointer() {
     moveLabel: null,
     lastMove: null,
     orientation: "white",
+    gameTitle: null,
     arrows: [],
     markers: [],
   };
@@ -50,10 +51,11 @@ export function buildPointer({
   moveLabel = null,
   lastMove = null,
   orientation = "white",
+  gameTitle = null,
   arrows = [],
   markers = [],
 }) {
-  return { fen, moveLabel, lastMove, orientation, arrows, markers };
+  return { fen, moveLabel, lastMove, orientation, gameTitle, arrows, markers };
 }
 
 function readJson(storage, key) {

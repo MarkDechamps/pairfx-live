@@ -433,6 +433,17 @@ body.projector {
   font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
   font-weight: 600;
 }
+.overlay.game-title {
+  top: 1.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 70vw;
+  font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .no-game-hint {
   color: var(--wood-panel-muted);

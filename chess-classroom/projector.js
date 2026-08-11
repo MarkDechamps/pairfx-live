@@ -30,6 +30,7 @@ const MARKER_TYPE_BY_COLOR = {
 const el = {
   board: document.getElementById("board"),
   ovMoveNumber: document.getElementById("ovMoveNumber"),
+  ovGameTitle: document.getElementById("ovGameTitle"),
 };
 
 const board = new Chessboard(el.board, {
@@ -81,6 +82,9 @@ function renderPointer(pointer) {
 
   el.ovMoveNumber.hidden = !overlays.moveNumber || !pointer.moveLabel;
   el.ovMoveNumber.textContent = pointer.moveLabel || "";
+
+  el.ovGameTitle.hidden = !overlays.gameTitle || !pointer.gameTitle;
+  el.ovGameTitle.textContent = pointer.gameTitle || "";
 }
 
 function renderOverlays(prefs) {

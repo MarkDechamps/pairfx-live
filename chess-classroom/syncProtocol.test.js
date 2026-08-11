@@ -60,6 +60,7 @@ test("defaultPointer starts at the start position with no annotations", () => {
     moveLabel: null,
     lastMove: null,
     orientation: "white",
+    gameTitle: null,
     arrows: [],
     markers: [],
   });
@@ -71,19 +72,28 @@ test("defaultPointer starts at the start position with no annotations", () => {
 // field below, not from an overlay preference - it's not toggleable and
 // never was). Removed per direct product feedback; only moveNumber/arrows
 // remain as checkboxes.
-test("defaultOverlayPrefs starts with both remaining overlays on", () => {
-  assert.deepEqual(defaultOverlayPrefs(), { moveNumber: true, arrows: true });
+//
+// gameTitle (the PGN's own "White vs Black - Event" label, same text shown
+// next to the move badge on the teacher tab) was added as a third overlay
+// per direct product feedback, so the room can see which game is being
+// demonstrated.
+test("defaultOverlayPrefs starts with all three overlays on", () => {
+  assert.deepEqual(defaultOverlayPrefs(), { moveNumber: true, gameTitle: true, arrows: true });
 });
 
 test("buildPointer is render-ready: a FEN plus display text, not a move path (projector needs no tree)", () => {
-  assert.deepEqual(buildPointer({ fen: A_FEN, moveLabel: "1...e5", lastMove: { from: "e7", to: "e5" } }), {
-    fen: A_FEN,
-    moveLabel: "1...e5",
-    lastMove: { from: "e7", to: "e5" },
-    orientation: "white",
-    arrows: [],
-    markers: [],
-  });
+  assert.deepEqual(
+    buildPointer({ fen: A_FEN, moveLabel: "1...e5", lastMove: { from: "e7", to: "e5" }, gameTitle: "Teacher vs Student" }),
+    {
+      fen: A_FEN,
+      moveLabel: "1...e5",
+      lastMove: { from: "e7", to: "e5" },
+      orientation: "white",
+      gameTitle: "Teacher vs Student",
+      arrows: [],
+      markers: [],
+    }
+  );
 });
 
 // ---- catch-up on startup (research 0001's gap) -------------------------
