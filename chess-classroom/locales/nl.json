@@ -14,6 +14,7 @@
   "annotationHint": "Rechtsklik-slepen tekent een pijl; rechtsklik markeert een veld. Alt/Cmd = blauw, Shift = rood, Shift+Alt = oranje.",
   "clearAnnotations": "Aantekeningen wissen",
   "keepAnnotations": "Behoud",
+  "keepAnnotationsHint": "Houd aantekeningen bij een volgende zet (standaard worden ze gewist zodra je een zet speelt).",
   "notes": "Notities",
   "notesTag": "uit PGN-commentaar",
   "noNote": "Geen notitie bij deze zet.",

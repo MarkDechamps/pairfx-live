@@ -14,6 +14,7 @@
   "annotationHint": "Clic droit + glisser dessine une flèche ; clic droit surligne une case. Alt/Cmd = bleu, Maj = rouge, Maj+Alt = orange.",
   "clearAnnotations": "Effacer les annotations",
   "keepAnnotations": "Conserver",
+  "keepAnnotationsHint": "Conserver les annotations lors du coup suivant (par défaut, elles disparaissent dès que vous jouez un coup).",
   "notes": "Notes",
   "notesTag": "commentaire PGN",
   "noNote": "Aucune note pour ce coup.",

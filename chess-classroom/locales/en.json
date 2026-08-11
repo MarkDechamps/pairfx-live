@@ -14,6 +14,7 @@
   "annotationHint": "Right-click-drag draws an arrow; right-click highlights a square. Alt/Cmd = blue, Shift = red, Shift+Alt = orange.",
   "clearAnnotations": "Clear annotations",
   "keepAnnotations": "Keep",
+  "keepAnnotationsHint": "Keep annotations across moves (by default they clear as soon as you play a move).",
   "notes": "Notes",
   "notesTag": "from PGN comment",
   "noNote": "No note for this move.",
