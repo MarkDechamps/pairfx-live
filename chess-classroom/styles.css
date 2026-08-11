@@ -312,7 +312,7 @@ body {
   background: transparent;
   border: none;
   color: var(--text);
-  padding: 0.15rem 0.35rem;
+  padding: 0.15rem 0.2rem;
   cursor: pointer;
   border-radius: 4px;
 }
