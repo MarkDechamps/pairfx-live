@@ -73,7 +73,7 @@ of one `engine.js`, because there are several genuinely independent concerns:
 |---|---|---|
 | `i18n.js` | `i18n.test.js` | Language detection (first-run default vs. persisted choice), dictionary lookup with Dutch fallback, `{placeholder}` interpolation. |
 | `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming from PGN headers, the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, multi-game upload picker choice-building. |
-| `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree) and `isCollapsedByDefault`/`formatMoveLabel`. |
+| `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
 | `syncProtocol.js` | `syncProtocol.test.js` | The teacher/projector message shapes and catch-up-on-startup logic. `BroadcastChannel`/`localStorage` are injected (`{channel, storage}`), so this is tested with fake in-memory stand-ins — no browser needed. |
 
 None of these four modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
@@ -129,13 +129,46 @@ weren't specified and needed a decision during implementation:
 - **`%cal`/`%csl` PGN color letters → cm-chessboard color names**: G→success(green),
   R→danger(red), B→info(blue), Y→warning(orange). PGN's Yellow has no matching cm-chessboard
   color; orange was the closest available.
-- **No open-ended free play.** The teacher can advance the board by dragging/clicking a piece,
-  but only if the resulting move matches a move already in the loaded PGN tree
-  (`moveTree.js: findContinuationBySan`) — a move that deviates from the loaded file is rejected
-  (the piece snaps back). This was a judgment call filling a real gap: map.md's "Not yet
-  specified" section explicitly leaves "a freeform/no-PGN-loaded mode" open, so building
-  unrestricted free play would have been scope creep on an acknowledged fog item rather than an
-  implementation of settled spec. Worth a wayfinder ticket if teachers want it.
+- **"No open-ended free play" (superseded — see "Lock PGN" below).** The original v1 build only
+  let the teacher advance the board by dragging/clicking a piece if the resulting move matched a
+  move already in the loaded PGN tree (`moveTree.js: findContinuationBySan`); a deviating move was
+  rejected outright (the piece snapped back), with no way to turn that off. That was flagged at
+  the time as "worth a wayfinder ticket if teachers want it" — this got requested, and is now the
+  "Lock PGN" feature documented below: the old always-on behavior is now the *default* (toggle on),
+  but a teacher can turn it off to play, and permanently record, any legal move including ones that
+  deviate from the loaded file. The gap this fills is still distinct from map.md's still-open
+  "freeform/no-PGN-loaded mode" fog item (playing with *no* PGN loaded at all) — that remains
+  unbuilt; this is about deviating from a PGN that *is* loaded.
+- **"Lock PGN" checkbox — where a deviating move attaches in the tree.** When Lock PGN is off and
+  a played move doesn't match `findContinuationBySan`, `moveTree.js: addMove(gameTree, node,
+  moveResult)` decides where it goes, using the exact same path/pathKey/entryPointKey shape
+  `buildLine` already establishes for PGN-authored moves, so the result is indistinguishable from
+  a node that was in the file all along: (1) if the cursor is at the end of its line (a leaf, no
+  continuation recorded yet — e.g. the loaded PGN just ends there), the move simply extends that
+  same `lineNodes` array one ply further; (2) if the cursor's position already has a recorded
+  continuation (the mainline continuation, and/or one or more existing sidelines), the move is
+  attached as a *new* sideline on that continuation's node, alongside whatever's already there —
+  the same slot a hand-authored `(...)` variation in the PGN text would occupy. Both cases are
+  covered by `moveTree.test.js`.
+- **"Lock PGN" checkbox — the grown tree is persisted, not session-only.** A move added while
+  unlocked is serialized back to PGN text (`moveTree.js: serializeGameTree`, reconstructing
+  `%cal`/`%csl` from `arrows`/`markers` so existing annotations round-trip losslessly) and written
+  back to the library entry via `putLibraryEntry` (`app.js: persistGrownTree`), the same way
+  rename already updates a stored entry. Read as the intended behavior from the requester's own
+  wording ("added in the pgn, as one would expect") — a teacher building up a repertoire file
+  session over session, one lesson at a time, is exactly the scenario this feature is for, and
+  losing that on an accidental reload would defeat the point.
+- **"Lock PGN" checkbox — its checked state is remembered, but via a plain localStorage key, not
+  the overlay-prefs sync machinery.** The three overlay-visibility checkboxes (ticket 0003) are
+  remembered *and* broadcast to the projector, because overlay visibility is itself something the
+  projector needs to know to render correctly. Lock PGN is different: it only gates what the
+  *teacher* board accepts as input — the projector never accepts input at all (confirmed
+  elsewhere in this file) and has no use for this preference. So it's remembered the same way the
+  language and last-opened-library-entry preferences already are: a direct
+  `localStorage.getItem`/`setItem` under its own key (`chess-classroom:lockPgn`) in `app.js`, read
+  once at boot, with no `syncProtocol.js` involvement. Defaults to **on** (checked) when no stored
+  preference exists yet, preserving the pre-existing behavior for anyone who never touches the
+  checkbox.
 - **Last-move highlight renders via cm-chessboard's own `markerSquare` sprite** (a `Markers`
   extension marker type, tinted with the prototype's `--last-move` gold via CSS), not a
   pixel-identical reproduction of the 0002/0003 prototypes' CSS `box-shadow` inset. Same color,

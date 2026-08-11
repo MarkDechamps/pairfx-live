@@ -89,7 +89,8 @@ English also supported.
 - Whether the teacher can edit or add PGN comments/notes live during a demo, or notes are
   strictly read-only as authored in the source PGN.
 - Any provision for a freeform/no-PGN-loaded mode (playing out moves live with no pre-loaded
-  game).
+  game). Still open — not to be confused with the "Lock PGN" checkbox (see chess-classroom's
+  CLAUDE.md), which covers deviating from a PGN that *is* loaded, not playing with none at all.
 - Mobile/tablet support for the teacher tab — only a teacher-laptop-plus-projector setup has
   been described so far.
 
