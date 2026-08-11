@@ -204,3 +204,26 @@ export function createCursor(gameTree, initialPathKey = "start") {
     },
   };
 }
+
+// The set of moves the teacher could play next on the board and still stay
+// on the loaded tree: the standard continuation plus every variation attached
+// to it (a variation is stored on the move it replaces, so they all live one
+// step ahead of `node`). Used to validate a drag/click move on the teacher's
+// board against the loaded PGN instead of allowing open-ended free play,
+// which is explicitly out of scope for v1 (map.md: "no provision for a
+// freeform/no-PGN-loaded mode" is still-open fog, not something this build
+// takes on). Returns [] at the end of a line with no more options.
+export function continuationsFrom(node, mainLine) {
+  const nextInLine = node ? node.lineNodes[node.indexInLine + 1] : mainLine[0];
+  if (!nextInLine) {
+    return [];
+  }
+  return [nextInLine, ...nextInLine.variations.map((variation) => variation[0])];
+}
+
+// Finds which continuation (if any) matches a SAN string the teacher just
+// played on the board, so app.js can jump the cursor there instead of
+// re-deriving tree knowledge itself.
+export function findContinuationBySan(node, mainLine, san) {
+  return continuationsFrom(node, mainLine).find((candidate) => candidate.san === san) || null;
+}

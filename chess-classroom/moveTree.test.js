@@ -10,6 +10,8 @@ import {
   buildGameTree,
   isCollapsedByDefault,
   createCursor,
+  continuationsFrom,
+  findContinuationBySan,
 } from "./moveTree.js";
 
 const { parse } = pgnParserPkg;
@@ -185,4 +187,37 @@ test("cursor.stepForward inside a sideline continues that sideline, not the main
 
 test("ROOT_PATH maps to the 'start' pathKey", () => {
   assert.equal(pathKey(ROOT_PATH), "start");
+});
+
+test("continuationsFrom the start position offers only the mainline's first move when there's no sideline there", () => {
+  const tree = buildTree();
+  const options = continuationsFrom(null, tree.mainLine);
+  assert.deepEqual(options.map((n) => n.san), ["e4"]);
+});
+
+test("continuationsFrom a branch point offers the mainline continuation plus every attached sideline", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4]; // 3. Bb5
+  const options = continuationsFrom(bb5, tree.mainLine);
+  // 3...a6 is the mainline reply; 3...Nf6 (Berlin) is the attached sideline.
+  assert.deepEqual(options.map((n) => n.san), ["a6", "Nf6"]);
+});
+
+test("continuationsFrom the end of a line (no more moves) is empty", () => {
+  const tree = buildTree();
+  const last = tree.mainLine[tree.mainLine.length - 1];
+  assert.deepEqual(continuationsFrom(last, tree.mainLine), []);
+});
+
+test("findContinuationBySan matches a board move against the loaded tree, mainline or sideline", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4];
+  assert.equal(findContinuationBySan(bb5, tree.mainLine, "Nf6").commentAfter, "The Berlin Defence.");
+  assert.equal(findContinuationBySan(bb5, tree.mainLine, "a6").san, "a6");
+});
+
+test("findContinuationBySan returns null for a move that deviates from the loaded tree entirely", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4];
+  assert.equal(findContinuationBySan(bb5, tree.mainLine, "Qh5"), null);
 });
