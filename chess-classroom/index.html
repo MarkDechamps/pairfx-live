@@ -70,14 +70,6 @@
         <p class="notes-body" id="notesBody" data-empty-label="Geen notitie bij deze zet."></p>
       </div>
 
-      <div class="card projector-preview">
-        <div class="board-container mini" id="miniBoard"></div>
-        <div class="caption">
-          <span data-i18n="projectorPreview">Projectorscherm</span> <strong data-i18n="preview">(voorbeeld)</strong><br>
-          <span id="previewCaption" data-i18n="previewCaptionOn">Zolang Sync aan staat, volgt dit mee.</span>
-        </div>
-      </div>
-
       <div class="card">
         <h2 data-i18n="overlays">Projector-overlays</h2>
         <div class="desk-group" style="color:var(--text);">
@@ -106,6 +98,20 @@
         </div>
         <p class="free-hint" id="freeHint" hidden data-i18n="freeHint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
       </div>
+
+      <!-- Collapsed by default - a "what does the room see" sanity check the
+           teacher glances at occasionally, not a panel worth permanent
+           board-column space next to the notes they actually read while
+           presenting. -->
+      <details class="card projector-preview-card">
+        <summary><span data-i18n="projectorPreview">Projectorscherm</span> <strong data-i18n="preview">(voorbeeld)</strong></summary>
+        <div class="projector-preview">
+          <div class="board-container mini" id="miniBoard"></div>
+          <div class="caption">
+            <span id="previewCaption" data-i18n="previewCaptionOn">Zolang Sync aan staat, volgt dit mee.</span>
+          </div>
+        </div>
+      </details>
     </div>
   </div>
 </div>
