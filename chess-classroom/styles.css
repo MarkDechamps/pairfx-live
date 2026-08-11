@@ -200,7 +200,7 @@ body {
 .tool-rail button:hover:not(.active) { background: #3c2c1c; }
 
 .board-container {
-  --sq: min(7.2vw, 4.6rem);
+  --sq: min(5.6vw, 3.6rem);
   width: calc(var(--sq) * 8);
   height: calc(var(--sq) * 8);
   border: 4px solid var(--board-border);
