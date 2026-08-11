@@ -1,0 +1,511 @@
+<title>Chess Classroom — lerarentab (prototype)</title>
+<style>
+  :root {
+    /* theme-invariant: the board and the wooden control desk don't flip with dark mode —
+       a real chessboard and a real podium don't repaint themselves for your OS setting. */
+    --board-light-sq: #e9dfc8;
+    --board-dark-sq: #7d5a3c;
+    --board-border: #4a3220;
+    --wood-panel: #241a10;
+    --wood-panel-fg: #efe6d4;
+    --wood-panel-muted: #b7a68c;
+    --wood-panel-border: #3c2c1c;
+    --felt: #2f5d46;
+    --felt-bright: #4f9d74;
+    --felt-fg: #f1fff6;
+    --flag-red: #a13d2c;
+    --flag-red-bright: #c9573f;
+    --piece-white: #f6f1e4;
+    --piece-black: #201408;
+    --piece-white-stroke: #4a3220;
+    --last-move: #d9b45c;
+
+    /* theme-variant: page chrome around the desk */
+    --page-bg: #ece2cc;
+    --panel-bg: #faf6ec;
+    --panel-bg-2: #f1e9d6;
+    --border: #d9cbaa;
+    --text: #241a10;
+    --text-muted: #6b5b45;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page-bg: #15100a;
+      --panel-bg: #1e1610;
+      --panel-bg-2: #251b13;
+      --border: #3a2c1d;
+      --text: #ede4d3;
+      --text-muted: #a5937a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page-bg: #15100a;
+    --panel-bg: #1e1610;
+    --panel-bg-2: #251b13;
+    --border: #3a2c1d;
+    --text: #ede4d3;
+    --text-muted: #a5937a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--page-bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    margin: 0;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-height: 100vh;
+  }
+  .banner {
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 70ch;
+  }
+  .banner strong { color: var(--text); }
+
+  /* ---- wooden control desk (topbar) ---- */
+  .desk {
+    background: var(--wood-panel);
+    color: var(--wood-panel-fg);
+    border: 1px solid var(--wood-panel-border);
+    border-radius: 10px;
+    padding: 0.85rem 1.1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.5rem;
+  }
+  .wordmark {
+    font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 1.35rem;
+    letter-spacing: 0.01em;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+  .wordmark small {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: var(--wood-panel-muted);
+    letter-spacing: 0.02em;
+  }
+  .desk-group { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .desk-group label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--wood-panel-muted);
+  }
+  .desk select, .btn {
+    font: inherit;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid var(--wood-panel-border);
+    background: #322414;
+    color: var(--wood-panel-fg);
+    padding: 0.4rem 0.65rem;
+    cursor: pointer;
+  }
+  .desk select { max-width: 15rem; }
+  .btn:hover { background: #3d2c19; }
+  .btn.primary { background: var(--felt); border-color: var(--felt); color: var(--felt-fg); }
+  .btn.primary:hover { background: var(--felt-bright); }
+  .spacer { flex: 1 1 auto; }
+
+  /* ---- signature control: the sync plunger ---- */
+  .sync-plunger {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    background: #322414;
+    border: 1px solid var(--wood-panel-border);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem 0.3rem 0.4rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .sync-plunger .knob {
+    width: 2.1rem;
+    height: 1.15rem;
+    border-radius: 999px;
+    background: var(--flag-red);
+    position: relative;
+    transition: background 0.15s ease;
+    flex: none;
+  }
+  .sync-plunger .knob::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 0.85rem; height: 0.85rem;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+  .sync-plunger.on .knob { background: var(--felt-bright); }
+  .sync-plunger.on .knob::after { transform: translateX(0.95rem); }
+  .sync-plunger .state { font-weight: 600; min-width: 9.5ch; }
+  .sync-plunger.on .state { color: var(--felt-bright); }
+  .sync-plunger:not(.on) .state { color: var(--flag-red-bright); }
+
+  /* ---- layout ---- */
+  .workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.85fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 46rem) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+
+  .board-col { display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .board-row { display: flex; gap: 0.6rem; align-items: stretch; }
+
+  .tool-rail {
+    background: var(--wood-panel);
+    border: 1px solid var(--wood-panel-border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.4rem;
+  }
+  .tool-rail button {
+    width: 2.3rem;
+    height: 2.3rem;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--wood-panel-fg);
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tool-rail button.active { background: var(--felt); border-color: var(--felt); }
+  .tool-rail button:hover:not(.active) { background: #3c2c1c; }
+
+  .board {
+    --sq: min(7.2vw, 4.6rem);
+    display: grid;
+    grid-template-columns: repeat(8, var(--sq));
+    grid-template-rows: repeat(8, var(--sq));
+    border: 4px solid var(--board-border);
+    border-radius: 4px;
+    overflow: hidden;
+    line-height: 0;
+    flex: none;
+  }
+  .sq {
+    width: var(--sq); height: var(--sq);
+    display: flex; align-items: center; justify-content: center;
+    font-size: calc(var(--sq) * 0.72);
+    position: relative;
+  }
+  .sq.light { background: var(--board-light-sq); }
+  .sq.dark { background: var(--board-dark-sq); }
+  .sq .piece.white { color: var(--piece-white); -webkit-text-stroke: 1px var(--piece-white-stroke); }
+  .sq .piece.black { color: var(--piece-black); }
+  .sq.last-move::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: color-mix(in srgb, var(--last-move) 45%, transparent);
+    box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--last-move) 90%, transparent);
+  }
+
+  .move-badge {
+    display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap;
+  }
+  .move-badge .current {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace;
+    font-size: 1rem;
+    background: var(--panel-bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.2rem 0.55rem;
+  }
+  .move-badge .caveat { font-size: 0.75rem; color: var(--text-muted); }
+
+  .card {
+    background: var(--panel-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+  }
+  .card h2 {
+    font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 0.95rem;
+    margin: 0 0 0.5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .card h2 .tag {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .notes-body { font-size: 0.92rem; line-height: 1.55; margin: 0; }
+
+  .projector-preview {
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .projector-preview .mini-board {
+    --sq: 1.35rem;
+    display: grid;
+    grid-template-columns: repeat(8, var(--sq));
+    grid-template-rows: repeat(8, var(--sq));
+    border: 2px solid var(--board-border);
+    border-radius: 3px;
+    overflow: hidden;
+    line-height: 0;
+    flex: none;
+  }
+  .projector-preview .mini-board .sq { font-size: calc(var(--sq) * 0.72); }
+  .projector-preview .caption { font-size: 0.82rem; color: var(--text-muted); }
+  .projector-preview .caption strong { color: var(--text); }
+
+  /* ---- variations panel ---- */
+  .variations { display: flex; flex-direction: column; gap: 1rem; }
+  .var-tree { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace; font-size: 0.88rem; }
+  .var-line {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    color: var(--text);
+    padding: 0.3rem 0.5rem 0.3rem 0.7rem;
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+  }
+  .var-line:hover { background: var(--panel-bg-2); }
+  .var-line.sideline { margin-left: 1.1rem; color: var(--text-muted); font-size: 0.85rem; }
+  .var-line .num { color: var(--text-muted); margin-right: 0.4rem; }
+  .var-line.active {
+    border-left-color: var(--felt-bright);
+    background: var(--panel-bg-2);
+    font-weight: 600;
+  }
+  .var-line.active .num { color: var(--felt-bright); }
+
+  .free-hint {
+    display: none;
+    font-size: 0.78rem;
+    color: var(--flag-red-bright);
+    background: color-mix(in srgb, var(--flag-red) 12%, var(--panel-bg));
+    border: 1px solid color-mix(in srgb, var(--flag-red) 35%, var(--border));
+    border-radius: 6px;
+    padding: 0.45rem 0.6rem;
+  }
+  body.sync-off .free-hint { display: block; }
+</style>
+
+<div class="banner">
+  <strong>Prototype — wayfinder ticket 0002</strong> (chess-classroom, teacher-tab layout).
+  Board position stays fixed; clicking a variation only moves the "last move" highlight,
+  the notes text and the projector preview, to test the layout and the sync behaviour —
+  not a working chess engine. Real content: a Closed Ruy Lopez tabiya, in Dutch (this
+  project's default UI language).
+</div>
+
+<div class="desk">
+  <div class="wordmark">♟ Chess&nbsp;Classroom <small>lesbord voor de klas</small></div>
+
+  <div class="desk-group">
+    <label for="lib">Bibliotheek</label>
+    <select id="lib">
+      <option>Ruy Lopez – Clubtraining.pgn</option>
+      <option>Siciliaans Najdorf – Demo.pgn</option>
+      <option>Koninginnegambiet – Les 4.pgn</option>
+    </select>
+    <button class="btn">PGN uploaden</button>
+  </div>
+
+  <div class="spacer"></div>
+
+  <button class="btn">Open projectorscherm ↗</button>
+
+  <button class="sync-plunger on" id="syncToggle" title="Synchroniseer lerarenbord met projectorscherm">
+    <span class="knob"></span>
+    <span class="state">Sync AAN</span>
+  </button>
+</div>
+
+<div class="workspace">
+  <div class="board-col">
+    <div class="board-row">
+      <div class="tool-rail">
+        <button class="active" title="Pijl tekenen">➜</button>
+        <button title="Veld markeren">▢</button>
+        <button title="Gum">⌫</button>
+      </div>
+      <div class="board" id="board"><!-- filled by JS --></div>
+    </div>
+
+    <div class="move-badge">
+      <span class="current" id="currentMove">8...d6</span>
+      <span class="caveat">bordstand blijft vast in dit prototype</span>
+    </div>
+
+    <div class="card">
+      <h2>Notities <span class="tag">uit PGN-commentaar</span></h2>
+      <p class="notes-body" id="notesBody">
+        Het Gesloten Spaans: wit heeft rustig ontwikkeld en de toren naar e1 gezet om
+        straks e4–e5 voor te bereiden of de loper op b3 te steunen. Zwart speelt ...d6 om
+        het centrum te stutten voor de hergroepering Nb8–d7–c5/f8.
+      </p>
+    </div>
+
+    <div class="card projector-preview">
+      <div class="mini-board" id="miniBoard"></div>
+      <div class="caption">
+        Projectorscherm <strong>(voorbeeld)</strong><br>
+        Zolang Sync aan staat, volgt dit mee. Zet Sync uit en klik verder — dit
+        bevriest tot Sync weer aan gaat.
+      </div>
+    </div>
+  </div>
+
+  <div class="card variations">
+    <div>
+      <h2>Varianten</h2>
+      <div class="var-tree" id="varTree">
+        <span class="var-line" style="cursor:default"><span class="num">1.</span>e4 e5</span>
+        <span class="var-line" style="cursor:default"><span class="num">2.</span>Nf3 Nc6</span>
+        <span class="var-line" style="cursor:default"><span class="num">3.</span>Bb5 a6</span>
+        <button class="var-line sideline" data-node="berlin"><span class="num">3...</span>Nf6 (Berlijnse Verdediging)</button>
+        <span class="var-line" style="cursor:default"><span class="num">4.</span>Ba4 Nf6</span>
+        <button class="var-line sideline" data-node="open"><span class="num">4...</span>Nxe4!? (Open Spaans)</button>
+        <span class="var-line" style="cursor:default"><span class="num">5.</span>O-O Be7</span>
+        <span class="var-line" style="cursor:default"><span class="num">6.</span>Re1 b5</span>
+        <span class="var-line" style="cursor:default"><span class="num">7.</span>Bb3 O-O</span>
+        <button class="var-line active" data-node="main"><span class="num">8.</span>c3 d6</button>
+      </div>
+    </div>
+    <p class="free-hint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
+  </div>
+</div>
+
+<script>
+  // Static tabiya after 8...d6 (Closed Ruy Lopez). rank8 -> rank1, a -> h.
+  const ROWS = [
+    "r.bq.rk.",
+    "..p.bppp",
+    "p.np.n..",
+    ".p..p...",
+    "....P...",
+    ".BP..N..",
+    "PP.P.PPP",
+    "RNBQR.K.",
+  ];
+  const GLYPH = {
+    r: "♜", n: "♞", b: "♝", q: "♛", k: "♚", p: "♟",
+    R: "♖", N: "♘", B: "♗", Q: "♕", K: "♔", P: "♙",
+  };
+  const files = "abcdefgh";
+  function squareToRC(sq) {
+    const file = files.indexOf(sq[0]);
+    const rank = parseInt(sq[1], 10);
+    return { r: 8 - rank, c: file };
+  }
+
+  function buildBoard(target, sizeClassIsMini) {
+    target.innerHTML = "";
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const ch = ROWS[r][c];
+        const div = document.createElement("div");
+        div.className = "sq " + ((r + c) % 2 === 0 ? "light" : "dark");
+        div.dataset.r = r; div.dataset.c = c;
+        if (ch !== ".") {
+          const span = document.createElement("span");
+          span.className = "piece " + (ch === ch.toUpperCase() ? "white" : "black");
+          span.textContent = GLYPH[ch];
+          div.appendChild(span);
+        }
+        target.appendChild(div);
+      }
+    }
+  }
+
+  const board = document.getElementById("board");
+  const miniBoard = document.getElementById("miniBoard");
+  buildBoard(board);
+  buildBoard(miniBoard);
+
+  const NODES = {
+    main: {
+      label: "8...d6",
+      from: "d7", to: "d6",
+      notes: `Het Gesloten Spaans: wit heeft rustig ontwikkeld en de toren naar e1 gezet om
+        straks e4–e5 voor te bereiden of de loper op b3 te steunen. Zwart speelt ...d6 om
+        het centrum te stutten voor de hergroepering Nb8–d7–c5/f8.`,
+    },
+    berlin: {
+      label: "3...Nf6 (Berlijnse Verdediging)",
+      from: "g8", to: "f6",
+      notes: `De Berlijnse Verdediging: in plaats van ...a6 ontwikkelt zwart meteen de
+        koningspaard. Na 4.O-O Nxe4 5.d4 ontstaat het beruchte Berlijnse eindspel —
+        Kramniks wapen tegen Kasparov in 2000.`,
+    },
+    open: {
+      label: "4...Nxe4!? (Open Spaans)",
+      from: "f6", to: "e4",
+      notes: `Het Open Spaans: zwart grijpt meteen de e4-pion. Wit krijgt initiatief na
+        5.d4, maar zwart houdt een gezonde structuur — een scherper alternatief voor wie
+        actief tegenspel zoekt.`,
+    },
+  };
+
+  function paintLastMove(target, node) {
+    target.querySelectorAll(".sq.last-move").forEach((s) => s.classList.remove("last-move"));
+    [node.from, node.to].forEach((sq) => {
+      const { r, c } = squareToRC(sq);
+      const cell = target.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+      if (cell) cell.classList.add("last-move");
+    });
+  }
+
+  let synced = true;
+  function applyNode(nodeKey) {
+    const node = NODES[nodeKey];
+    document.getElementById("currentMove").textContent = node.label;
+    document.getElementById("notesBody").textContent = node.notes.replace(/\s+/g, " ").trim();
+    paintLastMove(board, node);
+    document.querySelectorAll(".var-line[data-node]").forEach((b) => b.classList.remove("active"));
+    document.querySelector(`.var-line[data-node="${nodeKey}"]`).classList.add("active");
+    if (synced) paintLastMove(miniBoard, node);
+  }
+  applyNode("main");
+
+  document.querySelectorAll(".var-line[data-node]").forEach((btn) => {
+    btn.addEventListener("click", () => applyNode(btn.dataset.node));
+  });
+
+  const syncToggle = document.getElementById("syncToggle");
+  syncToggle.addEventListener("click", () => {
+    synced = !synced;
+    syncToggle.classList.toggle("on", synced);
+    syncToggle.querySelector(".state").textContent = synced ? "Sync AAN" : "Sync UIT";
+    document.body.classList.toggle("sync-off", !synced);
+    if (synced) {
+      // Toggling back on immediately snaps the projector to the teacher's current position.
+      const active = document.querySelector(".var-line.active[data-node]");
+      if (active) paintLastMove(miniBoard, NODES[active.dataset.node]);
+    }
+  });
+</script>
