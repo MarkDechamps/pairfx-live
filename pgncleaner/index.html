@@ -1,0 +1,979 @@
+<title>PGN Cleaner</title>
+<style>
+/* ── Design tokens ──────────────────────────────── */
+:root {
+  --bg:          #F4F7FA;
+  --surface:     #FFFFFF;
+  --surface-2:   #EBF0F7;
+  --border:      #D1DAE8;
+  --text:        #131E30;
+  --muted:       #596880;
+  --accent:      #1C7A4A;
+  --accent-h:    #165E38;
+  --accent-dim:  #E4F2EA;
+  --accent-fg:   #FFFFFF;
+  --danger:      #B83232;
+  --pass:        #1C7A4A;
+  --fail:        #B83232;
+  --shadow:      0 1px 3px rgba(13,20,36,.08), 0 4px 16px rgba(13,20,36,.06);
+  --r:           8px;
+  --mono:        'Courier New', 'Consolas', monospace;
+  --sans:        system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif:       Georgia, 'Times New Roman', serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:         #0C1420;
+    --surface:    #152034;
+    --surface-2:  #1A2A44;
+    --border:     #1C2E48;
+    --text:       #DDE5F4;
+    --muted:      #7A92B8;
+    --accent:     #30A86B;
+    --accent-h:   #27914F;
+    --accent-dim: #142A1E;
+    --accent-fg:  #FFFFFF;
+    --danger:     #E05050;
+    --pass:       #30A86B;
+    --fail:       #E05050;
+    --shadow:     0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:         #0C1420;
+  --surface:    #152034;
+  --surface-2:  #1A2A44;
+  --border:     #1C2E48;
+  --text:       #DDE5F4;
+  --muted:      #7A92B8;
+  --accent:     #30A86B;
+  --accent-h:   #27914F;
+  --accent-dim: #142A1E;
+  --accent-fg:  #FFFFFF;
+  --danger:     #E05050;
+  --pass:       #30A86B;
+  --fail:       #E05050;
+  --shadow:     0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.2);
+}
+
+/* ── Reset & base ───────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family:      var(--sans);
+  background:       var(--bg);
+  color:            var(--text);
+  min-height:       100vh;
+  padding:          2.5rem 1rem 5rem;
+  line-height:      1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ─────────────────────────────────────── */
+.wrap {
+  max-width:  580px;
+  margin:     0 auto;
+  display:    flex;
+  flex-direction: column;
+  gap:        1.5rem;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.header { text-align: center; padding-bottom: .25rem; }
+
+.header-piece {
+  display:      block;
+  font-size:    2.5rem;
+  line-height:  1;
+  margin-bottom: .5rem;
+  user-select:  none;
+}
+
+.header h1 {
+  font-family:    var(--serif);
+  font-size:      clamp(1.6rem, 4vw, 2rem);
+  font-weight:    400;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color:          var(--text);
+}
+
+.header p {
+  margin-top: .4rem;
+  font-size:  .875rem;
+  color:      var(--muted);
+  letter-spacing: .01em;
+}
+
+/* ── Card ───────────────────────────────────────── */
+.card {
+  background:    var(--surface);
+  border:        1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow:    var(--shadow);
+  padding:       1.5rem;
+}
+
+.card-title {
+  font-size:      .6875rem;
+  font-weight:    600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color:          var(--muted);
+  margin-bottom:  1rem;
+}
+
+/* ── Drop zone ──────────────────────────────────── */
+.dropzone {
+  border:        2px dashed var(--border);
+  border-radius: calc(var(--r) - 2px);
+  padding:       2.5rem 1.5rem;
+  text-align:    center;
+  cursor:        pointer;
+  transition:    border-color .15s, background .15s;
+  position:      relative;
+}
+
+.dropzone:hover,
+.dropzone.drag-over {
+  border-color: var(--accent);
+  background:   var(--accent-dim);
+}
+
+.dropzone input[type="file"] {
+  position: absolute;
+  inset:    0;
+  opacity:  0;
+  cursor:   pointer;
+  width:    100%;
+  height:   100%;
+}
+
+.dropzone-icon {
+  font-size:    2rem;
+  display:      block;
+  margin-bottom:.5rem;
+  user-select:  none;
+}
+
+.dropzone-label {
+  font-size:  .9375rem;
+  color:      var(--text);
+  font-weight: 500;
+}
+
+.dropzone-hint {
+  font-size:  .8125rem;
+  color:      var(--muted);
+  margin-top: .25rem;
+}
+
+/* ── File info bar ──────────────────────────────── */
+.file-info {
+  display:     flex;
+  align-items: center;
+  gap:         .625rem;
+  padding:     .75rem 1rem;
+  background:  var(--accent-dim);
+  border:      1px solid var(--border);
+  border-radius: var(--r);
+  font-size:   .875rem;
+  color:       var(--accent);
+  font-weight: 500;
+}
+
+.file-info-icon { font-size: 1.1rem; flex-shrink: 0; }
+.file-info-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-info-meta { color: var(--muted); font-size: .8125rem; white-space: nowrap; }
+
+/* ── Replacement stats ──────────────────────────── */
+.stats-grid {
+  display:    grid;
+  gap:        .5rem;
+}
+
+.stat-row {
+  display:       grid;
+  grid-template-columns: 1fr auto auto;
+  align-items:   center;
+  gap:           .75rem;
+  padding:       .625rem .875rem;
+  background:    var(--surface-2);
+  border-radius: calc(var(--r) - 2px);
+  font-size:     .875rem;
+}
+
+.stat-tokens {
+  display:     flex;
+  align-items: center;
+  gap:         .4rem;
+  font-family: var(--mono);
+  font-size:   .8rem;
+  overflow:    hidden;
+}
+
+.stat-from {
+  color:      var(--muted);
+  white-space: nowrap;
+  overflow:   hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-arrow { color: var(--muted); flex-shrink: 0; }
+
+.stat-to {
+  color:      var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stat-count {
+  font-size:   .8125rem;
+  color:       var(--muted);
+  white-space: nowrap;
+  text-align:  right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-count.nonzero { color: var(--accent); font-weight: 600; }
+
+.stat-indicator {
+  width:  8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.stat-indicator.active { background: var(--accent); }
+
+/* ── Preview ────────────────────────────────────── */
+.preview-wrap { overflow-x: auto; }
+
+.preview {
+  font-family:  var(--mono);
+  font-size:    .8125rem;
+  line-height:  1.7;
+  color:        var(--text);
+  background:   var(--surface-2);
+  border-radius: calc(var(--r) - 2px);
+  padding:      1rem 1.125rem;
+  max-height:   220px;
+  overflow-y:   auto;
+  white-space:  pre-wrap;
+  word-break:   break-all;
+}
+
+/* ── Download button ────────────────────────────── */
+.btn-download {
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             .5rem;
+  width:           100%;
+  padding:         .875rem 1.5rem;
+  background:      var(--accent);
+  color:           var(--accent-fg);
+  font-family:     var(--sans);
+  font-size:       .9375rem;
+  font-weight:     600;
+  letter-spacing:  .02em;
+  border:          none;
+  border-radius:   var(--r);
+  cursor:          pointer;
+  transition:      background .15s, transform .1s;
+  text-decoration: none;
+}
+
+.btn-download:hover { background: var(--accent-h); }
+.btn-download:active { transform: scale(.98); }
+.btn-download:focus-visible {
+  outline:        2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* ── Test panel ─────────────────────────────────── */
+.test-panel {
+  border:        1px solid var(--border);
+  border-radius: var(--r);
+  overflow:      hidden;
+}
+
+.test-header {
+  display:       flex;
+  align-items:   center;
+  gap:           .75rem;
+  padding:       .875rem 1.25rem;
+  background:    var(--surface);
+  cursor:        pointer;
+  user-select:   none;
+  list-style:    none;
+}
+
+.test-header::-webkit-details-marker { display: none; }
+.test-header::marker { content: ''; }
+
+.test-label {
+  font-size:    .8125rem;
+  font-weight:  600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color:        var(--muted);
+  flex:         1;
+}
+
+.test-summary-badge {
+  font-size:   .8rem;
+  font-weight: 600;
+  padding:     .2rem .6rem;
+  border-radius: 99px;
+  background:  var(--surface-2);
+  color:       var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.test-summary-badge.all-pass {
+  background: var(--accent-dim);
+  color:      var(--accent);
+}
+
+.test-summary-badge.has-fail {
+  background: #fce8e8;
+  color:      var(--fail);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .test-summary-badge.has-fail {
+    background: #2a1212;
+    color:      var(--fail);
+  }
+}
+
+:root[data-theme="dark"] .test-summary-badge.has-fail {
+  background: #2a1212;
+  color:      var(--fail);
+}
+
+.btn-run {
+  font-family:  var(--sans);
+  font-size:    .8125rem;
+  font-weight:  600;
+  color:        var(--accent);
+  background:   var(--accent-dim);
+  border:       1px solid transparent;
+  border-radius: 6px;
+  padding:      .3rem .75rem;
+  cursor:       pointer;
+  transition:   background .15s;
+}
+
+.btn-run:hover { background: var(--border); }
+.btn-run:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.test-chevron {
+  color:      var(--muted);
+  font-size:  .75rem;
+  transition: transform .2s;
+}
+
+details[open] .test-chevron { transform: rotate(180deg); }
+
+.test-body {
+  border-top:  1px solid var(--border);
+  background:  var(--surface);
+  padding:     1rem 1.25rem;
+  display:     flex;
+  flex-direction: column;
+  gap:         .375rem;
+}
+
+.test-case {
+  display:     flex;
+  align-items: flex-start;
+  gap:         .5rem;
+  font-size:   .8125rem;
+  padding:     .4rem .625rem;
+  border-radius: 5px;
+}
+
+.test-case.pass { background: var(--accent-dim); }
+
+.test-case.fail {
+  background: #fce8e8;
+  color:      var(--fail);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .test-case.fail {
+    background: #2a1010;
+    color:      var(--fail);
+  }
+}
+
+:root[data-theme="dark"] .test-case.fail {
+  background: #2a1010;
+  color:      var(--fail);
+}
+
+.test-icon {
+  flex-shrink: 0;
+  margin-top:  .05rem;
+  font-style:  normal;
+}
+
+.test-desc { flex: 1; }
+
+.test-detail {
+  font-family: var(--mono);
+  font-size:   .75rem;
+  color:       var(--fail);
+  margin-top:  .25rem;
+}
+
+/* ── Hidden utility ─────────────────────────────── */
+.hidden { display: none !important; }
+</style>
+
+<main class="wrap">
+
+  <!-- Header -->
+  <header class="header">
+    <span class="header-piece" aria-hidden="true">♟</span>
+    <h1>PGN Cleaner</h1>
+    <p>Strip Chessable annotations · restore standard PGN notation</p>
+  </header>
+
+  <!-- Upload card -->
+  <section class="card" aria-label="File upload">
+    <p class="card-title">Upload PGN</p>
+    <div class="dropzone" id="dropzone" role="button" aria-label="Drop PGN file here or click to browse">
+      <input type="file" id="fileInput" accept=".pgn,text/plain" aria-label="Choose PGN file">
+      <span class="dropzone-icon" aria-hidden="true">📄</span>
+      <span class="dropzone-label">Drop PGN file here</span>
+      <p class="dropzone-hint">or click to browse — .pgn or .txt</p>
+    </div>
+  </section>
+
+  <!-- File info + stats + preview + download — hidden until file loaded -->
+  <div id="resultArea" class="hidden" aria-live="polite">
+
+    <!-- File info bar -->
+    <div class="file-info" id="fileInfo">
+      <span class="file-info-icon" aria-hidden="true">♟</span>
+      <span class="file-info-name" id="fileName"></span>
+      <span class="file-info-meta" id="fileMeta"></span>
+    </div>
+
+    <!-- Replacements card -->
+    <section class="card" aria-label="Replacement statistics">
+      <p class="card-title">Replacements applied</p>
+      <div class="stats-grid" id="statsGrid"></div>
+    </section>
+
+    <!-- Preview card -->
+    <section class="card" aria-label="Cleaned PGN preview">
+      <p class="card-title">Preview</p>
+      <div class="preview-wrap">
+        <pre class="preview" id="preview" tabindex="0"></pre>
+      </div>
+    </section>
+
+    <!-- Download button -->
+    <button class="btn-download" id="downloadBtn" type="button">
+      <span aria-hidden="true">↓</span>
+      Download cleaned PGN
+    </button>
+
+  </div>
+
+  <!-- Test panel -->
+  <details class="test-panel" id="testPanel">
+    <summary class="test-header">
+      <span class="test-label">Unit tests</span>
+      <span class="test-summary-badge" id="testBadge">not run</span>
+      <button class="btn-run" id="runTestsBtn" type="button" aria-label="Run unit tests">▶ Run</button>
+      <span class="test-chevron" aria-hidden="true">▾</span>
+    </summary>
+    <div class="test-body" id="testBody">
+      <p style="font-size:.8125rem;color:var(--muted);">Click Run to execute all unit tests.</p>
+    </div>
+  </details>
+
+</main>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+//  REPLACEMENTS — single source of truth
+// ═══════════════════════════════════════════════════
+const REPLACEMENTS = Object.freeze([
+  // 1. Restore brackets
+  { token: '@@StartBracket@@', replacement: '(',           label: 'Variation open'      },
+  { token: '@@EndBracket@@',   replacement: ')',           label: 'Variation close'     },
+  // 2. FEN diagram tags
+  { token: '@@StartFEN@@',     replacement: '[fen]',      label: 'FEN start'           },
+  { token: '@@EndFEN@@',       replacement: '[/fen]',     label: 'FEN end'             },
+  // 3. Inline move sequence tags
+  { token: '@@StartV@@',       replacement: '[moves]',    label: 'Move sequence start' },
+  { token: '@@EndV@@',         replacement: '[/moves]',   label: 'Move sequence end'   },
+  // 4. List items  (• = •, ↵ = ↵ for display)
+  { token: '@@li@@', replacement: '\n• ', displayReplacement: '↵• ', label: 'List item' },
+  // 5. Markdown bold → BBCode
+  { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: '[b]text[/b]', replacement: '[b]$1[/b]', label: 'Bold → BBCode' },
+  // 6. Trailing whitespace before punctuation
+  { pattern: /\s+(\.|\!|\?)/g, display: '\\s+[.!?]', displayReplacement: '[.!?]', replacement: '$1', label: 'Trailing spaces' },
+]);
+
+
+// ═══════════════════════════════════════════════════
+//  PURE FUNCTIONS  (the contract the tests specify)
+// ═══════════════════════════════════════════════════
+
+/**
+ * Replace every literal occurrence of `token` in `pgn` with `replacement`.
+ * Uses split/join to avoid regex escaping concerns with special characters.
+ * @param {string} pgn
+ * @param {string} token
+ * @param {string} replacement
+ * @returns {string}
+ */
+function replaceToken(pgn, token, replacement) {
+  return pgn.split(token).join(replacement);
+}
+
+/**
+ * Apply a single replacement entry (literal token or regex pattern) to a PGN string.
+ * @param {string} pgn
+ * @param {{ token?: string, pattern?: RegExp, replacement: string }} repl
+ * @returns {string}
+ */
+function applyReplacement(pgn, repl) {
+  if (repl.pattern) return pgn.replace(repl.pattern, repl.replacement);
+  return replaceToken(pgn, repl.token, repl.replacement);
+}
+
+/**
+ * Apply all known replacements to a PGN string in declaration order.
+ * @param {string} pgn
+ * @returns {string}
+ */
+function cleanPgn(pgn) {
+  return REPLACEMENTS.reduce(
+    (acc, repl) => applyReplacement(acc, repl),
+    pgn
+  );
+}
+
+/**
+ * Count literal occurrences of `token` inside `str`.
+ * @param {string} str
+ * @param {string} token
+ * @returns {number}
+ */
+function countOccurrences(str, token) {
+  if (!token) return 0;
+  return str.split(token).length - 1;
+}
+
+/**
+ * Build a stats array describing how many times each replacement matched.
+ * @param {string} original  — raw uploaded PGN
+ * @returns {Array<{display, displayReplacement, label, count}>}
+ */
+function getStats(original) {
+  return REPLACEMENTS.map(repl => ({
+    display:            repl.display            || repl.token,
+    displayReplacement: repl.displayReplacement || repl.replacement,
+    label:              repl.label,
+    count: repl.pattern
+      ? (original.match(repl.pattern) || []).length
+      : countOccurrences(original, repl.token),
+  }));
+}
+
+
+// ═══════════════════════════════════════════════════
+//  TEST SUITE  (defined first — TDD)
+// ═══════════════════════════════════════════════════
+
+const TESTS = [
+  // ── replaceToken ───────────────────────────────
+  {
+    id: 'T01',
+    desc: 'replaceToken: @@StartBracket@@ → ( (single)',
+    fn:  () => replaceToken('@@StartBracket@@1. e4)', '@@StartBracket@@', '('),
+    expected: '(1. e4)',
+  },
+  {
+    id: 'T02',
+    desc: 'replaceToken: @@EndBracket@@ → ) (single)',
+    fn:  () => replaceToken('(1. e4@@EndBracket@@', '@@EndBracket@@', ')'),
+    expected: '(1. e4)',
+  },
+  {
+    id: 'T03',
+    desc: 'replaceToken: @@StartFEN@@ → [fen] (single)',
+    fn:  () => replaceToken('@@StartFEN@@rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR@@EndFEN@@', '@@StartFEN@@', '[fen]'),
+    expected: '[fen]rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR@@EndFEN@@',
+  },
+  {
+    id: 'T04',
+    desc: 'replaceToken: @@EndFEN@@ → [/fen] (single)',
+    fn:  () => replaceToken('[fen]rnbq@@EndFEN@@', '@@EndFEN@@', '[/fen]'),
+    expected: '[fen]rnbq[/fen]',
+  },
+  {
+    id: 'T05',
+    desc: 'replaceToken: replaces ALL occurrences in one pass',
+    fn:  () => replaceToken('@@StartBracket@@a@@EndBracket@@ @@StartBracket@@b@@EndBracket@@', '@@StartBracket@@', '('),
+    expected: '(a@@EndBracket@@ (b@@EndBracket@@',
+  },
+  {
+    id: 'T06',
+    desc: 'replaceToken: unchanged when token absent',
+    fn:  () => replaceToken('1. e4 e5 2. Nf3', '@@StartBracket@@', '('),
+    expected: '1. e4 e5 2. Nf3',
+  },
+  {
+    id: 'T07',
+    desc: 'replaceToken: empty string → empty string',
+    fn:  () => replaceToken('', '@@StartBracket@@', '('),
+    expected: '',
+  },
+  {
+    id: 'T08',
+    desc: 'replaceToken: partial token not replaced',
+    fn:  () => replaceToken('@@StartBracket 1. e4', '@@StartBracket@@', '('),
+    expected: '@@StartBracket 1. e4',
+  },
+  // ── cleanPgn ───────────────────────────────────
+  {
+    id: 'T09',
+    desc: 'cleanPgn: replaces all four tokens in one call',
+    fn:  () => cleanPgn('@@StartBracket@@1. e4 d5@@EndBracket@@'),
+    expected: '(1. e4 d5)',
+  },
+  {
+    id: 'T10',
+    desc: 'cleanPgn: replaces FEN markers',
+    fn:  () => cleanPgn('@@StartFEN@@rnbqkbnr/8@@EndFEN@@'),
+    expected: '[fen]rnbqkbnr/8[/fen]',
+  },
+  {
+    id: 'T11',
+    desc: 'cleanPgn: handles all four tokens together',
+    fn:  () => cleanPgn(
+      '1. e4 @@StartBracket@@1. d4@@EndBracket@@ @@StartFEN@@rnbq/8@@EndFEN@@ *'
+    ),
+    expected: '1. e4 (1. d4) [fen]rnbq/8[/fen] *',
+  },
+  {
+    id: 'T12',
+    desc: 'cleanPgn: empty string → empty string',
+    fn:  () => cleanPgn(''),
+    expected: '',
+  },
+  {
+    id: 'T13',
+    desc: 'cleanPgn: clean PGN with no tokens passes through unchanged',
+    fn:  () => cleanPgn('1. e4 e5 2. Nf3 Nc6 *'),
+    expected: '1. e4 e5 2. Nf3 Nc6 *',
+  },
+  {
+    id: 'T14',
+    desc: 'cleanPgn: tokens are case-sensitive (wrong case → no replacement)',
+    fn:  () => cleanPgn('@@startbracket@@1. e4)'),
+    expected: '@@startbracket@@1. e4)',
+  },
+  {
+    id: 'T15',
+    desc: 'cleanPgn: nested brackets replaced correctly',
+    fn:  () => cleanPgn('@@StartBracket@@a @@StartBracket@@b@@EndBracket@@@@EndBracket@@'),
+    expected: '(a (b))',
+  },
+  // ── countOccurrences ───────────────────────────
+  {
+    id: 'T16',
+    desc: 'countOccurrences: zero when token absent',
+    fn:  () => countOccurrences('1. e4 e5', '@@StartBracket@@'),
+    expected: 0,
+  },
+  {
+    id: 'T17',
+    desc: 'countOccurrences: correct count for two occurrences',
+    fn:  () => countOccurrences('@@StartBracket@@a@@StartBracket@@b', '@@StartBracket@@'),
+    expected: 2,
+  },
+  {
+    id: 'T18',
+    desc: 'countOccurrences: empty string → 0',
+    fn:  () => countOccurrences('', '@@StartBracket@@'),
+    expected: 0,
+  },
+  // ── getStats ───────────────────────────────────
+  {
+    id: 'T19',
+    desc: 'getStats: returns one entry per replacement',
+    fn:  () => getStats('').length,
+    expected: REPLACEMENTS.length,
+  },
+  {
+    id: 'T20',
+    desc: 'getStats: counts literal tokens correctly',
+    fn:  () => {
+      const stats = getStats('@@StartBracket@@@@StartBracket@@@@EndFEN@@');
+      return JSON.stringify([stats[0].count, stats[1].count, stats[2].count, stats[3].count]);
+    },
+    expected: JSON.stringify([2, 0, 0, 1]),
+  },
+  // ── Move sequence tags ─────────────────────────
+  {
+    id: 'T21',
+    desc: 'cleanPgn: @@StartV@@ → [moves] and @@EndV@@ → [/moves]',
+    fn:  () => cleanPgn('See @@StartV@@1. e4 e5@@EndV@@'),
+    expected: 'See [moves]1. e4 e5[/moves]',
+  },
+  {
+    id: 'T22',
+    desc: 'replaceToken: @@StartV@@ → [moves] (direct)',
+    fn:  () => replaceToken('@@StartV@@1. e4', '@@StartV@@', '[moves]'),
+    expected: '[moves]1. e4',
+  },
+  {
+    id: 'T23',
+    desc: 'replaceToken: @@EndV@@ → [/moves] (direct)',
+    fn:  () => replaceToken('1. e4@@EndV@@', '@@EndV@@', '[/moves]'),
+    expected: '1. e4[/moves]',
+  },
+  // ── List item ──────────────────────────────────
+  {
+    id: 'T24',
+    desc: 'cleanPgn: @@li@@ → newline + bullet',
+    fn:  () => cleanPgn('Points:@@li@@First@@li@@Second'),
+    expected: 'Points:\n• First\n• Second',
+  },
+  // ── Bold markdown → BBCode ─────────────────────
+  {
+    id: 'T25',
+    desc: 'cleanPgn: **text** → [b]text[/b]',
+    fn:  () => cleanPgn('This is **important**.'),
+    expected: 'This is [b]important[/b].',
+  },
+  {
+    id: 'T26',
+    desc: 'cleanPgn: multiple **bold** spans converted',
+    fn:  () => cleanPgn('**A** and **B**'),
+    expected: '[b]A[/b] and [b]B[/b]',
+  },
+  {
+    id: 'T27',
+    desc: 'cleanPgn: no bold markers → string unchanged',
+    fn:  () => cleanPgn('plain text'),
+    expected: 'plain text',
+  },
+  // ── Trailing whitespace before punctuation ─────
+  {
+    id: 'T28',
+    desc: 'cleanPgn: strips trailing space before period',
+    fn:  () => cleanPgn('1. e4 .'),
+    expected: '1. e4.',
+  },
+  {
+    id: 'T29',
+    desc: 'cleanPgn: strips trailing space before !',
+    fn:  () => cleanPgn('Great move !'),
+    expected: 'Great move!',
+  },
+  {
+    id: 'T30',
+    desc: 'cleanPgn: strips trailing space before ?',
+    fn:  () => cleanPgn('Is this right ?'),
+    expected: 'Is this right?',
+  },
+  {
+    id: 'T31',
+    desc: 'cleanPgn: strips multiple whitespace chars before punctuation',
+    fn:  () => cleanPgn('move   .'),
+    expected: 'move.',
+  },
+  // ── Full integration ───────────────────────────
+  {
+    id: 'T32',
+    desc: 'cleanPgn: all nine replacements applied together',
+    fn:  () => cleanPgn(
+      '@@StartBracket@@1. e4@@EndBracket@@ ' +
+      '@@StartFEN@@pos@@EndFEN@@ ' +
+      '@@StartV@@1. d4@@EndV@@ ' +
+      '@@li@@item **bold** move .'
+    ),
+    expected: '(1. e4) [fen]pos[/fen] [moves]1. d4[/moves] \n• item [b]bold[/b] move.',
+  },
+];
+
+function runTests() {
+  return TESTS.map(t => {
+    try {
+      const actual = t.fn();
+      const pass   = actual === t.expected;
+      return { id: t.id, desc: t.desc, pass, actual, expected: t.expected };
+    } catch (err) {
+      return { id: t.id, desc: t.desc, pass: false, actual: String(err), expected: t.expected };
+    }
+  });
+}
+
+
+// ═══════════════════════════════════════════════════
+//  UI
+// ═══════════════════════════════════════════════════
+
+const dropzone   = document.getElementById('dropzone');
+const fileInput  = document.getElementById('fileInput');
+const resultArea = document.getElementById('resultArea');
+const fileNameEl = document.getElementById('fileName');
+const fileMetaEl = document.getElementById('fileMeta');
+const statsGrid  = document.getElementById('statsGrid');
+const previewEl  = document.getElementById('preview');
+const downloadBtn= document.getElementById('downloadBtn');
+const testBody   = document.getElementById('testBody');
+const testBadge  = document.getElementById('testBadge');
+const runTestsBtn= document.getElementById('runTestsBtn');
+const testPanel  = document.getElementById('testPanel');
+
+let cleanedContent = '';
+let cleanedFileName = 'cleaned.pgn';
+
+// ── Drag & drop ────────────────────────────────────
+dropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropzone.classList.add('drag-over');
+});
+
+['dragleave', 'dragend'].forEach(evt =>
+  dropzone.addEventListener(evt, () => dropzone.classList.remove('drag-over'))
+);
+
+dropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropzone.classList.remove('drag-over');
+  const file = e.dataTransfer?.files?.[0];
+  if (file) processFile(file);
+});
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files?.[0];
+  if (file) processFile(file);
+});
+
+// ── File processing ────────────────────────────────
+function processFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const original = e.target.result;
+    cleanedContent  = cleanPgn(original);
+    cleanedFileName = file.name.replace(/(\.[^.]+)?$/, '-cleaned.pgn');
+
+    renderFileInfo(file.name, original);
+    renderStats(original);
+    renderPreview(cleanedContent);
+    resultArea.classList.remove('hidden');
+    resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  reader.readAsText(file);
+}
+
+function renderFileInfo(name, original) {
+  const games = (original.match(/\[Event /g) || []).length;
+  fileNameEl.textContent = name;
+  fileMetaEl.textContent = games > 0
+    ? `${games} game${games !== 1 ? 's' : ''}`
+    : `${(original.length / 1024).toFixed(1)} KB`;
+}
+
+function renderStats(original) {
+  const stats = getStats(original);
+  statsGrid.innerHTML = '';
+  stats.forEach(({ display, displayReplacement, label, count }) => {
+    const row = document.createElement('div');
+    row.className = 'stat-row';
+    row.innerHTML = `
+      <div class="stat-tokens">
+        <span class="stat-from">${escHtml(display)}</span>
+        <span class="stat-arrow">→</span>
+        <span class="stat-to">${escHtml(displayReplacement)}</span>
+      </div>
+      <span class="stat-count ${count > 0 ? 'nonzero' : ''}">
+        ${count > 0 ? `${count}×` : '—'}
+      </span>
+      <span class="stat-indicator ${count > 0 ? 'active' : ''}" title="${label}" aria-label="${count > 0 ? 'replaced' : 'not found'}"></span>
+    `;
+    statsGrid.appendChild(row);
+  });
+}
+
+function renderPreview(cleaned) {
+  // show first ~1500 chars so the card stays compact
+  const LIMIT = 1500;
+  previewEl.textContent = cleaned.length > LIMIT
+    ? cleaned.slice(0, LIMIT) + '\n\n… (truncated for preview)'
+    : cleaned;
+}
+
+// ── Download ───────────────────────────────────────
+downloadBtn.addEventListener('click', () => {
+  if (!cleanedContent) return;
+  const blob = new Blob([cleanedContent], { type: 'text/plain' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = cleanedFileName;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// ── Tests ──────────────────────────────────────────
+runTestsBtn.addEventListener('click', e => {
+  e.stopPropagation();    // don't toggle the <details>
+  renderTests();
+  testPanel.open = true;  // expand panel automatically
+});
+
+function renderTests() {
+  const results  = runTests();
+  const passing  = results.filter(r => r.pass).length;
+  const failing  = results.length - passing;
+  const allPass  = failing === 0;
+
+  testBadge.textContent = `${passing}/${results.length} passing`;
+  testBadge.className   = 'test-summary-badge ' + (allPass ? 'all-pass' : 'has-fail');
+
+  testBody.innerHTML = '';
+  results.forEach(r => {
+    const div = document.createElement('div');
+    div.className = `test-case ${r.pass ? 'pass' : 'fail'}`;
+    div.innerHTML = `
+      <em class="test-icon" aria-label="${r.pass ? 'pass' : 'fail'}">${r.pass ? '✓' : '✗'}</em>
+      <div>
+        <span class="test-desc"><strong>${escHtml(r.id)}</strong> — ${escHtml(r.desc)}</span>
+        ${!r.pass ? `<div class="test-detail">
+          expected: ${escHtml(String(r.expected))}<br>
+          got:      ${escHtml(String(r.actual))}
+        </div>` : ''}
+      </div>
+    `;
+    testBody.appendChild(div);
+  });
+}
+
+// ── Utils ──────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
