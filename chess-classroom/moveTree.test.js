@@ -18,6 +18,7 @@ import {
   stripUnrecognizedMoveGlyphs,
   sanitizePgnText,
   splitPgnGames,
+  replaceGameInPgnText,
   addMove,
   serializeGameTree,
 } from "./moveTree.js";
@@ -103,6 +104,39 @@ test("parseGames isolates a single malformed game instead of failing the whole b
   assert.equal(failures.length, 1);
   assert.equal(failures[0].index, 1);
   assert.match(failures[0].message, /Expected|expected/);
+});
+
+// ---- replaceGameInPgnText (persisting a Lock-PGN-off deviation back into --
+// its correct slot within a multi-game library entry's raw text) ----------
+
+test("replaceGameInPgnText swaps out a single-game file's only chunk entirely", () => {
+  const result = replaceGameInPgnText(RUY_LOPEZ_PGN, 0, '[Event "New"]\n\n1. d4 *');
+  const { games } = parseGames(parse, result);
+  assert.equal(games.length, 1);
+  assert.equal(games[0].tags.Event, "New");
+});
+
+test("replaceGameInPgnText replaces only the targeted game, leaving the other games' text untouched", () => {
+  const threeGames = [
+    RUY_LOPEZ_PGN,
+    '[Event "Second"]\n\n1. d4 d5 *',
+    '[Event "Third"]\n\n1. c4 c5 *',
+  ].join("\n\n");
+
+  const result = replaceGameInPgnText(threeGames, 1, '[Event "Second — edited"]\n\n1. d4 d5 2. c4 *');
+  const { games, failures } = parseGames(parse, result);
+
+  assert.deepEqual(failures, []);
+  assert.equal(games.length, 3, "still three games — none dropped or merged");
+  assert.equal(games[0].tags.Event, "Club Training", "game 0 (Ruy Lopez) is untouched");
+  assert.equal(games[1].tags.Event, "Second — edited", "game 1 got the new content");
+  assert.equal(games[1].moves.length, 3, "game 1's new move (2.c4) is present");
+  assert.equal(games[2].tags.Event, "Third", "game 2 is untouched");
+});
+
+test("replaceGameInPgnText throws on an out-of-range index instead of silently corrupting the file", () => {
+  assert.throws(() => replaceGameInPgnText(RUY_LOPEZ_PGN, 1, "anything"), RangeError);
+  assert.throws(() => replaceGameInPgnText(RUY_LOPEZ_PGN, -1, "anything"), RangeError);
 });
 
 // Real-world bug report: a book-sourced PGN (copy/OCR'd from a Russian-language

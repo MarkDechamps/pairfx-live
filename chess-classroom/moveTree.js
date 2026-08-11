@@ -231,6 +231,23 @@ export function parseGames(parsePgn, pgnText) {
   return { games, failures };
 }
 
+// Rewrites the raw text of a multi-game (or single-game) PGN file, replacing
+// only the game at `gameIndex` with `newGameText` and leaving every other
+// game's own chunk of text byte-for-byte as `splitPgnGames` found it. This is
+// the write-back half of the library storing the whole uploaded file rather
+// than one picked-out game (see CLAUDE.md's judgment call superseding ticket
+// 0006): a move played while "Lock PGN" is off must land back in the correct
+// game's slot within that file, not clobber the other games sharing the same
+// library entry. Throws RangeError on an out-of-range index rather than
+// silently appending/dropping a game, since that would corrupt the file.
+export function replaceGameInPgnText(pgnText, gameIndex, newGameText) {
+  const chunks = splitPgnGames(pgnText);
+  if (gameIndex < 0 || gameIndex >= chunks.length) {
+    throw new RangeError(`gameIndex ${gameIndex} is out of range for a ${chunks.length}-game file`);
+  }
+  return chunks.map((chunk, i) => (i === gameIndex ? newGameText.trim() : chunk.trim())).join("\n\n");
+}
+
 // Builds the full move tree for one already-parsed game. `ChessCtor` is the
 // chess.js `Chess` class (or a compatible fake, in tests).
 // A puzzle/exercise-style PGN entry (common in book exports) sets up a
