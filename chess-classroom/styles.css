@@ -330,7 +330,14 @@ body {
 }
 .var-line:hover { background: var(--panel-bg-2); }
 .var-line .num { color: var(--text-muted); margin-right: 0.15rem; }
-.var-line.active { background: var(--felt); color: var(--felt-fg); font-weight: 600; }
+/* No font-weight change here on purpose: this is a monospace stack with a
+   generic "monospace" fallback at the end, and not every font a browser
+   picks from that fallback keeps bold at the exact same advance width as
+   regular (Windows' Consolas is a known case that doesn't). A wider bold
+   word reflows every word after it on the same line, so the highlighted
+   move visibly "jumps" sideways as you step through moves. Background
+   contrast alone is a strong enough active-state signal without it. */
+.var-line.active { background: var(--felt); color: var(--felt-fg); }
 .var-line.active .num { color: var(--felt-fg); }
 .var-row { margin: 0.1rem 0; }
 .var-sideline { margin-left: 1.1rem; color: var(--text-muted); font-size: 0.85rem; display: block; }
