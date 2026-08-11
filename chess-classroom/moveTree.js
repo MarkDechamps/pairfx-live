@@ -34,6 +34,25 @@ function parseColorField(entry) {
   return { color, square: entry.slice(1) };
 }
 
+function sideToMoveFromFen(fen) {
+  return fen.split(" ")[1];
+}
+
+function fullMoveNumberFromFen(fen) {
+  return parseInt(fen.split(" ")[5], 10);
+}
+
+// A move's label as teachers expect to read it: "8.c3" for White, "8...d6"
+// for Black (matching the confirmed prototype's notation exactly — no space
+// after the move number) — the badge above the board and the projector's
+// move-number overlay both use this.
+export function formatMoveLabel(node) {
+  if (!node) {
+    return null;
+  }
+  return node.turn === "w" ? `${node.moveNumber}.${node.san}` : `${node.moveNumber}...${node.san}`;
+}
+
 // Parses raw PGN text into the pgn-parser library's tree shape. `parsePgn` is
 // the library's own `parse` export (or window.PgnParser.parse in the browser).
 export function parseGame(parsePgn, pgnText) {
@@ -87,10 +106,16 @@ function buildLine(ChessCtor, startFen, pgnMoves, parentPath, entryPointKey, nod
       path,
       pathKey: pathKey(path),
       san: moveResult.san,
+      from: moveResult.from,
+      to: moveResult.to,
       fenBefore,
       fen: chess.fen(),
-      turn: mv.turn,
-      moveNumber: mv.moveNumber || null,
+      // Derived from fenBefore's own fields rather than trusted from mv:
+      // @mliebelt/pgn-parser leaves moveNumber null on black's half of a
+      // move pair, but a FEN always carries an authoritative side-to-move
+      // and fullmove number, valid at any nesting depth.
+      turn: sideToMoveFromFen(fenBefore),
+      moveNumber: fullMoveNumberFromFen(fenBefore),
       commentBefore: mv.commentMove || null,
       commentAfter: mv.commentAfter || null,
       arrows: (commentDiag.colorArrows || []).map(parseColorArrow),

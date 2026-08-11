@@ -12,6 +12,7 @@ import {
   createCursor,
   continuationsFrom,
   findContinuationBySan,
+  formatMoveLabel,
 } from "./moveTree.js";
 
 const { parse } = pgnParserPkg;
@@ -220,4 +221,27 @@ test("findContinuationBySan returns null for a move that deviates from the loade
   const tree = buildTree();
   const bb5 = tree.mainLine[4];
   assert.equal(findContinuationBySan(bb5, tree.mainLine, "Qh5"), null);
+});
+
+test("moveNumber/turn are derived from the FEN, correct even for pgn-parser's null black moveNumber", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4]; // 3.Bb5
+  assert.equal(bb5.turn, "w");
+  assert.equal(bb5.moveNumber, 3);
+  const aSix = tree.mainLine[5]; // 3...a6
+  assert.equal(aSix.turn, "b");
+  assert.equal(aSix.moveNumber, 3);
+});
+
+test("from/to squares are recorded on every node (needed for last-move highlighting)", () => {
+  const tree = buildTree();
+  assert.equal(tree.mainLine[0].from, "e2");
+  assert.equal(tree.mainLine[0].to, "e4");
+});
+
+test("formatMoveLabel matches the prototype's notation exactly: '8.c3' / '8...d6', no space", () => {
+  const tree = buildTree();
+  assert.equal(formatMoveLabel(tree.mainLine[4]), "3.Bb5");
+  assert.equal(formatMoveLabel(tree.mainLine[5]), "3...a6");
+  assert.equal(formatMoveLabel(null), null);
 });
