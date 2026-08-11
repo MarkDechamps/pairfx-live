@@ -32,6 +32,7 @@
   "cancel": "Cancel",
   "libraryFullWarning": "The library is full (50 games). Delete a game before adding a new one.",
   "invalidPgn": "This PGN file could not be read",
+  "someGamesFailed": "{count} of {total} games in this file could not be read and were skipped.",
   "renamePrompt": "New name for this game:",
   "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
   "lastMoveLabel": "last move"

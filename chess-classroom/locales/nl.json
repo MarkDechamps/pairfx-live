@@ -32,6 +32,7 @@
   "cancel": "Annuleren",
   "libraryFullWarning": "De bibliotheek zit vol (50 partijen). Verwijder eerst een partij voordat je een nieuwe toevoegt.",
   "invalidPgn": "Dit PGN-bestand kon niet worden gelezen",
+  "someGamesFailed": "{count} van {total} partijen in dit bestand konden niet worden gelezen en zijn overgeslagen.",
   "renamePrompt": "Nieuwe naam voor deze partij:",
   "deleteConfirm": "Weet je zeker dat je \"{name}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
   "lastMoveLabel": "laatste zet"

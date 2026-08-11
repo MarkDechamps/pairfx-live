@@ -32,6 +32,7 @@
   "cancel": "Annuler",
   "libraryFullWarning": "La bibliothèque est pleine (50 parties). Supprimez une partie avant d'en ajouter une nouvelle.",
   "invalidPgn": "Ce fichier PGN n'a pas pu être lu",
+  "someGamesFailed": "{count} partie(s) sur {total} dans ce fichier n'ont pas pu être lues et ont été ignorées.",
   "renamePrompt": "Nouveau nom pour cette partie :",
   "deleteConfirm": "Voulez-vous vraiment supprimer « {name} » ? Cette action est irréversible.",
   "lastMoveLabel": "dernier coup"

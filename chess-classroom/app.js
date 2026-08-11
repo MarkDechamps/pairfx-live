@@ -222,16 +222,17 @@ async function addGameToLibrary(pgnText, tags, fallbackName) {
 
 async function handleUpload(file) {
   const text = await file.text();
-  let games;
-  try {
-    games = MoveTree.parseGames(window.PgnParser.parse, text);
-  } catch (err) {
-    alert(`${state.t("invalidPgn")}: ${err.message}`);
-    return;
-  }
+  // parseGames parses each game in the file independently, so one malformed
+  // game (e.g. a genuinely unbalanced parenthesis in a hand-authored or
+  // OCR'd PGN) can't sink every other game in the same file — it's reported
+  // via `failures` instead, not thrown.
+  const { games, failures } = MoveTree.parseGames(window.PgnParser.parse, text);
   if (games.length === 0) {
     alert(state.t("invalidPgn"));
     return;
+  }
+  if (failures.length > 0) {
+    alert(state.t("someGamesFailed", { count: failures.length, total: games.length + failures.length }));
   }
   if (!Lib.needsGamePicker(games)) {
     await addGameToLibrary(text, games[0].tags, file.name);
