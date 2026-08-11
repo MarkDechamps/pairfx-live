@@ -18,6 +18,12 @@ import { getAllLibraryEntries, putLibraryEntry, deleteLibraryEntry } from "./idb
 const ASSETS_URL = "vendor/cm-chessboard/assets/";
 const LANG_STORAGE_KEY = "chess-classroom:lang";
 const LAST_ENTRY_STORAGE_KEY = "chess-classroom:lastEntryId";
+// "Lock PGN" is a teacher-only input preference (it never reaches the
+// projector — see CLAUDE.md), so it's a plain localStorage key read/written
+// directly here, the same way LANG_STORAGE_KEY/LAST_ENTRY_STORAGE_KEY are —
+// not routed through syncProtocol.js's overlay-prefs machinery, which exists
+// specifically to broadcast a *projector-facing* preference (ticket 0003).
+const LOCK_PGN_STORAGE_KEY = "chess-classroom:lockPgn";
 const LAST_MOVE_MARKER_TYPE = { class: "marker-last-move", slice: "markerSquare" };
 
 // cm-chessboard's RightClickAnnotator draws with its own ARROW_TYPE/
@@ -68,6 +74,7 @@ const state = {
   gameTree: null,
   cursor: null,
   syncOn: true,
+  lockPgn: true,
   keepAnnotations: false,
   overlays: Sync.defaultOverlayPrefs(),
   annotations: { arrows: [], markers: [] },
@@ -98,6 +105,7 @@ const el = {
   previewCaption: document.getElementById("previewCaption"),
   varTree: document.getElementById("varTree"),
   freeHint: document.getElementById("freeHint"),
+  lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
   overlayMoveNumber: document.getElementById("overlayMoveNumber"),
@@ -429,14 +437,42 @@ function tryPlayBoardMove(from, to) {
   try {
     moveResult = scratch.move({ from, to, promotion: "q" });
   } catch {
-    return false;
+    return false; // illegal chess move — always rejected, regardless of Lock PGN
   }
   const match = MoveTree.findContinuationBySan(currentNode, state.gameTree.mainLine, moveResult.san);
-  if (!match) {
-    return false; // not part of the loaded PGN — v1 doesn't support free play
+  if (match) {
+    jumpTo(match.pathKey);
+    return false; // we drive the position via setPosition ourselves in render()
   }
-  jumpTo(match.pathKey);
-  return false; // we drive the position via setPosition ourselves in render()
+  if (state.lockPgn) {
+    return false; // deviates from the loaded PGN and Lock PGN is on — reject (piece snaps back)
+  }
+  // Lock PGN is off: any legal move is playable, and it's added to the tree
+  // as a real node (new sideline, or extending a line that ended here) —
+  // see moveTree.js: addMove and CLAUDE.md's judgment call on this.
+  const newNode = MoveTree.addMove(state.gameTree, currentNode, {
+    san: moveResult.san,
+    from: moveResult.from,
+    to: moveResult.to,
+    fenBefore: fen,
+    fen: scratch.fen(),
+  });
+  renderVariations(); // the tree just grew — redraw so the new node is visible/clickable
+  jumpTo(newNode.pathKey);
+  persistGrownTree();
+  return false;
+}
+
+// Persists a tree grown by addMove back to the library entry (IndexedDB), so
+// a move played while Lock PGN was off survives navigating away or reloading
+// — see CLAUDE.md's judgment call on this. Mirrors the immutable
+// entries-array update the rename flow already does.
+function persistGrownTree() {
+  const entry = Lib.findEntry(state.entries, state.currentEntryId);
+  if (!entry) return;
+  const updated = { ...entry, pgnText: MoveTree.serializeGameTree(state.gameTree) };
+  state.entries = state.entries.map((e) => (e.id === updated.id ? updated : e));
+  putLibraryEntry(updated);
 }
 
 // ---- annotations --------------------------------------------------------
@@ -462,6 +498,13 @@ el.clearAnnotationsBtn.addEventListener("click", () => {
 
 el.keepAnnotationsCheckbox.addEventListener("change", (e) => {
   state.keepAnnotations = e.target.checked;
+});
+
+// ---- Lock PGN -------------------------------------------------------
+
+el.lockPgnCheckbox.addEventListener("change", (e) => {
+  state.lockPgn = e.target.checked;
+  window.localStorage.setItem(LOCK_PGN_STORAGE_KEY, state.lockPgn ? "1" : "0");
 });
 
 // ---- overlays -------------------------------------------------------
@@ -568,6 +611,13 @@ async function boot() {
   el.overlayMoveNumber.checked = state.overlays.moveNumber;
   el.overlayLastMove.checked = state.overlays.lastMove;
   el.overlayArrows.checked = state.overlays.arrows;
+  // Default ON (preserves the pre-existing "board must match the loaded
+  // PGN" behavior for anyone who never touches the checkbox) — but a
+  // teacher's explicit choice is remembered across reloads, same as the
+  // language and last-opened-library-entry preferences above.
+  const storedLockPgn = window.localStorage.getItem(LOCK_PGN_STORAGE_KEY);
+  state.lockPgn = storedLockPgn === null ? true : storedLockPgn === "1";
+  el.lockPgnCheckbox.checked = state.lockPgn;
   await loadLibrary();
   render();
 }

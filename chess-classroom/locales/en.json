@@ -9,6 +9,8 @@
   "syncOn": "Sync ON",
   "syncOff": "Sync OFF",
   "syncTitle": "Sync the teacher board with the projector screen",
+  "lockPgn": "Lock PGN",
+  "lockPgnHint": "On: only moves already in the loaded PGN can be played. Off: any move is allowed and gets added to the PGN.",
   "annotationHint": "Right-click-drag draws an arrow; right-click highlights a square. Alt/Cmd = blue, Shift = red, Shift+Alt = orange.",
   "clearAnnotations": "Clear annotations",
   "keepAnnotations": "Keep",

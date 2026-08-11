@@ -9,6 +9,8 @@
   "syncOn": "Sync ACTIVÉE",
   "syncOff": "Sync COUPÉE",
   "syncTitle": "Synchroniser l'écran professeur avec le projecteur",
+  "lockPgn": "Verrouiller le PGN",
+  "lockPgnHint": "Activé : seuls les coups déjà présents dans le PGN chargé peuvent être joués. Désactivé : n'importe quel coup est autorisé et s'ajoute au PGN.",
   "annotationHint": "Clic droit + glisser dessine une flèche ; clic droit surligne une case. Alt/Cmd = bleu, Maj = rouge, Maj+Alt = orange.",
   "clearAnnotations": "Effacer les annotations",
   "keepAnnotations": "Conserver",
