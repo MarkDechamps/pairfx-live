@@ -71,6 +71,13 @@ const state = {
   t: (key) => key,
   entries: [],
   currentEntryId: null,
+  // The currently-open entry's raw text, reparsed into one-game-per-index
+  // (MoveTree.parseGames), and which of those is loaded on the board —
+  // box 2 (the persistent "games in this file" list) renders from this;
+  // see CLAUDE.md's judgment call superseding ticket 0006's "one game per
+  // library entry" — an entry now stores the whole uploaded file.
+  currentEntryGames: [],
+  currentGameIndex: 0,
   gameTree: null,
   cursor: null,
   syncOn: true,
@@ -78,8 +85,6 @@ const state = {
   keepAnnotations: false,
   overlays: Sync.defaultOverlayPrefs(),
   annotations: { arrows: [], markers: [] },
-  pendingPickerGames: null,
-  pendingPickerFilename: null,
 };
 
 const teacherSync = Sync.createTeacherSync({
@@ -111,9 +116,8 @@ const el = {
   overlayMoveNumber: document.getElementById("overlayMoveNumber"),
   overlayLastMove: document.getElementById("overlayLastMove"),
   overlayArrows: document.getElementById("overlayArrows"),
-  pickerBackdrop: document.getElementById("pickerBackdrop"),
-  pickerList: document.getElementById("pickerList"),
-  pickerCancelBtn: document.getElementById("pickerCancelBtn"),
+  gameListCard: document.getElementById("gameListCard"),
+  gameList: document.getElementById("gameList"),
 };
 
 // ---- i18n ----------------------------------------------------------------
@@ -196,30 +200,69 @@ async function loadLibrary() {
   if (toLoad) loadEntry(toLoad.id);
 }
 
-function loadEntry(id) {
+// Re-derives box 2's per-game label list for the currently-open entry, and
+// picks out the one for the game actually on the board right now — used
+// both to render box 2 itself and to caption the board (so the two always
+// agree on what a given game is called).
+function currentGameLabel(entry) {
+  if (!entry) return "";
+  const choices = Lib.gameListChoices(state.currentEntryGames, entry.name);
+  return (choices[state.currentGameIndex] || {}).label || entry.name;
+}
+
+// Loads a library entry onto the board — and, when it's a multi-game file,
+// a specific game within it (`gameIndex`; defaults to the entry's own
+// remembered `selectedGameIndex`). Reparses `entry.pgnText` on every call
+// rather than trusting a cache, since it's the one source of truth for both
+// "which games exist" (box 2) and "what's on the board" (this function), and
+// it may have just changed underneath us (a move persisted while Lock PGN
+// was off — see persistGrownTree).
+function loadEntry(id, gameIndex) {
   const entry = Lib.findEntry(state.entries, id);
   if (!entry) return;
   state.currentEntryId = id;
   window.localStorage.setItem(LAST_ENTRY_STORAGE_KEY, id);
-  const parsed = MoveTree.parseGame(window.PgnParser.parse, entry.pgnText);
-  state.gameTree = MoveTree.buildGameTree(Chess, parsed);
+
+  const { games } = MoveTree.parseGames(window.PgnParser.parse, entry.pgnText);
+  state.currentEntryGames = games;
+  const index = Lib.clampGameIndex(games, gameIndex === undefined ? entry.selectedGameIndex : gameIndex);
+  state.currentGameIndex = index;
+  if (entry.selectedGameIndex !== index) {
+    // Remember which game within this entry was last opened, the same way
+    // LAST_ENTRY_STORAGE_KEY remembers which entry — so re-selecting this
+    // entry later (including after a reload) resumes on the same game.
+    entry.selectedGameIndex = index;
+    state.entries = state.entries.map((e) => (e.id === entry.id ? entry : e));
+    putLibraryEntry(entry);
+  }
+
+  state.gameTree = MoveTree.buildGameTree(Chess, games[index]);
   state.cursor = MoveTree.createCursor(state.gameTree);
   state.annotations = { arrows: [], markers: [] };
-  el.gameTitle.textContent = entry.name;
+  el.gameTitle.textContent = currentGameLabel(entry);
   refreshLibrarySelect();
+  renderGameList();
   renderVariations();
   render();
 }
 
-async function addGameToLibrary(pgnText, tags, fallbackName) {
+// Switches which game (within the same, already-open library entry) is on
+// the board — box 2's click handler.
+function selectGame(index) {
+  if (index === state.currentGameIndex) return;
+  loadEntry(state.currentEntryId, index);
+}
+
+async function addGameToLibrary(pgnText, games, fallbackName) {
   if (Lib.isLibraryFull(state.entries)) {
     alert(state.t("libraryFullWarning"));
     return;
   }
   const entry = {
     id: `g${Date.now()}${Math.floor(Math.random() * 1000)}`,
-    name: Lib.nameForGame(tags, fallbackName),
+    name: Lib.nameForEntry(games, fallbackName),
     pgnText,
+    selectedGameIndex: 0,
     createdAt: Date.now(),
   };
   state.entries = Lib.addEntry(state.entries, entry);
@@ -242,63 +285,37 @@ async function handleUpload(file) {
   if (failures.length > 0) {
     alert(state.t("someGamesFailed", { count: failures.length, total: games.length + failures.length }));
   }
-  if (!Lib.needsGamePicker(games)) {
-    await addGameToLibrary(text, games[0].tags, file.name);
-    return;
-  }
-  state.pendingPickerGames = games;
-  state.pendingPickerFilename = file.name;
-  openGamePicker(games, file.name);
+  // The whole uploaded file becomes the library entry — including every
+  // game in it, not just one picked at upload time (see CLAUDE.md's
+  // judgment call superseding ticket 0006). Box 2 (renderGameList) is what
+  // now lets the teacher browse/switch between them, persistently, instead
+  // of a one-time picker modal.
+  await addGameToLibrary(text, games, file.name);
 }
 
-function openGamePicker(games, filename) {
-  const choices = Lib.gamePickerChoices(games, filename);
-  el.pickerList.innerHTML = "";
+// Renders box 2 — the persistent, scrollable list of every game in the
+// currently-open library entry. Hidden entirely for a single-game entry
+// (see CLAUDE.md: a one-item, nothing-else-to-pick list would just be noise
+// for what's the common case).
+function renderGameList() {
+  const entry = Lib.findEntry(state.entries, state.currentEntryId);
+  el.gameList.innerHTML = "";
+  if (!entry || !Lib.showGameList(state.currentEntryGames)) {
+    el.gameListCard.hidden = true;
+    return;
+  }
+  el.gameListCard.hidden = false;
+  const choices = Lib.gameListChoices(state.currentEntryGames, entry.name);
   choices.forEach((choice) => {
     const li = document.createElement("li");
     const btn = document.createElement("button");
+    btn.className = "game-list-entry";
+    if (choice.index === state.currentGameIndex) btn.classList.add("active");
     btn.textContent = choice.label;
-    btn.addEventListener("click", () => {
-      closeGamePicker();
-      const game = games[choice.index];
-      addGameToLibrary(pgnTextForGame(game), game.tags, filename);
-    });
+    btn.addEventListener("click", () => selectGame(choice.index));
     li.appendChild(btn);
-    el.pickerList.appendChild(li);
+    el.gameList.appendChild(li);
   });
-  el.pickerBackdrop.hidden = false;
-}
-
-function closeGamePicker() {
-  el.pickerBackdrop.hidden = true;
-  state.pendingPickerGames = null;
-}
-
-// Re-derives a standalone single-game PGN (tags + mainline SAN, including
-// variations/comments as parsed) from a picked game, since the library
-// stores one game's PGN text per entry (ticket 0006), not the raw upload.
-function pgnTextForGame(game) {
-  const tagLines = Object.entries(game.tags || {})
-    .filter(([key, value]) => key !== "messages" && typeof value !== "object")
-    .map(([key, value]) => `[${key} "${value}"]`)
-    .join("\n");
-  const result = (game.tags && game.tags.Result) || "*";
-  const moveText = `${printMoves(game.moves)} ${result}`;
-  return `${tagLines}\n\n${moveText}`.trim();
-}
-
-function printMoves(moves) {
-  return moves
-    .map((mv) => {
-      let text = mv.notation.notation;
-      if (mv.commentMove) text = `{${mv.commentMove}} ${text}`;
-      if (mv.variations && mv.variations.length) {
-        text += " " + mv.variations.map((v) => `(${printMoves(v)})`).join(" ");
-      }
-      if (mv.commentAfter) text += ` {${mv.commentAfter}}`;
-      return text;
-    })
-    .join(" ");
 }
 
 // ---- rendering ------------------------------------------------------
@@ -465,12 +482,19 @@ function tryPlayBoardMove(from, to) {
 
 // Persists a tree grown by addMove back to the library entry (IndexedDB), so
 // a move played while Lock PGN was off survives navigating away or reloading
-// — see CLAUDE.md's judgment call on this. Mirrors the immutable
-// entries-array update the rename flow already does.
+// — see CLAUDE.md's judgment call on this. Since an entry now stores a whole
+// (possibly multi-game) file rather than one game (also CLAUDE.md, this
+// feature's own change), the grown game must be written back into its own
+// slot within that file's text via replaceGameInPgnText — not used to
+// replace the entry's pgnText outright, which would silently drop every
+// other game sharing this entry. Mirrors the immutable entries-array update
+// the rename flow already does.
 function persistGrownTree() {
   const entry = Lib.findEntry(state.entries, state.currentEntryId);
   if (!entry) return;
-  const updated = { ...entry, pgnText: MoveTree.serializeGameTree(state.gameTree) };
+  const newGameText = MoveTree.serializeGameTree(state.gameTree);
+  const updatedPgnText = MoveTree.replaceGameInPgnText(entry.pgnText, state.currentGameIndex, newGameText);
+  const updated = { ...entry, pgnText: updatedPgnText, selectedGameIndex: state.currentGameIndex };
   state.entries = state.entries.map((e) => (e.id === updated.id ? updated : e));
   putLibraryEntry(updated);
 }
@@ -559,7 +583,13 @@ el.renameBtn.addEventListener("click", () => {
   const renamed = Lib.findEntry(state.entries, entry.id);
   putLibraryEntry(renamed);
   refreshLibrarySelect();
-  el.gameTitle.textContent = renamed.name;
+  // The badge shows the current *game's* label, not the entry's name
+  // directly (they only coincide for single-game entries) — but a rename
+  // can still change it, since gameListChoices falls back to the entry name
+  // for a game with no meaningful tags of its own. Box 2's labels can shift
+  // the same way, so refresh it too.
+  el.gameTitle.textContent = currentGameLabel(renamed);
+  renderGameList();
 });
 
 el.deleteBtn.addEventListener("click", async () => {
@@ -575,13 +605,14 @@ el.deleteBtn.addEventListener("click", async () => {
   } else {
     state.gameTree = null;
     state.cursor = null;
+    state.currentEntryGames = [];
+    state.currentGameIndex = 0;
     el.gameTitle.textContent = "";
     el.varTree.innerHTML = "";
+    renderGameList();
     render();
   }
 });
-
-el.pickerCancelBtn.addEventListener("click", closeGamePicker);
 
 el.langSelect.addEventListener("change", (e) => setLanguage(e.target.value));
 

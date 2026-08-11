@@ -88,24 +88,24 @@
       </div>
     </div>
 
-    <div class="card variations">
-      <div>
-        <h2 data-i18n="variations">Varianten</h2>
-        <div class="var-tree" id="varTree"></div>
+    <div class="side-col">
+      <!-- Box 2: every game in the currently-open library entry (box 1 is
+           the existing #librarySelect above — see CLAUDE.md's judgment
+           call). Persistent and scrollable, not a one-time modal — this is
+           what replaced ticket 0006's upload-time picker. Hidden by
+           app.js/renderGameList when the open entry has only one game. -->
+      <div class="card game-list-card" id="gameListCard" hidden>
+        <h2 data-i18n="gamesInPgn">Partijen in dit bestand</h2>
+        <ul class="game-list" id="gameList"></ul>
       </div>
-      <p class="free-hint" id="freeHint" hidden data-i18n="freeHint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
-    </div>
-  </div>
-</div>
 
-<!-- Multi-game picker modal (ticket 0006: shown once, at upload time) -->
-<div class="modal-backdrop" id="pickerBackdrop" hidden>
-  <div class="modal">
-    <h2 data-i18n="pickGame">Kies een partij</h2>
-    <p data-i18n="pickGameHint">Dit bestand bevat meerdere partijen. Kies er één om aan de bibliotheek toe te voegen.</p>
-    <ul class="picker-list" id="pickerList"></ul>
-    <div class="modal-actions">
-      <button class="btn" id="pickerCancelBtn" data-i18n="cancel">Annuleren</button>
+      <div class="card variations">
+        <div>
+          <h2 data-i18n="variations">Varianten</h2>
+          <div class="var-tree" id="varTree"></div>
+        </div>
+        <p class="free-hint" id="freeHint" hidden data-i18n="freeHint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
+      </div>
     </div>
   </div>
 </div>
