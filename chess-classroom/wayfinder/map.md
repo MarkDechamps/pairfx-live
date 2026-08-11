@@ -76,7 +76,9 @@ English also supported.
 - [Define the local PGN library UX](tickets/0006-define-pgn-library-ux.md) — auto-name from PGN
   headers (renameable), cap at 50 entries with warn-and-require-delete (no silent eviction),
   confirm-to-delete, multi-game picker shown once at upload with the picked game becoming the
-  library entry.
+  library entry. (Later revised — see chess-classroom's CLAUDE.md: a library entry now keeps the
+  whole multi-game file, browsable at any time via a persistent games-in-this-file list, instead
+  of discarding every game but the one picked at upload.)
 - [Define the i18n approach](tickets/0007-define-i18n-approach.md) — per-language flat JSON
   dictionaries (nl/fr/en), a visible switcher always present (auto-detect only sets the
   first-run default), remembered across sessions.

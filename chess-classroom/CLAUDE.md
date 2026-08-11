@@ -72,8 +72,8 @@ of one `engine.js`, because there are several genuinely independent concerns:
 | Module | Tests | Owns |
 |---|---|---|
 | `i18n.js` | `i18n.test.js` | Language detection (first-run default vs. persisted choice), dictionary lookup with Dutch fallback, `{placeholder}` interpolation. |
-| `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming from PGN headers, the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, multi-game upload picker choice-building. |
-| `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
+| `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming — both of a library *entry* (`nameForEntry`) and of one *game* inside it (`nameForGame`) — the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, and which game within a (possibly multi-game) entry is currently selected/shown (`showGameList`, `gameListChoices`, `clampGameIndex`). |
+| `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, `splitPgnGames`/`parseGames` (splitting/parsing a raw multi-game file), `replaceGameInPgnText` (writing one game's text back into its own slot within a multi-game file without touching the others), and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
 | `syncProtocol.js` | `syncProtocol.test.js` | The teacher/projector message shapes and catch-up-on-startup logic. `BroadcastChannel`/`localStorage` are injected (`{channel, storage}`), so this is tested with fake in-memory stand-ins — no browser needed. |
 
 None of these four modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
@@ -85,10 +85,14 @@ unit-tested (there's nothing to meaningfully unit-test — it's glue):
 
 - `app.js` — the teacher tab. Boots i18n, loads the PGN library from IndexedDB, creates the two
   `cm-chessboard` instances (main board + the small projector-preview board) with the
-  `RightClickAnnotator` extension, wires DOM events (upload, rename, delete, library select,
-  variations-panel clicks, arrow-key stepping, overlay checkboxes, the Sync toggle) to the pure
-  modules above, and calls `syncProtocol.createTeacherSync(...).publishPosition(...)` whenever
-  the position/annotations change and Sync is on.
+  `RightClickAnnotator` extension, wires DOM events (upload, rename, delete, library select, the
+  per-game list clicks, variations-panel clicks, arrow-key stepping, overlay checkboxes, the Sync
+  toggle) to the pure modules above, and calls
+  `syncProtocol.createTeacherSync(...).publishPosition(...)` whenever the position/annotations
+  change and Sync is on. `loadEntry(id, gameIndex)` reparses the open entry's raw `pgnText` into
+  `state.currentEntryGames` on every call (feeding both the board and the per-game list), rather
+  than trusting a cache — the text can change underneath it (a Lock-PGN-off deviation persisted
+  via `persistGrownTree`).
 - `projector.js` — the projector tab. Creates one `cm-chessboard` instance with `Markers` +
   `Arrows` (no `RightClickAnnotator` — the projector never accepts drawing input) and does
   nothing but render whatever `syncProtocol.createProjectorSync(...)` hands it. It never parses a
@@ -98,6 +102,20 @@ unit-tested (there's nothing to meaningfully unit-test — it's glue):
   `putLibraryEntry` / `deleteLibraryEntry`). IndexedDB was picked over `localStorage` for the
   library because a school year's worth of PGNs could exceed `localStorage`'s ~5-10MB cap
   (`wayfinder/research/0001`).
+
+**PGN library entry, concretely** (reversed from ticket 0006 — see "Judgment calls" below): each
+IndexedDB-stored entry is `{id, name, pgnText, selectedGameIndex, createdAt}`. `pgnText` is the
+**entire raw uploaded file**, unmodified at upload time, not one re-serialized picked-out game —
+so a 3-game file's entry contains all 3 games' text. `selectedGameIndex` is which of those games
+(0-based, as `MoveTree.parseGames`/`splitPgnGames` would split them) is currently loaded on the
+board; it's updated (and persisted) both when the teacher clicks a different game in the
+"games in this file" list and, defensively, whenever `Lib.clampGameIndex` has to correct an
+out-of-range value (e.g. hand-edited storage). `name` is the *entry's* name (`Lib.nameForEntry`)
+— which is not always the same string as what's shown next to the board for the currently-loaded
+game (`Lib.gameListChoices`-derived, per game) — see the Judgment calls entry on this below. The
+50-entry cap (`LIBRARY_CAP`) still counts **uploaded files**, not games — a 3-game upload still
+costs exactly 1 of the 50 slots, same as a 1-game upload; `pgnLibrary.js`'s cap logic itself
+(`isLibraryFull`/`addEntry`) is untouched by this feature.
 
 **Sync protocol, concretely**: two independent records, each with its own `localStorage` key and
 `BroadcastChannel` message type — `POINTER` (`{fen, moveLabel, lastMove, orientation, arrows,
@@ -175,9 +193,49 @@ weren't specified and needed a decision during implementation:
   same purpose, visually close but not a pixel match — cm-chessboard doesn't expose an "add a
   CSS box-shadow to this square" primitive, and building one from scratch wasn't worth it for a
   cosmetic difference this small.
-- **Rename/delete-confirm use native `prompt()`/`confirm()`**, not custom modal dialogs (the
-  multi-game picker *does* get a real modal, since ticket 0006 calls it out specifically). A
+- **Rename/delete-confirm use native `prompt()`/`confirm()`**, not custom modal dialogs. (This
+  bullet originally carved out an exception for the multi-game upload picker, which *did* get a
+  real modal per ticket 0006. That modal is gone — see the "multi-game library entries" bullets
+  below — so there is no longer any modal dialog anywhere in the app; rename/delete-confirm are
+  now simply the *only* two confirmation-style interactions, and both use native dialogs.) A
   pragmatic v1 scoping call, not a spec requirement either way.
+- **Multi-game library entries: reverses ticket 0006's "picked game becomes the library
+  entry."** The requester asked for a persistent, always-available way to browse *every* game in
+  an uploaded multi-game PGN (a "games in this file" list, clickable at any time), not just a
+  one-time picker at upload. That's incompatible with 0006's original resolution of discarding
+  every game except the one picked — so a library entry now stores the **whole raw uploaded
+  file** (`pgnText`) plus which game within it is currently selected (`selectedGameIndex`), and
+  the one-time picker modal is gone entirely (see "PGN library entry, concretely" above for the
+  exact shape). Loading a different game from the same file is now just a click, with no
+  re-upload. The 50-entry cap is unchanged in spirit and still means 50 *uploaded files* — see
+  above; that part of ticket 0006's resolution still holds.
+- **Box 1 (which library entry) is the existing `#librarySelect` dropdown — not a new panel.**
+  The feature request described "1 box with the pgn" identifying which uploaded file is active.
+  The existing library dropdown in the top bar already does exactly this (it's literally "which
+  uploaded PGN is active," unchanged by this feature), so no new UI was built for it — adding a
+  second, separate "which file" control right next to a `<select>` that already answers the same
+  question would just be visual duplication. If a more prominent/different box-1 treatment turns
+  out to matter in practice (e.g. teachers not noticing the existing dropdown is doing this job),
+  that's a small, isolated follow-up — it wouldn't touch box 2 or the data model at all.
+- **Box 2 (the "games in this file" list) hides itself entirely for a single-game entry**,
+  rather than always rendering with one (non-)choice. Most uploads will be single games, and a
+  list box with exactly one item, nothing else to pick, and nothing to scroll would be pure
+  visual noise in that — the common — case; it also means the multi-game case is what makes box 2
+  appear at all, which reads as a discoverable "oh, this file has more than one game" signal
+  rather than a permanently-present near-empty panel. (`pgnLibrary.js: showGameList`; toggled via
+  `app.js: renderGameList`.)
+- **A move added while Lock PGN is off is written back into its own slot within the entry's
+  file, not used to overwrite the whole entry.** Before this feature, `persistGrownTree`
+  (`app.js`) replaced an entry's entire `pgnText` with `serializeGameTree`'s output, because an
+  entry held exactly one game. Now that an entry can hold several, doing that would silently
+  discard every other game sharing the entry the moment the teacher deviated from just one of
+  them — clearly wrong, and the trickiest part of this whole feature to get right. Fixed via
+  `moveTree.js: replaceGameInPgnText(pgnText, gameIndex, newGameText)`: splits the entry's raw
+  text back into its per-game chunks (`splitPgnGames`), swaps out only the chunk at
+  `gameIndex`/`state.currentGameIndex`, and rejoins — every other game's chunk is left exactly as
+  `splitPgnGames` found it. Verified end-to-end (not just unit-tested): deviating from one game in
+  a 3-game fixture with Lock PGN off, reloading the page, and reselecting that same game from box
+  2 shows the deviation persisted, while the other two games in the same file remain unchanged.
 
 ## Language note
 
@@ -191,4 +249,11 @@ to all three files together, not just one.
 `fixtures/ruy-lopez-demo.pgn` — a short Ruy Lopez used for manual/visual QA: a top-level
 sideline (the Berlin Defence), a sideline nested inside that sideline, PGN comments on several
 moves, and one embedded `%cal`/`%csl` annotation. Upload it through the real teacher-tab upload
-flow to exercise the whole pipeline end to end.
+flow to exercise the whole pipeline end to end. Being single-game, it's also the fixture for
+confirming box 2 (the "games in this file" list) correctly hides itself.
+
+`fixtures/multi-game-demo.pgn` — three short, distinct synthetic games (Italian, Scandinavian,
+Caro-Kann; not from any real source) added for this feature's QA: confirms box 2 lists all three,
+that clicking each one loads it onto the board, and (with Lock PGN off) that a deviating move
+persists into its own game's slot on reload without disturbing the other two games sharing the
+same library entry.
