@@ -1,0 +1,20 @@
+[Event "Classroom Demo — Italian Game"]
+[White "Teacher"]
+[Black "Student A"]
+[Result "*"]
+
+1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 {The Italian Game.} 4. c3 Nf6 5. d3 d6 *
+
+[Event "Classroom Demo — Scandinavian Defence"]
+[White "Teacher"]
+[Black "Student B"]
+[Result "*"]
+
+1. e4 d5 2. exd5 Qxd5 {The Scandinavian.} 3. Nc3 Qa5 4. d4 Nf6 5. Nf3 c6 *
+
+[Event "Classroom Demo — Caro-Kann Defence"]
+[White "Teacher"]
+[Black "Student C"]
+[Result "*"]
+
+1. e4 c6 2. d4 d5 3. Nc3 dxe4 {The Classical Caro-Kann.} 4. Nxe4 Bf5 5. Ng3 Bg6 *

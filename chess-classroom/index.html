@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chess Classroom — lerarentab</title>
+<link rel="stylesheet" href="vendor/cm-chessboard/assets/chessboard.css">
+<link rel="stylesheet" href="vendor/cm-chessboard/assets/extensions/arrows/arrows.css">
+<link rel="stylesheet" href="vendor/cm-chessboard/assets/extensions/markers/markers.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem; min-height:100vh;">
+
+  <div class="desk">
+    <div class="wordmark">♟ Chess&nbsp;Classroom</div>
+
+    <div class="spacer"></div>
+
+    <div class="desk-group">
+      <label for="langSelect" data-i18n="language">Taal</label>
+      <select id="langSelect">
+        <option value="nl">Nederlands</option>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <button class="btn" id="openProjectorBtn" data-i18n="openProjector">Open projectorscherm ↗</button>
+
+    <label class="lock-pgn-toggle" title="Wanneer aan: alleen zetten uit de geladen PGN zijn te spelen. Wanneer uit: elke zet is toegestaan en wordt aan de PGN toegevoegd." data-i18n-title="lockPgnHint">
+      <input type="checkbox" id="lockPgnCheckbox" checked>
+      <span data-i18n="lockPgn">PGN vergrendelen</span>
+    </label>
+
+    <button class="sync-plunger on" id="syncToggle" title="Synchroniseer lerarenbord met projectorscherm" data-i18n-title="syncTitle">
+      <span class="knob"></span>
+      <span class="state" id="syncState" data-i18n="syncOn">Sync AAN</span>
+    </button>
+  </div>
+
+  <div class="workspace">
+    <div class="board-col">
+      <div class="board-row">
+        <div class="tool-rail">
+          <button id="flipBoardBtn" title="Bord omdraaien (beide schermen)" data-i18n-title="flipBoard">⇅</button>
+          <div title="Rechtsklik-slepen tekent een pijl; rechtsklik markeert een veld. Alt/Cmd = blauw, Shift = rood, Shift+Alt = oranje." data-i18n-title="annotationHint">
+            <button id="clearAnnotationsBtn" title="Aantekeningen wissen" data-i18n-title="clearAnnotations">⌫</button>
+            <label style="display:flex; flex-direction:column; align-items:center; gap:0.15rem; font-size:0.55rem; color:var(--wood-panel-muted); text-align:center; padding:0.3rem 0.1rem; cursor:pointer;" title="Houd aantekeningen bij een volgende zet (standaard worden ze gewist zodra je een zet speelt)." data-i18n-title="keepAnnotationsHint">
+              <input type="checkbox" id="keepAnnotationsCheckbox">
+              <span data-i18n="keepAnnotations">Behoud</span>
+            </label>
+          </div>
+        </div>
+        <div class="board-container" id="board"></div>
+      </div>
+
+      <div class="move-badge">
+        <span class="current mono" id="currentMove">–</span>
+        <span class="caveat" id="gameTitle"></span>
+      </div>
+
+      <details class="card collapsible-card notes-card" open>
+        <summary><span data-i18n="notes">Notities</span> <span class="tag" data-i18n="notesTag">uit PGN-commentaar</span></summary>
+        <p class="notes-body" id="notesBody" data-empty-label="Geen notitie bij deze zet."></p>
+      </details>
+
+    </div>
+
+    <div class="side-col">
+      <!-- Box 1 (see CLAUDE.md's judgment call: box 1 is "which uploaded PGN
+           is open", box 2 below is "which game within it"). Moved here from
+           the top bar per direct feedback - upload/rename/delete are
+           per-lesson setup, not something reached for mid-lesson, so
+           collapsed by default like the projector-preview/overlays cards. -->
+      <details class="card collapsible-card library-card">
+        <summary data-i18n="library">Bibliotheek</summary>
+        <div class="desk-group">
+          <select id="librarySelect" aria-label="Bibliotheek"></select>
+          <button class="btn" id="uploadBtn" data-i18n="uploadPgn">PGN uploaden</button>
+          <input type="file" id="uploadInput" accept=".pgn,text/plain" class="visually-hidden">
+          <button class="icon-btn" id="renameBtn" title="Naam wijzigen" data-i18n-title="rename">✎</button>
+          <button class="icon-btn" id="deleteBtn" title="Verwijderen" data-i18n-title="delete">🗑</button>
+        </div>
+      </details>
+
+      <!-- Box 2: every game in the currently-open library entry. Persistent
+           and scrollable, not a one-time modal — this is what replaced
+           ticket 0006's upload-time picker. Hidden by app.js/renderGameList
+           when the open entry has only one game. -->
+      <details class="card collapsible-card game-list-card" id="gameListCard" hidden open>
+        <summary data-i18n="gamesInPgn">Partijen in dit bestand</summary>
+        <ul class="game-list" id="gameList"></ul>
+      </details>
+
+      <details class="card collapsible-card variations" open>
+        <summary data-i18n="variations">Varianten</summary>
+        <div class="var-tree" id="varTree"></div>
+        <p class="free-hint" id="freeHint" hidden data-i18n="freeHint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
+      </details>
+
+      <!-- Collapsed by default - a "what does the room see" sanity check the
+           teacher glances at occasionally, not a panel worth permanent
+           board-column space next to the notes they actually read while
+           presenting. -->
+      <details class="card collapsible-card projector-preview-card">
+        <summary><span data-i18n="projectorPreview">Projectorscherm</span> <strong data-i18n="preview">(voorbeeld)</strong></summary>
+        <div class="projector-preview">
+          <div class="board-container mini" id="miniBoard"></div>
+          <div class="caption">
+            <span id="previewCaption" data-i18n="previewCaptionOn">Zolang Sync aan staat, volgt dit mee.</span>
+          </div>
+        </div>
+      </details>
+
+      <!-- Also collapsed by default, same reasoning as the preview above:
+           set-and-forget checkboxes the teacher rarely revisits mid-lesson,
+           not worth permanent space. -->
+      <details class="card collapsible-card projector-overlays-card">
+        <summary data-i18n="overlays">Projector-overlays</summary>
+        <div class="desk-group">
+          <label><input type="checkbox" id="overlayMoveNumber" checked> <span data-i18n="showMoveNumber">Toon zetnummer</span></label>
+          <label><input type="checkbox" id="overlayGameTitle" checked> <span data-i18n="showGameTitle">Toon partijtitel</span></label>
+          <label><input type="checkbox" id="overlayArrows" checked> <span data-i18n="showArrows">Toon pijlen</span></label>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- pgn-parser ships as a UMD build (research 0001) — loaded as a classic
+     script so it attaches window.PgnParser, then referenced from app.js. -->
+<script src="vendor/pgn-parser/pgn-parser.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>

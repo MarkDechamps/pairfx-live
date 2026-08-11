@@ -58,9 +58,10 @@ header h1 {
     opacity: 0.9;
 }
 
-.opening-selector-link {
+.sub-app-link {
     display: inline-block;
     margin-top: var(--spacing-xs);
+    margin-right: var(--spacing-sm);
     color: var(--color-accent);
     font-size: 0.9rem;
     text-decoration: underline;
