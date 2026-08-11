@@ -12,6 +12,7 @@
   "lockPgn": "Verrouiller le PGN",
   "lockPgnHint": "Activé : seuls les coups déjà présents dans le PGN chargé peuvent être joués. Désactivé : n'importe quel coup est autorisé et s'ajoute au PGN.",
   "annotationHint": "Clic droit + glisser dessine une flèche ; clic droit surligne une case. Alt/Cmd = bleu, Maj = rouge, Maj+Alt = orange.",
+  "flipBoard": "Retourner l'échiquier (les deux écrans)",
   "clearAnnotations": "Effacer les annotations",
   "keepAnnotations": "Conserver",
   "keepAnnotationsHint": "Conserver les annotations lors du coup suivant (par défaut, elles disparaissent dès que vous jouez un coup).",

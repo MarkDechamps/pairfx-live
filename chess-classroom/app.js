@@ -5,7 +5,7 @@
 // logic of its own worth unit-testing — see CLAUDE.md.
 
 import { Chess } from "./vendor/chess-js/chess.js";
-import { Chessboard, INPUT_EVENT_TYPE } from "./vendor/cm-chessboard/src/Chessboard.js";
+import { Chessboard, INPUT_EVENT_TYPE, COLOR } from "./vendor/cm-chessboard/src/Chessboard.js";
 import { RightClickAnnotator } from "./vendor/cm-chessboard/src/extensions/right-click-annotator/RightClickAnnotator.js";
 import { Markers } from "./vendor/cm-chessboard/src/extensions/markers/Markers.js";
 
@@ -82,6 +82,7 @@ const state = {
   cursor: null,
   syncOn: true,
   lockPgn: true,
+  orientation: "white",
   keepAnnotations: false,
   overlays: Sync.defaultOverlayPrefs(),
   annotations: { arrows: [], markers: [] },
@@ -111,6 +112,7 @@ const el = {
   varTree: document.getElementById("varTree"),
   freeHint: document.getElementById("freeHint"),
   lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
+  flipBoardBtn: document.getElementById("flipBoardBtn"),
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
   overlayMoveNumber: document.getElementById("overlayMoveNumber"),
@@ -173,6 +175,17 @@ function paintLastMove(board, lastMove) {
   if (lastMove) {
     board.addMarker(LAST_MOVE_MARKER_TYPE, lastMove.from);
     board.addMarker(LAST_MOVE_MARKER_TYPE, lastMove.to);
+  }
+}
+
+// setOrientation always enqueues a turn-board animation, even to the color
+// it's already at - skip the call when nothing's actually changing (e.g. on
+// every ordinary move, which re-renders both boards) so only a real flip
+// animates.
+function applyOrientation(board, orientation) {
+  const color = orientation === "black" ? COLOR.black : COLOR.white;
+  if (board.getOrientation() !== color) {
+    board.setOrientation(color);
   }
 }
 
@@ -239,6 +252,7 @@ function loadEntry(id, gameIndex) {
   state.gameTree = MoveTree.buildGameTree(Chess, games[index]);
   state.cursor = MoveTree.createCursor(state.gameTree);
   state.annotations = { arrows: [], markers: [] };
+  state.orientation = "white"; // fresh per game/puzzle - flip as needed, doesn't carry over
   el.gameTitle.textContent = currentGameLabel(entry);
   refreshLibrarySelect();
   renderGameList();
@@ -330,6 +344,7 @@ function currentDisplay() {
 
 function render() {
   const { node, fen, lastMove, moveLabel } = currentDisplay();
+  applyOrientation(teacherBoard, state.orientation);
   teacherBoard.setPosition(fen, true);
   paintLastMove(teacherBoard, lastMove);
   // No badge at all at the start position - "startpositie" as a label was
@@ -349,6 +364,7 @@ function render() {
 }
 
 function renderPreview(fen, lastMove) {
+  applyOrientation(miniBoard, state.orientation);
   miniBoard.setPosition(fen, true);
   paintLastMove(miniBoard, lastMove);
   el.previewCaption.textContent = state.syncOn ? state.t("previewCaptionOn") : state.t("previewCaptionOff");
@@ -360,7 +376,7 @@ function publishIfSynced(fen, lastMove, moveLabel) {
     fen,
     moveLabel,
     lastMove,
-    orientation: "white",
+    orientation: state.orientation,
     // Same "White vs Black - Event" text already shown next to the move
     // badge - read straight off that element rather than re-deriving it,
     // so there's exactly one source of truth for the label.
@@ -524,6 +540,11 @@ teacherBoard.context.addEventListener("mouseup", () => {
   // just-finished drag/click.
   state.annotations = serializeBoardAnnotations(teacherBoard);
   republishAnnotations();
+});
+
+el.flipBoardBtn.addEventListener("click", () => {
+  state.orientation = state.orientation === "white" ? "black" : "white";
+  render(); // applies the new orientation to both local boards and republishes
 });
 
 el.clearAnnotationsBtn.addEventListener("click", () => {

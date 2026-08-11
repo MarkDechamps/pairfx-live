@@ -42,12 +42,15 @@
   <div class="workspace">
     <div class="board-col">
       <div class="board-row">
-        <div class="tool-rail" title="Rechtsklik-slepen tekent een pijl; rechtsklik markeert een veld. Alt/Cmd = blauw, Shift = rood, Shift+Alt = oranje." data-i18n-title="annotationHint">
-          <button id="clearAnnotationsBtn" title="Aantekeningen wissen" data-i18n-title="clearAnnotations">⌫</button>
-          <label style="display:flex; flex-direction:column; align-items:center; gap:0.15rem; font-size:0.55rem; color:var(--wood-panel-muted); text-align:center; padding:0.3rem 0.1rem; cursor:pointer;" title="Houd aantekeningen bij een volgende zet (standaard worden ze gewist zodra je een zet speelt)." data-i18n-title="keepAnnotationsHint">
-            <input type="checkbox" id="keepAnnotationsCheckbox">
-            <span data-i18n="keepAnnotations">Behoud</span>
-          </label>
+        <div class="tool-rail">
+          <button id="flipBoardBtn" title="Bord omdraaien (beide schermen)" data-i18n-title="flipBoard">⇅</button>
+          <div title="Rechtsklik-slepen tekent een pijl; rechtsklik markeert een veld. Alt/Cmd = blauw, Shift = rood, Shift+Alt = oranje." data-i18n-title="annotationHint">
+            <button id="clearAnnotationsBtn" title="Aantekeningen wissen" data-i18n-title="clearAnnotations">⌫</button>
+            <label style="display:flex; flex-direction:column; align-items:center; gap:0.15rem; font-size:0.55rem; color:var(--wood-panel-muted); text-align:center; padding:0.3rem 0.1rem; cursor:pointer;" title="Houd aantekeningen bij een volgende zet (standaard worden ze gewist zodra je een zet speelt)." data-i18n-title="keepAnnotationsHint">
+              <input type="checkbox" id="keepAnnotationsCheckbox">
+              <span data-i18n="keepAnnotations">Behoud</span>
+            </label>
+          </div>
         </div>
         <div class="board-container" id="board"></div>
       </div>

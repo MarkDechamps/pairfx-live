@@ -3,7 +3,7 @@
 // PGN parsing, no move tree, no library, no drawing input — just paints a
 // FEN plus display text/annotations it receives via syncProtocol.js.
 
-import { Chessboard } from "./vendor/cm-chessboard/src/Chessboard.js";
+import { Chessboard, COLOR } from "./vendor/cm-chessboard/src/Chessboard.js";
 import { Markers } from "./vendor/cm-chessboard/src/extensions/markers/Markers.js";
 import { Arrows } from "./vendor/cm-chessboard/src/extensions/arrows/Arrows.js";
 
@@ -70,8 +70,19 @@ function paintAnnotations(annotations) {
 
 let lastPointer = Sync.defaultPointer();
 
+function applyOrientation(orientation) {
+  const color = orientation === "black" ? COLOR.black : COLOR.white;
+  // setOrientation always enqueues a turn-board animation, even to the
+  // color it's already at - skip the call entirely on every ordinary move
+  // (which re-renders the whole pointer) so only an actual flip animates.
+  if (board.getOrientation() !== color) {
+    board.setOrientation(color);
+  }
+}
+
 function renderPointer(pointer) {
   lastPointer = pointer;
+  applyOrientation(pointer.orientation);
   board.setPosition(pointer.fen, true);
   // Always shown now, not gated by an overlay checkbox: the highlighted
   // from/to squares are the board's own visual language, not a separate
