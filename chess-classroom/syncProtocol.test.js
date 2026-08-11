@@ -4,6 +4,7 @@ import {
   MESSAGE_TYPE,
   POINTER_STORAGE_KEY,
   OVERLAYS_STORAGE_KEY,
+  START_FEN,
   defaultOverlayPrefs,
   defaultPointer,
   buildPointer,
@@ -49,12 +50,15 @@ function fakeBroadcastBus() {
   };
 }
 
+const A_FEN = "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2";
+
 // ---- defaults / shape -------------------------------------------------
 
 test("defaultPointer starts at the start position with no annotations", () => {
   assert.deepEqual(defaultPointer(), {
-    gameId: null,
-    pathKey: "start",
+    fen: START_FEN,
+    moveLabel: null,
+    lastMove: null,
     orientation: "white",
     arrows: [],
     markers: [],
@@ -65,10 +69,11 @@ test("defaultOverlayPrefs starts with all three overlays on", () => {
   assert.deepEqual(defaultOverlayPrefs(), { moveNumber: true, lastMove: true, arrows: true });
 });
 
-test("buildPointer fills in empty arrows/markers when omitted", () => {
-  assert.deepEqual(buildPointer({ gameId: "g1", pathKey: "3", orientation: "white" }), {
-    gameId: "g1",
-    pathKey: "3",
+test("buildPointer is render-ready: a FEN plus display text, not a move path (projector needs no tree)", () => {
+  assert.deepEqual(buildPointer({ fen: A_FEN, moveLabel: "1...e5", lastMove: { from: "e7", to: "e5" } }), {
+    fen: A_FEN,
+    moveLabel: "1...e5",
+    lastMove: { from: "e7", to: "e5" },
     orientation: "white",
     arrows: [],
     markers: [],
@@ -87,7 +92,7 @@ test("readInitialState falls back to defaults when nothing was ever stored", () 
 
 test("readInitialState reads whatever was last written, synchronously, before any broadcast", () => {
   const storage = fakeStorage();
-  const pointer = buildPointer({ gameId: "g1", pathKey: "5.v0.0", orientation: "black" });
+  const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5", orientation: "black" });
   storage.setItem(POINTER_STORAGE_KEY, JSON.stringify(pointer));
   storage.setItem(OVERLAYS_STORAGE_KEY, JSON.stringify({ moveNumber: false, lastMove: true, arrows: false }));
 
@@ -113,7 +118,7 @@ test("publishPosition writes localStorage and broadcasts to other open tabs", ()
   const projectorChannel = bus.open();
   projectorChannel.addEventListener("message", (event) => received.push(event.data));
 
-  const pointer = buildPointer({ gameId: "g1", pathKey: "0", orientation: "white" });
+  const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5" });
   teacher.publishPosition(pointer);
 
   assert.deepEqual(received, [{ type: MESSAGE_TYPE.POSITION, payload: pointer }]);
@@ -128,7 +133,7 @@ test("the publishing tab never receives its own broadcast (BroadcastChannel sema
   channel.addEventListener("message", (event) => receivedOnOwnChannel.push(event.data));
 
   const teacher = createTeacherSync({ channel, storage });
-  teacher.publishPosition(buildPointer({ gameId: "g1", pathKey: "0", orientation: "white" }));
+  teacher.publishPosition(buildPointer({ fen: A_FEN }));
 
   assert.deepEqual(receivedOnOwnChannel, []);
 });
@@ -151,7 +156,7 @@ test("publishOverlays writes/broadcasts independently of position", () => {
 test("createProjectorSync catches up from storage at construction time", () => {
   const bus = fakeBroadcastBus();
   const storage = fakeStorage();
-  const pointer = buildPointer({ gameId: "g9", pathKey: "2", orientation: "white" });
+  const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5" });
   storage.setItem(POINTER_STORAGE_KEY, JSON.stringify(pointer));
 
   const initial = createProjectorSync({ channel: bus.open(), storage, onPosition() {}, onOverlays() {} });
@@ -172,7 +177,7 @@ test("createProjectorSync dispatches live position/overlay messages to the right
     onOverlays: (o) => overlays.push(o),
   });
 
-  const pointer = buildPointer({ gameId: "g1", pathKey: "1", orientation: "white" });
+  const pointer = buildPointer({ fen: A_FEN, moveLabel: "1...e5" });
   teacher.publishPosition(pointer);
   teacher.publishOverlays({ moveNumber: true, lastMove: false, arrows: true });
 
@@ -204,8 +209,8 @@ test("toggling Sync back on and republishing the teacher's current position snap
   createProjectorSync({ channel: bus.open(), storage, onPosition: (p) => positions.push(p), onOverlays() {} });
 
   // Sync is "on": every navigation publishes.
-  teacher.publishPosition(buildPointer({ gameId: "g1", pathKey: "0", orientation: "white" }));
-  teacher.publishPosition(buildPointer({ gameId: "g1", pathKey: "1", orientation: "white" }));
+  teacher.publishPosition(buildPointer({ fen: START_FEN, moveLabel: null }));
+  teacher.publishPosition(buildPointer({ fen: A_FEN, moveLabel: "1...e5" }));
 
   // Sync flips "off" here (app.js simply stops calling publishPosition) — the
   // teacher keeps navigating locally, but nothing reaches storage/broadcast.
@@ -214,13 +219,14 @@ test("toggling Sync back on and republishing the teacher's current position snap
 
   // Sync flips back "on": app.js immediately republishes wherever the
   // teacher ended up, with no separate "push" action.
-  teacher.publishPosition(buildPointer({ gameId: "g1", pathKey: "7", orientation: "white" }));
+  const finalFen = "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3";
+  teacher.publishPosition(buildPointer({ fen: finalFen, moveLabel: "2...Nc6" }));
 
   assert.deepEqual(
-    positions.map((p) => p.pathKey),
-    ["0", "1", "7"]
+    positions.map((p) => p.fen),
+    [START_FEN, A_FEN, finalFen]
   );
-  assert.equal(JSON.parse(storage.getItem(POINTER_STORAGE_KEY)).pathKey, "7");
+  assert.equal(JSON.parse(storage.getItem(POINTER_STORAGE_KEY)).fen, finalFen);
 });
 
 test("annotations travel inside the same pointer as the position (they follow the same sync rules as moves)", () => {
@@ -231,9 +237,8 @@ test("annotations travel inside the same pointer as the position (they follow th
   createProjectorSync({ channel: bus.open(), storage, onPosition: (p) => positions.push(p), onOverlays() {} });
 
   const withArrow = buildPointer({
-    gameId: "g1",
-    pathKey: "4",
-    orientation: "white",
+    fen: A_FEN,
+    moveLabel: "1...e5",
     arrows: [{ color: "success", from: "e2", to: "e4" }],
   });
   teacher.publishPosition(withArrow);

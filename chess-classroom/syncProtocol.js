@@ -6,8 +6,12 @@
 //
 // Two independent pieces of durable state, each with its own localStorage key
 // and its own broadcast message type:
-// - POINTER: "where is the lesson right now" — game id, current move path,
-//   board orientation, and the currently-drawn annotations. Written every time
+// - POINTER: "what should the projector's board show right now" — fully
+//   render-ready (a FEN, not a move path), so the projector never needs its
+//   own copy of the move tree to make sense of a message. This keeps the
+//   projector a genuine pure renderer (ticket 0003): it doesn't parse PGN,
+//   doesn't walk variations, doesn't know what a "path" is — it just paints
+//   whatever FEN/label/squares/annotations it was handed. Written every time
 //   the teacher moves, jumps, or draws/erases an annotation while Sync is on.
 // - OVERLAYS: the three projector-overlay checkboxes' state. This is a display
 //   *preference*, not a lesson position — it is written/broadcast regardless of
@@ -16,6 +20,8 @@
 export const CHANNEL_NAME = "chess-classroom-sync";
 export const POINTER_STORAGE_KEY = "chess-classroom:pointer:v1";
 export const OVERLAYS_STORAGE_KEY = "chess-classroom:overlays:v1";
+
+export const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 export const MESSAGE_TYPE = {
   POSITION: "position",
@@ -27,13 +33,27 @@ export function defaultOverlayPrefs() {
 }
 
 export function defaultPointer() {
-  return { gameId: null, pathKey: "start", orientation: "white", arrows: [], markers: [] };
+  return {
+    fen: START_FEN,
+    moveLabel: null,
+    lastMove: null,
+    orientation: "white",
+    arrows: [],
+    markers: [],
+  };
 }
 
 // The one shape every "current position" message/localStorage record uses,
 // so teacher and projector code (and tests) never drift on field names.
-export function buildPointer({ gameId, pathKey, orientation, arrows = [], markers = [] }) {
-  return { gameId, pathKey, orientation, arrows, markers };
+export function buildPointer({
+  fen,
+  moveLabel = null,
+  lastMove = null,
+  orientation = "white",
+  arrows = [],
+  markers = [],
+}) {
+  return { fen, moveLabel, lastMove, orientation, arrows, markers };
 }
 
 function readJson(storage, key) {
