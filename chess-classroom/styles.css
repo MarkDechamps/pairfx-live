@@ -234,6 +234,12 @@ body {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.2rem 0.55rem;
+  /* Fixed width (ch is exact for a monospace font) so the game title next
+     to it doesn't shift sideways every time a shorter/longer move label
+     replaces the previous one - e.g. "1.e4" vs "12...Qxd8+". */
+  display: inline-block;
+  min-width: 8ch;
+  text-align: center;
 }
 .move-badge .caveat { font-size: 0.75rem; color: var(--text-muted); }
 
