@@ -15,15 +15,6 @@
   <div class="desk">
     <div class="wordmark">♟ Chess&nbsp;Classroom <small data-i18n="wordmarkSub">lesbord voor de klas</small></div>
 
-    <div class="desk-group">
-      <label for="librarySelect" data-i18n="library">Bibliotheek</label>
-      <select id="librarySelect"></select>
-      <button class="btn" id="uploadBtn" data-i18n="uploadPgn">PGN uploaden</button>
-      <input type="file" id="uploadInput" accept=".pgn,text/plain" class="visually-hidden">
-      <button class="icon-btn" id="renameBtn" title="Naam wijzigen" data-i18n-title="rename">✎</button>
-      <button class="icon-btn" id="deleteBtn" title="Verwijderen" data-i18n-title="delete">🗑</button>
-    </div>
-
     <div class="spacer"></div>
 
     <div class="desk-group">
@@ -66,31 +57,44 @@
         <span class="caveat" id="gameTitle"></span>
       </div>
 
-      <div class="card">
-        <h2><span data-i18n="notes">Notities</span> <span class="tag" data-i18n="notesTag">uit PGN-commentaar</span></h2>
+      <details class="card collapsible-card notes-card" open>
+        <summary><span data-i18n="notes">Notities</span> <span class="tag" data-i18n="notesTag">uit PGN-commentaar</span></summary>
         <p class="notes-body" id="notesBody" data-empty-label="Geen notitie bij deze zet."></p>
-      </div>
+      </details>
 
     </div>
 
     <div class="side-col">
-      <!-- Box 2: every game in the currently-open library entry (box 1 is
-           the existing #librarySelect above — see CLAUDE.md's judgment
-           call). Persistent and scrollable, not a one-time modal — this is
-           what replaced ticket 0006's upload-time picker. Hidden by
-           app.js/renderGameList when the open entry has only one game. -->
-      <div class="card game-list-card" id="gameListCard" hidden>
-        <h2 data-i18n="gamesInPgn">Partijen in dit bestand</h2>
-        <ul class="game-list" id="gameList"></ul>
-      </div>
-
-      <div class="card variations">
-        <div>
-          <h2 data-i18n="variations">Varianten</h2>
-          <div class="var-tree" id="varTree"></div>
+      <!-- Box 1 (see CLAUDE.md's judgment call: box 1 is "which uploaded PGN
+           is open", box 2 below is "which game within it"). Moved here from
+           the top bar per direct feedback - upload/rename/delete are
+           per-lesson setup, not something reached for mid-lesson, so
+           collapsed by default like the projector-preview/overlays cards. -->
+      <details class="card collapsible-card library-card">
+        <summary data-i18n="library">Bibliotheek</summary>
+        <div class="desk-group">
+          <select id="librarySelect" aria-label="Bibliotheek"></select>
+          <button class="btn" id="uploadBtn" data-i18n="uploadPgn">PGN uploaden</button>
+          <input type="file" id="uploadInput" accept=".pgn,text/plain" class="visually-hidden">
+          <button class="icon-btn" id="renameBtn" title="Naam wijzigen" data-i18n-title="rename">✎</button>
+          <button class="icon-btn" id="deleteBtn" title="Verwijderen" data-i18n-title="delete">🗑</button>
         </div>
+      </details>
+
+      <!-- Box 2: every game in the currently-open library entry. Persistent
+           and scrollable, not a one-time modal — this is what replaced
+           ticket 0006's upload-time picker. Hidden by app.js/renderGameList
+           when the open entry has only one game. -->
+      <details class="card collapsible-card game-list-card" id="gameListCard" hidden open>
+        <summary data-i18n="gamesInPgn">Partijen in dit bestand</summary>
+        <ul class="game-list" id="gameList"></ul>
+      </details>
+
+      <details class="card collapsible-card variations" open>
+        <summary data-i18n="variations">Varianten</summary>
+        <div class="var-tree" id="varTree"></div>
         <p class="free-hint" id="freeHint" hidden data-i18n="freeHint">Sync staat uit — je kunt vrij door de varianten klikken zonder het projectorscherm te storen.</p>
-      </div>
+      </details>
 
       <!-- Collapsed by default - a "what does the room see" sanity check the
            teacher glances at occasionally, not a panel worth permanent

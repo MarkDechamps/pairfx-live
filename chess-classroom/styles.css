@@ -263,14 +263,9 @@ body {
   border-radius: 8px;
   padding: 0.9rem 1rem;
 }
-.card h2 {
-  font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
-  font-size: 0.95rem;
-  margin: 0 0 0.5rem;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 0.5rem;
-}
-.card h2 .tag {
+/* Every card is now a <details>/<summary> (see .collapsible-card below) -
+   there are no more plain .card > h2 headers left to style. */
+.tag {
   font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
   font-size: 0.68rem;
   text-transform: uppercase;
@@ -278,7 +273,7 @@ body {
   color: var(--text-muted);
   font-weight: 500;
 }
-.notes-body { font-size: 0.92rem; line-height: 1.55; margin: 0; white-space: pre-wrap; }
+.notes-body { font-size: 0.92rem; line-height: 1.55; margin: 0; white-space: pre-wrap; padding: 0 1rem 0.9rem; }
 .notes-body:empty::before { content: attr(data-empty-label); color: var(--text-muted); font-style: italic; }
 
 .projector-preview { display: flex; align-items: center; gap: 0.8rem; padding-top: 0.8rem; }
@@ -297,7 +292,11 @@ body {
   font-family: ui-serif, Georgia, "Iowan Old Style", "Times New Roman", serif;
   font-size: 0.95rem;
   list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
+.collapsible-card summary .tag { margin-left: auto; }
 .collapsible-card summary::-webkit-details-marker { display: none; }
 .collapsible-card summary::before {
   content: "▸";
@@ -313,9 +312,11 @@ body {
    content, so this isn't shared like the summary styling above). */
 .projector-preview-card .projector-preview { padding: 0 1rem 0.9rem; }
 .projector-overlays-card .desk-group { padding: 0 1rem 0.9rem; }
+.library-card .desk-group { padding: 0 1rem 0.9rem; }
 
 /* ---- variations panel ---- */
-.variations { display: flex; flex-direction: column; gap: 1rem; }
+.variations > .var-tree { padding: 0 1rem 0.9rem; }
+.variations > .free-hint { margin: 0 1rem 0.9rem; }
 .var-tree { font-family: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", monospace; font-size: 0.88rem; }
 .var-line {
   display: inline-block;
@@ -375,7 +376,7 @@ body {
 .game-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 1rem 0.9rem;
   max-height: 9rem;
   overflow-y: auto;
   display: flex;
