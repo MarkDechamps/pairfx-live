@@ -331,7 +331,10 @@ function render() {
   const { node, fen, lastMove, moveLabel } = currentDisplay();
   teacherBoard.setPosition(fen, true);
   paintLastMove(teacherBoard, lastMove);
-  el.currentMove.textContent = moveLabel || state.t("startPosition");
+  // No badge at all at the start position - "startpositie" as a label was
+  // reported as confusing/unnecessary; the empty board already says that.
+  el.currentMove.hidden = !moveLabel;
+  el.currentMove.textContent = moveLabel || "";
   el.notesBody.textContent = node ? node.commentAfter || "" : (state.gameTree && state.gameTree.gameComment) || "";
 
   applyAnnotationsToBoard(teacherBoard, state.annotations);
