@@ -13,6 +13,11 @@ import {
   continuationsFrom,
   findContinuationBySan,
   formatMoveLabel,
+  sanitizeCyrillicHomoglyphs,
+  normalizeEvaluationSymbols,
+  stripUnrecognizedMoveGlyphs,
+  sanitizePgnText,
+  splitPgnGames,
 } from "./moveTree.js";
 
 const { parse } = pgnParserPkg;
@@ -40,17 +45,163 @@ test("parseGame delegates to the injected parser with startRule: game", () => {
   assert.equal(game.moves.length, 10); // mainline plies only, not sideline moves
 });
 
-test("parseGames returns an array even for a single-game file", () => {
-  const games = parseGames(parse, RUY_LOPEZ_PGN);
+test("splitPgnGames returns one chunk for a single-game file", () => {
+  assert.deepEqual(splitPgnGames(RUY_LOPEZ_PGN), [RUY_LOPEZ_PGN]);
+});
+
+test("splitPgnGames splits at a blank line followed by a new tag section, not at every '['", () => {
+  const twoGames = `${RUY_LOPEZ_PGN}\n\n[Event "Second"]\n1. d4 d5 *`;
+  const chunks = splitPgnGames(twoGames);
+  assert.equal(chunks.length, 2);
+  assert.equal(chunks[0].trim(), RUY_LOPEZ_PGN.trim());
+  assert.equal(chunks[1].trim(), '[Event "Second"]\n1. d4 d5 *');
+});
+
+test("parseGames returns { games, failures } with one entry even for a single-game file", () => {
+  const { games, failures } = parseGames(parse, RUY_LOPEZ_PGN);
   assert.equal(games.length, 1);
   assert.equal(games[0].tags.Event, "Club Training");
+  assert.deepEqual(failures, []);
 });
 
 test("parseGames splits a multi-game file into one entry per game", () => {
   const twoGames = `${RUY_LOPEZ_PGN}\n\n[Event "Second"]\n1. d4 d5 *`;
-  const games = parseGames(parse, twoGames);
+  const { games, failures } = parseGames(parse, twoGames);
   assert.equal(games.length, 2);
   assert.equal(games[1].tags.Event, "Second");
+  assert.deepEqual(failures, []);
+});
+
+// Real-world bug report: a 155-game book export had one single game with a
+// genuinely unbalanced parenthesis (a variation opened with "(" and never
+// closed before the game ends) — an authoring defect in the source file
+// that can't be safely auto-corrected (there's no reliable way to guess
+// where the missing ")" belongs). Before this fix, @mliebelt/pgn-parser
+// parses "games" as a single grammar pass over the whole file, so one
+// malformed game took down all 155. parseGames now parses each game
+// independently so one bad game doesn't sink the rest of the library.
+test("parseGames isolates a single malformed game instead of failing the whole batch", () => {
+  const unbalanced = `[Event "Broken"]\n\n1. e4 e5 2. Nf3 (2. Bc4 *`; // "(" never closed
+  const threeGames = `${RUY_LOPEZ_PGN}\n\n${unbalanced}\n\n[Event "Third"]\n1. d4 d5 *`;
+
+  const { games, failures } = parseGames(parse, threeGames);
+
+  assert.equal(games.length, 2, "the two well-formed games still load");
+  assert.deepEqual(games.map((g) => g.tags.Event), ["Club Training", "Third"]);
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].index, 1);
+  assert.match(failures[0].message, /Expected|expected/);
+});
+
+// Real-world bug report: a book-sourced PGN (copy/OCR'd from a Russian-language
+// source) had a handful of Cyrillic look-alike characters standing in for
+// Latin ones inside actual move text — visually identical, but @mliebelt/
+// pgn-parser's strict SAN grammar (and chess.js's own move parser) reject
+// them outright. Cyrillic а/е/о/р/с/х/у and А/В/Е/К/М/Н/О/Р/С/Т/У/Х are
+// confusable with Latin a/e/o/p/c/x/y and A/B/E/K/M/H/O/P/C/T/Y/X.
+test("sanitizeCyrillicHomoglyphs replaces confusable Cyrillic letters with their Latin look-alikes", () => {
+  // "Qхb4" — Cyrillic х (U+0445) standing in for Latin x, as found in
+  // the reported file.
+  const withHomoglyph = "2. Qхb4 Rb8";
+  assert.equal(sanitizeCyrillicHomoglyphs(withHomoglyph), "2. Qxb4 Rb8");
+});
+
+test("sanitizeCyrillicHomoglyphs leaves ordinary ASCII PGN text untouched", () => {
+  assert.equal(sanitizeCyrillicHomoglyphs(RUY_LOPEZ_PGN), RUY_LOPEZ_PGN);
+});
+
+test("parseGame tolerates a Cyrillic homoglyph inside a move instead of throwing", () => {
+  const pgnWithHomoglyph = `[Event "Test"]
+[White "A"]
+[Black "B"]
+[Result "*"]
+
+1. e4 d5 2. eхd5 *`;
+
+  const game = parseGame(parse, pgnWithHomoglyph);
+  assert.equal(game.moves[2].notation.notation, "exd5"); // [e4, d5, exd5]
+});
+
+// Same real-world file also used superscript-digit evaluation symbols (²/³)
+// as informal shorthand for "slight edge to White/Black", directly attached
+// to a move with no separating space (e.g. "17.h4² Nd7"). The grammar
+// doesn't recognize ²/³ but does recognize the standard NAG glyphs ±/∓ for
+// exactly this meaning, so normalize to those rather than dropping the
+// annotation entirely.
+test("normalizeEvaluationSymbols maps superscript ²/³ to the grammar's own accepted ±/∓ glyphs", () => {
+  assert.equal(normalizeEvaluationSymbols("17.h4² Nd7"), "17.h4± Nd7");
+  assert.equal(normalizeEvaluationSymbols("20...Bc5³"), "20...Bc5∓");
+});
+
+test("normalizeEvaluationSymbols leaves ordinary ASCII PGN text untouched", () => {
+  assert.equal(normalizeEvaluationSymbols(RUY_LOPEZ_PGN), RUY_LOPEZ_PGN);
+});
+
+test("sanitizePgnText composes Cyrillic-homoglyph and evaluation-symbol normalization", () => {
+  const messy = "2. Qхb4² Rb8";
+  assert.equal(sanitizePgnText(messy), "2. Qxb4± Rb8");
+});
+
+test("parseGame tolerates a superscript evaluation symbol glued directly to a move", () => {
+  const pgnWithGluedSymbol = `[Event "Test"]
+[Result "*"]
+
+1. e4² e5 *`;
+
+  const game = parseGame(parse, pgnWithGluedSymbol);
+  assert.equal(game.moves[0].notation.notation, "e4");
+  assert.deepEqual(game.moves[0].nag, ["$16"]); // ± normalizes to NAG $16
+});
+
+// Same real-world file also had a few other stray symbols glued directly to
+// moves (e.g. "Qxc5µ" — a micro sign, U+00B5) that aren't Cyrillic
+// homoglyphs and don't map to any recognizable NAG glyph either — most
+// likely leftover font-mapping noise from however the book's PGN was
+// generated. Rather than growing an ever-longer per-character map for each
+// new garbage symbol that turns up, strip anything the grammar doesn't
+// accept, but ONLY outside `{...}` comments and `"..."` header strings —
+// both of which the grammar already treats as opaque text (confirmed:
+// Cyrillic/accented prose inside either survives untouched today), so this
+// must never touch genuine comment prose or header values.
+test("stripUnrecognizedMoveGlyphs removes a stray unrecognized symbol glued to a move", () => {
+  assert.equal(stripUnrecognizedMoveGlyphs("25.Bxc5 Bxc4 26.Bxc4 Qxc5µ)"), "25.Bxc5 Bxc4 26.Bxc4 Qxc5)");
+});
+
+test("stripUnrecognizedMoveGlyphs never touches text inside a comment", () => {
+  const withComment = "12.Be2 {Ünïcödé prose — the µ sign, ² and ³ can appear here freely.} Qd7";
+  assert.equal(stripUnrecognizedMoveGlyphs(withComment), withComment);
+});
+
+test("stripUnrecognizedMoveGlyphs never touches text inside a quoted header value", () => {
+  const withHeader = '[Black "Stefan Кuipers µ 2440"]\n\n1. e4 *';
+  assert.equal(stripUnrecognizedMoveGlyphs(withHeader), withHeader);
+});
+
+test("stripUnrecognizedMoveGlyphs leaves the grammar's own accepted glyphs alone outside comments", () => {
+  const withNag = "17.h4± Nd7";
+  assert.equal(stripUnrecognizedMoveGlyphs(withNag), withNag);
+});
+
+test("sanitizePgnText composes all three normalization passes", () => {
+  const messy = '[Black "Кuipers"]\n\n2. Qхb4² Qxc5µ Rb8';
+  // Header "Кuipers" -> "Kuipers": the Cyrillic-homoglyph pass runs globally
+  // (translation, not deletion, so it's safe everywhere including headers —
+  // see sanitizeCyrillicHomoglyphs above). Only the strip-unrecognized pass
+  // is scoped to skip headers/comments, since it deletes rather than
+  // translates.
+  assert.equal(sanitizePgnText(messy), '[Black "Kuipers"]\n\n2. Qxb4± Qxc5 Rb8');
+});
+
+test("buildGameTree replays a move that arrived with a Cyrillic homoglyph in it", () => {
+  const pgnWithHomoglyph = `[Event "Test"]
+[White "A"]
+[Black "B"]
+[Result "*"]
+
+1. e4 d5 2. eхd5 *`;
+
+  const tree = buildGameTree(Chess, parseGame(parse, pgnWithHomoglyph));
+  assert.equal(tree.mainLine[2].san, "exd5"); // [e4, d5, exd5]
 });
 
 test("buildGameTree replays the mainline through chess.js and records the resulting FEN", () => {
@@ -62,6 +213,33 @@ test("buildGameTree replays the mainline through chess.js and records the result
   const chess = new Chess();
   chess.move("e4");
   assert.equal(tree.mainLine[0].fen, chess.fen());
+});
+
+// Real-world bug report: the same book export includes tactics-exercise
+// entries that start from a mid-game diagram (a `[FEN "..."]` header tag)
+// rather than move 1 of a full game — a normal, legitimate PGN feature
+// chess.js supports directly (`new Chess(fen)`), but buildGameTree always
+// started from the standard position, so every one of these entries failed
+// with a spurious "illegal move" (the puzzle's first move genuinely isn't
+// legal from the *standard* start position — it was never meant to be).
+test("buildGameTree starts from a [FEN] tag's position when present, instead of assuming a new game", () => {
+  const puzzlePgn = `[Event "Exercise position"]
+[White "Exercise position"]
+[Black "Black to move"]
+[Result "*"]
+[FEN "5rk1/5ppp/3Q4/4p1P1/1p2P3/1p6/qP5P/2KR3R b - - 0 1"]
+
+1... Qa8 *`;
+  const parsed = parseGame(parse, puzzlePgn);
+  const tree = buildGameTree(Chess, parsed);
+
+  assert.equal(tree.rootFen, "5rk1/5ppp/3Q4/4p1P1/1p2P3/1p6/qP5P/2KR3R b - - 0 1");
+  assert.equal(tree.mainLine[0].san, "Qa8");
+});
+
+test("buildGameTree still defaults to the standard starting position when no [FEN] tag is present", () => {
+  const tree = buildTree();
+  assert.equal(tree.rootFen, new Chess().fen());
 });
 
 test("mainline move paths are single-element and pathKey-addressable", () => {

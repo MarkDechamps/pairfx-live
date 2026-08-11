@@ -53,23 +53,195 @@ export function formatMoveLabel(node) {
   return node.turn === "w" ? `${node.moveNumber}.${node.san}` : `${node.moveNumber}...${node.san}`;
 }
 
+// Real-world PGNs copied or OCR'd from Russian-language chess sources
+// sometimes carry Cyrillic letters that are visually indistinguishable from
+// their Latin look-alikes (a book export was reported with "Qхb4" — Cyrillic
+// х, U+0445 — instead of "Qxb4"). @mliebelt/pgn-parser's grammar validates
+// SAN character-by-character and rejects these outright, and chess.js's own
+// move parser would reject them just as strictly even if the grammar let
+// them through. Applied to the whole file rather than only inside move
+// text: harmless wherever it's not needed (a Cyrillic look-alike inside a
+// comment or a name header renders identically once normalized to Latin),
+// and this app has no legitimate use for Cyrillic text.
+const CYRILLIC_HOMOGLYPHS = {
+  а: "a", е: "e", о: "o", р: "p", с: "c", х: "x", у: "y",
+  А: "A", В: "B", Е: "E", К: "K", М: "M", Н: "H", О: "O", Р: "P", С: "C", Т: "T", У: "Y", Х: "X",
+};
+const CYRILLIC_HOMOGLYPH_RE = new RegExp(Object.keys(CYRILLIC_HOMOGLYPHS).join("|"), "g");
+
+export function sanitizeCyrillicHomoglyphs(pgnText) {
+  return pgnText.replace(CYRILLIC_HOMOGLYPH_RE, (match) => CYRILLIC_HOMOGLYPHS[match]);
+}
+
+// Some chess books/authors write informal "slight edge" evaluations as
+// superscript digits (²/³) glued directly onto a move, instead of the
+// standard NAG glyphs (±/∓ — "slight advantage to White/Black") the
+// pgn-parser grammar actually recognizes. Map to the closest accepted
+// glyph rather than dropping the annotation: the grammar turns ± into NAG
+// $16 and ∓ into $17 on its own, so this is a one-line character swap, not
+// a reimplementation of NAG handling.
+const EVALUATION_SYMBOLS = { "²": "±", "³": "∓" };
+const EVALUATION_SYMBOL_RE = new RegExp(Object.keys(EVALUATION_SYMBOLS).join("|"), "g");
+
+export function normalizeEvaluationSymbols(pgnText) {
+  return pgnText.replace(EVALUATION_SYMBOL_RE, (match) => EVALUATION_SYMBOLS[match]);
+}
+
+// The full set of non-ASCII glyphs @mliebelt/pgn-parser's grammar itself
+// accepts outside comments/headers (NAG-style annotation symbols), read
+// directly off the grammar's own "Expected ... but X found" parse-error
+// token lists rather than guessed. Anything non-ASCII NOT in this set,
+// appearing outside a comment or a quoted header value, is grammar noise —
+// almost always leftover font-mapping artifacts from however a PGN was
+// generated (a real example: a book export used "²"/"³"/"µ" as informal,
+// non-standard evaluation marks glued directly onto moves).
+const GRAMMAR_ACCEPTED_GLYPHS = new Set([
+  "±", // ± slight/moderate advantage White ($16 as parsed)
+  "∓", // ∓ slight/moderate advantage Black ($17)
+  "⩱", // ⩱ slight advantage Black ($15)
+  "⩲", // ⩲ slight advantage White ($14)
+  "‼", // ‼ ($3, brilliant move)
+  "⁇", // ⁇ ($4, blunder)
+  "⁈", // ⁈ ($6, dubious move)
+  "⁉", // ⁉ ($5, interesting move)
+  "↑", // ↑ (initiative)
+  "→", // → (attack)
+  "⇆", // ⇆ (counterplay)
+  "∞", // ∞ (unclear)
+  "□", // □ (only move)
+  "⟳", // ⟳ (development)
+  "⨀", // ⨀ (zugzwang)
+  "﻿", // BOM, tolerated at the very start of a file
+]);
+
+// Deletes any character the grammar doesn't accept, but only in the "bare"
+// move-list text the grammar actually validates token-by-token — never
+// inside a `{...}` comment or a `"..."` header value, both of which the
+// grammar already treats as opaque text (confirmed: this file's own
+// Cyrillic/accented prose inside either survives untouched). Deletion (not
+// translation) is only safe here because there is no reliable way to
+// recover the original intended symbol; comments/headers are skipped
+// entirely so a teacher's own prose or a player's name is never touched.
+export function stripUnrecognizedMoveGlyphs(pgnText) {
+  let result = "";
+  let inComment = false;
+  let inQuotes = false;
+
+  for (const ch of pgnText) {
+    if (inComment) {
+      result += ch;
+      if (ch === "}") inComment = false;
+      continue;
+    }
+    if (inQuotes) {
+      result += ch;
+      if (ch === '"') inQuotes = false;
+      continue;
+    }
+    if (ch === "{") {
+      inComment = true;
+      result += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = true;
+      result += ch;
+      continue;
+    }
+    if (ch.codePointAt(0) > 127 && !GRAMMAR_ACCEPTED_GLYPHS.has(ch)) {
+      continue; // drop it
+    }
+    result += ch;
+  }
+
+  return result;
+}
+
+// Single entry point for all "real-world PGN text the strict grammar would
+// otherwise reject outright" normalization. Add new categories here (and as
+// their own tested function above) rather than growing any one function
+// past a single clear responsibility. Order matters: the translation passes
+// (safe everywhere, including inside comments/headers) run first, so any
+// symbol they can rescue into a grammar-accepted glyph is preserved;
+// stripping — the only lossy, deletion-based pass — runs last and only
+// touches whatever's left over outside comments/headers.
+export function sanitizePgnText(pgnText) {
+  return stripUnrecognizedMoveGlyphs(normalizeEvaluationSymbols(sanitizeCyrillicHomoglyphs(pgnText)));
+}
+
 // Parses raw PGN text into the pgn-parser library's tree shape. `parsePgn` is
 // the library's own `parse` export (or window.PgnParser.parse in the browser).
 export function parseGame(parsePgn, pgnText) {
-  return parsePgn(pgnText, { startRule: "game" });
+  return parsePgn(sanitizePgnText(pgnText), { startRule: "game" });
+}
+
+// Splits raw multi-game PGN text into one text chunk per game, using PGN's
+// own convention: a new game's tag section starts at a line beginning with
+// "[", immediately preceded by a blank line. (Tag lines within one game's
+// own header never have a blank line between them, so this only fires at
+// true game boundaries.) Pure string splitting, done on the raw text before
+// any sanitization — sanitizePgnText never removes or adds newlines, so
+// split-then-sanitize-each-chunk and sanitize-then-split would find the same
+// boundaries either way.
+export function splitPgnGames(pgnText) {
+  const lines = pgnText.split("\n");
+  const chunks = [];
+  let current = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const startsNewGame =
+      i > 0 && lines[i - 1].trim() === "" && line.startsWith("[") && current.some((l) => l.trim() !== "");
+    if (startsNewGame) {
+      chunks.push(current.join("\n"));
+      current = [];
+    }
+    current.push(line);
+  }
+  if (current.some((l) => l.trim() !== "")) {
+    chunks.push(current.join("\n"));
+  }
+
+  return chunks;
 }
 
 // Parses raw PGN text that may contain multiple games (upload picker, ticket
-// 0006). Returns an array even for a single-game file.
+// 0006). Parses each game independently (via splitPgnGames) rather than as
+// one grammar pass over the whole file, so a single malformed game — e.g. a
+// genuinely unbalanced parenthesis, an authoring defect no sanitization can
+// safely auto-correct — doesn't prevent every other game in the file from
+// loading. Returns `{ games, failures }`: `games` is every game that parsed
+// successfully; `failures` is `{ index, message }` for each chunk (indexed
+// into the original split, not into `games`) that didn't. Callers (the
+// upload picker) should tell the teacher when `failures` is non-empty rather
+// than silently dropping games.
 export function parseGames(parsePgn, pgnText) {
-  const result = parsePgn(pgnText, { startRule: "games" });
-  return Array.isArray(result) ? result : [result];
+  const chunks = splitPgnGames(pgnText);
+  const games = [];
+  const failures = [];
+
+  chunks.forEach((chunk, index) => {
+    try {
+      games.push(parseGame(parsePgn, chunk));
+    } catch (err) {
+      failures.push({ index, message: err.message });
+    }
+  });
+
+  return { games, failures };
 }
 
 // Builds the full move tree for one already-parsed game. `ChessCtor` is the
 // chess.js `Chess` class (or a compatible fake, in tests).
+// A puzzle/exercise-style PGN entry (common in book exports) sets up a
+// mid-game diagram via a [FEN] header tag instead of starting from move 1
+// of a full game — a normal, legitimate PGN feature, not something to
+// sanitize away. Without this, buildGameTree always assumed the standard
+// starting position, so a puzzle's first move (legal from its diagram, but
+// not from move 1 of a fresh game) failed with a spurious "illegal move".
 export function buildGameTree(ChessCtor, parsedGame) {
-  const chess = new ChessCtor();
+  const startingFen = (parsedGame.tags || {}).FEN;
+  const chess = startingFen ? new ChessCtor(startingFen) : new ChessCtor();
   const rootFen = chess.fen();
   const nodesByPath = new Map();
   const mainLine = buildLine(ChessCtor, rootFen, parsedGame.moves || [], ROOT_PATH, "start", nodesByPath);
