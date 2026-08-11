@@ -289,6 +289,38 @@ test("buildGameTree still defaults to the standard starting position when no [FE
   assert.equal(tree.rootFen, new Chess().fen());
 });
 
+// Real-world bug report: a book export includes entries that are entirely
+// prose - a preface "game" with zero moves, just a long pre-move comment
+// (@mliebelt/pgn-parser puts this in `gameComment`, not on any move, since
+// there is no move to attach it to). Before this fix, buildGameTree
+// discarded gameComment entirely, so these entries showed "No note for
+// this move" with the actual text nowhere to be found.
+test("buildGameTree captures a pre-move gameComment for games with zero moves", () => {
+  const prefacePgn = `[Event "Preface"]
+[White "Preface"]
+[Black "Sergei Tiviakov"]
+[Result "*"]
+
+{How was the idea of this book born?} {More text.} *`;
+  const tree = buildGameTree(Chess, parseGame(parse, prefacePgn));
+  assert.equal(tree.mainLine.length, 0);
+  assert.equal(tree.gameComment, "How was the idea of this book born? More text.");
+});
+
+test("buildGameTree also captures a pre-move-1 gameComment on a game that does have moves", () => {
+  const introPgn = `[Event "Test"]
+[Result "*"]
+
+{Intro text before move 1.} 1. e4 e5 *`;
+  const tree = buildGameTree(Chess, parseGame(parse, introPgn));
+  assert.equal(tree.gameComment, "Intro text before move 1.");
+});
+
+test("buildGameTree's gameComment is null when there is no pre-move comment", () => {
+  const tree = buildTree();
+  assert.equal(tree.gameComment, null);
+});
+
 test("mainline move paths are single-element and pathKey-addressable", () => {
   const tree = buildTree();
   assert.deepEqual(tree.mainLine[0].path, [0]);

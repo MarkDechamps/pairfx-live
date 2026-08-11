@@ -333,7 +333,7 @@ function render() {
   teacherBoard.setPosition(fen, true);
   paintLastMove(teacherBoard, lastMove);
   el.currentMove.textContent = moveLabel || state.t("startPosition");
-  el.notesBody.textContent = node ? node.commentAfter || "" : "";
+  el.notesBody.textContent = node ? node.commentAfter || "" : (state.gameTree && state.gameTree.gameComment) || "";
 
   applyAnnotationsToBoard(teacherBoard, state.annotations);
 

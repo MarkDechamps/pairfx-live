@@ -290,6 +290,12 @@ export function buildGameTree(ChessCtor, parsedGame) {
     rootFen,
     mainLine,
     nodesByPath,
+    // Text before move 1 - e.g. a book "preface" entry that is nothing but
+    // prose, with zero moves - isn't attached to any move node (there may
+    // be none), so pgn-parser surfaces it separately as `gameComment`.
+    // Shown in the Notes card at the start position, same as any other
+    // move's comment is shown there once you step onto it.
+    gameComment: (parsedGame.gameComment || {}).comment || null,
   };
 }
 
