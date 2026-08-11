@@ -424,3 +424,137 @@ export function continuationsFrom(node, mainLine) {
 export function findContinuationBySan(node, mainLine, san) {
   return continuationsFrom(node, mainLine).find((candidate) => candidate.san === san) || null;
 }
+
+// "Lock PGN" off (see CLAUDE.md judgment calls): the teacher played a legal
+// move that findContinuationBySan couldn't match, so it needs to become a
+// real, addressable node in the tree — not just a transient board position —
+// the same way a real PGN editor grows a game while you're annotating it.
+//
+// `node` is the cursor's current node (null at the start position, matching
+// createCursor/continuationsFrom's own convention). `moveResult` carries
+// exactly what a chess.js move plus its pre-move FEN gives you: { san, from,
+// to, fenBefore, fen }. Two attachment cases, both reusing the exact
+// pathKey/entryPointKey shape buildLine already establishes so the result is
+// indistinguishable from a node that was in the original PGN all along:
+//
+// 1. The cursor is at the end of its line (no continuation recorded yet) —
+//    the move simply extends that same lineNodes array one ply further.
+// 2. The cursor already has a recorded continuation (mainline and/or one or
+//    more sidelines) that this move doesn't match — the move becomes a new
+//    sideline attached to that continuation's node, alongside any existing
+//    ones (`continuationsFrom` will then offer it too).
+export function addMove(gameTree, node, moveResult) {
+  const nextInLine = node ? node.lineNodes[node.indexInLine + 1] : gameTree.mainLine[0];
+  const currentPathKey = node ? node.pathKey : "start";
+
+  let path;
+  let lineNodes;
+  let indexInLine;
+  let entryPointKey;
+
+  if (!nextInLine) {
+    // Case 1: extend the current line one ply further.
+    lineNodes = node ? node.lineNodes : gameTree.mainLine;
+    indexInLine = lineNodes.length;
+    const parentPath = node ? node.path.slice(0, -1) : ROOT_PATH;
+    path = [...parentPath, indexInLine];
+    entryPointKey = node ? node.entryPointKey : "start";
+  } else {
+    // Case 2: attach as a new sideline alongside whatever's already recorded
+    // one step ahead of the cursor (nextInLine's own mainline/sideline
+    // siblings) — mirrors exactly how buildLine attaches a PGN-authored
+    // variation to the move it replaces.
+    const variationIndex = nextInLine.variations.length;
+    lineNodes = [];
+    nextInLine.variations.push(lineNodes);
+    indexInLine = 0;
+    path = [...nextInLine.path, `v${variationIndex}`, 0];
+    entryPointKey = currentPathKey;
+  }
+
+  const newNode = {
+    path,
+    pathKey: pathKey(path),
+    san: moveResult.san,
+    from: moveResult.from,
+    to: moveResult.to,
+    fenBefore: moveResult.fenBefore,
+    fen: moveResult.fen,
+    turn: sideToMoveFromFen(moveResult.fenBefore),
+    moveNumber: fullMoveNumberFromFen(moveResult.fenBefore),
+    commentBefore: null,
+    commentAfter: null,
+    arrows: [],
+    markers: [],
+    variationDepth: countBranches(path),
+    lineNodes,
+    indexInLine,
+    entryPointKey,
+    variations: [],
+  };
+
+  lineNodes.push(newNode);
+  gameTree.nodesByPath.set(newNode.pathKey, newNode);
+  return newNode;
+}
+
+// The inverse of ANNOTATION_COLOR_MAP, for writing %cal/%csl back out when
+// serializing. Several PGN letters could in principle map to the same
+// cm-chessboard color; only one direction is ever needed the other way
+// (there's exactly one letter per color actually produced by this app).
+const REVERSE_ANNOTATION_COLOR_MAP = { success: "G", danger: "R", info: "B", warning: "Y" };
+
+function formatColorArrow(arrow) {
+  return `${REVERSE_ANNOTATION_COLOR_MAP[arrow.color] || "G"}${arrow.from}${arrow.to}`;
+}
+
+function formatColorField(marker) {
+  return `${REVERSE_ANNOTATION_COLOR_MAP[marker.color] || "G"}${marker.square}`;
+}
+
+// Rebuilds one node's trailing `{...}` comment, folding its plain-text
+// commentAfter back together with any %cal/%csl annotation it carries (both
+// live on the same node but arrived from the parser as separate fields —
+// see buildLine). Returns null when there's nothing to write.
+function commentAfterText(node) {
+  const parts = [];
+  if (node.commentAfter) parts.push(node.commentAfter);
+  if (node.arrows.length > 0) parts.push(`[%cal ${node.arrows.map(formatColorArrow).join(",")}]`);
+  if (node.markers.length > 0) parts.push(`[%csl ${node.markers.map(formatColorField).join(",")}]`);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
+function serializeLine(lineNodes) {
+  return lineNodes
+    .map((node) => {
+      let text = node.san;
+      if (node.commentBefore) text = `{${node.commentBefore}} ${text}`;
+      const after = commentAfterText(node);
+      if (after) text += ` {${after}}`;
+      if (node.variations.length > 0) {
+        text += " " + node.variations.map((variation) => `(${serializeLine(variation)})`).join(" ");
+      }
+      return text;
+    })
+    .join(" ");
+}
+
+// Turns a (possibly grown-since-loading, see addMove) game tree back into
+// PGN text, so a move played while "Lock PGN" was off can be persisted to
+// the library entry (idbLibraryStore.js) and survive a reload — see
+// CLAUDE.md's judgment call on this. Deliberately omits move numbers, the
+// same way app.js's existing pgnTextForGame (the multi-game-picker
+// serializer this was modeled on) does: @mliebelt/pgn-parser's grammar
+// accepts a bare move list just fine, and not tracking "was the last move
+// White's or Black's" through nested variations sidesteps a whole class of
+// off-by-one numbering bugs for no visible benefit (the numbers are
+// re-derived from FEN on every reparse anyway — see buildLine).
+export function serializeGameTree(gameTree) {
+  const tagLines = Object.entries(gameTree.tags || {})
+    .filter(([key, value]) => key !== "messages" && typeof value !== "object")
+    .map(([key, value]) => `[${key} "${value}"]`)
+    .join("\n");
+  const result = (gameTree.tags && gameTree.tags.Result) || "*";
+  const moveText = `${serializeLine(gameTree.mainLine)} ${result}`.trim();
+  return `${tagLines}\n\n${moveText}`.trim();
+}

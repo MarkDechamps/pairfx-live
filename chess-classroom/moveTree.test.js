@@ -18,7 +18,19 @@ import {
   stripUnrecognizedMoveGlyphs,
   sanitizePgnText,
   splitPgnGames,
+  addMove,
+  serializeGameTree,
 } from "./moveTree.js";
+
+// Plays `san` on a fresh chess.js instance seeded at `fen` and returns the
+// shape `addMove` expects — the same shape app.js's tryPlayBoardMove already
+// builds from a real board move (fenBefore/fen plus chess.js's own move
+// result fields).
+function playMoveResult(fen, san) {
+  const scratch = new Chess(fen);
+  const move = scratch.move(san);
+  return { san: move.san, from: move.from, to: move.to, fenBefore: fen, fen: scratch.fen() };
+}
 
 const { parse } = pgnParserPkg;
 
@@ -422,4 +434,130 @@ test("formatMoveLabel matches the prototype's notation exactly: '8.c3' / '8...d6
   assert.equal(formatMoveLabel(tree.mainLine[4]), "3.Bb5");
   assert.equal(formatMoveLabel(tree.mainLine[5]), "3...a6");
   assert.equal(formatMoveLabel(null), null);
+});
+
+// ---- addMove ("Lock PGN" off: free play grows the tree) -------------------
+
+test("addMove extends a line that currently ends at the cursor (no existing continuation)", () => {
+  const tree = buildTree();
+  const cursor = createCursor(tree);
+  const last = tree.mainLine[tree.mainLine.length - 1]; // 5...Be7, the end of the loaded line
+  assert.equal(continuationsFrom(last, tree.mainLine).length, 0, "sanity: nothing recorded past this point");
+
+  const moveResult = playMoveResult(last.fen, "d3");
+  const newNode = addMove(tree, last, moveResult);
+
+  assert.equal(newNode.san, "d3");
+  assert.deepEqual(newNode.path, [10]);
+  assert.equal(newNode.pathKey, "10");
+  assert.equal(newNode.indexInLine, 10);
+  assert.equal(newNode.lineNodes, last.lineNodes, "extends the same line array the cursor was on");
+  assert.equal(tree.mainLine[10], newNode, "mainLine itself grew");
+  assert.equal(tree.nodesByPath.get("10"), newNode, "addressable like any other node");
+  assert.equal(newNode.entryPointKey, last.entryPointKey);
+});
+
+test("addMove from the very start (no moves loaded yet) appends the tree's first move", () => {
+  const parsed = parseGame(parse, `[Event "Empty"]\n\n*`);
+  const tree = buildGameTree(Chess, parsed);
+  assert.equal(tree.mainLine.length, 0);
+
+  const moveResult = playMoveResult(tree.rootFen, "e4");
+  const newNode = addMove(tree, null, moveResult);
+
+  assert.deepEqual(newNode.path, [0]);
+  assert.equal(newNode.entryPointKey, "start");
+  assert.equal(tree.mainLine[0], newNode);
+});
+
+test("addMove creates a new sideline when the cursor's position already has a different recorded continuation", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4]; // 3.Bb5 — already has "a6" (mainline) and "Nf6" (Berlin sideline)
+  const aSix = tree.mainLine[5];
+  assert.equal(aSix.variations.length, 1, "sanity: one sideline (the Berlin) already attached");
+
+  const moveResult = playMoveResult(bb5.fen, "d6"); // a third, never-before-seen reply
+  const newNode = addMove(tree, bb5, moveResult);
+
+  assert.equal(aSix.variations.length, 2, "the new reply is attached as a second sideline off 3...a6");
+  assert.equal(aSix.variations[1][0], newNode);
+  assert.equal(newNode.san, "d6");
+  assert.deepEqual(newNode.path, [5, "v1", 0]);
+  assert.equal(newNode.pathKey, "5.v1.0");
+  assert.equal(newNode.entryPointKey, bb5.pathKey, "stepping back from it returns to 3.Bb5, same as the Berlin does");
+  assert.equal(tree.nodesByPath.get("5.v1.0"), newNode);
+});
+
+test("addMove creates a new sideline off the mainline's very first move when played from the start position", () => {
+  const tree = buildTree();
+  assert.equal(tree.mainLine[0].variations.length, 0, "sanity: no sideline recorded on 1.e4 yet");
+
+  const moveResult = playMoveResult(tree.rootFen, "d4"); // deviates from 1.e4 itself
+  const newNode = addMove(tree, null, moveResult);
+
+  assert.equal(tree.mainLine[0].variations.length, 1);
+  assert.equal(tree.mainLine[0].variations[0][0], newNode);
+  assert.deepEqual(newNode.path, [0, "v0", 0]);
+  assert.equal(newNode.entryPointKey, "start");
+});
+
+test("addMove: the newly added node is navigable afterward via the cursor, like any other node", () => {
+  const tree = buildTree();
+  const cursor = createCursor(tree);
+  const bb5 = tree.mainLine[4];
+  const moveResult = playMoveResult(bb5.fen, "d6");
+  const newNode = addMove(tree, bb5, moveResult);
+
+  cursor.jumpTo(newNode.path);
+  assert.equal(cursor.getCurrentNode(), newNode);
+  assert.equal(cursor.getCurrentFen(), moveResult.fen);
+  const back = cursor.stepBackward();
+  assert.equal(back, bb5, "stepping back from the newly-added sideline returns to the branch point");
+});
+
+test("addMove: a continuation added while unlocked is then found by findContinuationBySan (Lock PGN back on sees it)", () => {
+  const tree = buildTree();
+  const bb5 = tree.mainLine[4];
+  const moveResult = playMoveResult(bb5.fen, "d6");
+  addMove(tree, bb5, moveResult);
+
+  const match = findContinuationBySan(bb5, tree.mainLine, "d6");
+  assert.ok(match, "the move added while Lock PGN was off is now a legitimate tree continuation");
+  assert.equal(match.san, "d6");
+});
+
+// ---- serializeGameTree (persisting a grown tree back to PGN text) --------
+
+test("serializeGameTree round-trips the fixture unchanged: comments, %cal/%csl, and nested variations survive re-parsing", () => {
+  const tree = buildTree();
+  const pgnText = serializeGameTree(tree);
+
+  const reparsed = buildGameTree(Chess, parseGame(parse, pgnText));
+
+  function plain(nodes) {
+    return nodes.map((n) => ({
+      san: n.san,
+      commentBefore: n.commentBefore,
+      commentAfter: n.commentAfter,
+      arrows: n.arrows,
+      markers: n.markers,
+      variations: n.variations.map(plain),
+    }));
+  }
+
+  assert.deepEqual(plain(reparsed.mainLine), plain(tree.mainLine));
+  assert.equal(reparsed.tags.Event, tree.tags.Event);
+});
+
+test("serializeGameTree includes a move added via addMove, so it survives a reload", () => {
+  const tree = buildTree();
+  const last = tree.mainLine[tree.mainLine.length - 1];
+  const moveResult = playMoveResult(last.fen, "d3");
+  addMove(tree, last, moveResult);
+
+  const pgnText = serializeGameTree(tree);
+  const reparsed = buildGameTree(Chess, parseGame(parse, pgnText));
+
+  assert.equal(reparsed.mainLine.length, 11);
+  assert.equal(reparsed.mainLine[10].san, "d3");
 });
