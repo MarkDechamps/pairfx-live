@@ -236,13 +236,18 @@ body {
   padding: 0.2rem 0.55rem;
 }
 .move-badge .caveat { font-size: 0.75rem; color: var(--text-muted); }
-.move-badge .lock-pgn-toggle {
-  margin-left: auto;
+
+/* Lives in the dark wood .desk bar now (next to the Sync toggle), not the
+   light move-badge row it started in - colors match .desk-group label's
+   wood-panel palette instead of the light-card --text-muted it used there. */
+.lock-pgn-toggle {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--wood-panel-muted);
   cursor: pointer;
 }
 

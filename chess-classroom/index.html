@@ -37,6 +37,11 @@
 
     <button class="btn" id="openProjectorBtn" data-i18n="openProjector">Open projectorscherm ↗</button>
 
+    <label class="lock-pgn-toggle" title="Wanneer aan: alleen zetten uit de geladen PGN zijn te spelen. Wanneer uit: elke zet is toegestaan en wordt aan de PGN toegevoegd." data-i18n-title="lockPgnHint">
+      <input type="checkbox" id="lockPgnCheckbox" checked>
+      <span data-i18n="lockPgn">PGN vergrendelen</span>
+    </label>
+
     <button class="sync-plunger on" id="syncToggle" title="Synchroniseer lerarenbord met projectorscherm" data-i18n-title="syncTitle">
       <span class="knob"></span>
       <span class="state" id="syncState" data-i18n="syncOn">Sync AAN</span>
@@ -59,10 +64,6 @@
       <div class="move-badge">
         <span class="current mono" id="currentMove">–</span>
         <span class="caveat" id="gameTitle"></span>
-        <label class="lock-pgn-toggle" title="Wanneer aan: alleen zetten uit de geladen PGN zijn te spelen. Wanneer uit: elke zet is toegestaan en wordt aan de PGN toegevoegd." data-i18n-title="lockPgnHint">
-          <input type="checkbox" id="lockPgnCheckbox" checked>
-          <span data-i18n="lockPgn">PGN vergrendelen</span>
-        </label>
       </div>
 
       <div class="card">
