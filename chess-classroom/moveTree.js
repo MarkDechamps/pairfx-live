@@ -188,8 +188,69 @@ export function stripUnrecognizedMoveGlyphs(pgnText) {
 // symbol they can rescue into a grammar-accepted glyph is preserved;
 // stripping — the only lossy, deletion-based pass — runs last and only
 // touches whatever's left over outside comments/headers.
+// Some puzzle/exercise PGN generators write the answer entirely inside
+// parentheses with no real move preceding them - e.g.
+// "{Aanval op gepend stuk!} ( 1. ... Rc8 )" instead of a normal mainline.
+// This isn't valid PGN (a "(...)" variation needs a preceding mainline move
+// to branch from) and the grammar rejects it outright with a syntax error,
+// but the intent is unambiguous: the bracketed line *is* the answer. Finds
+// the first non-whitespace, non-comment token in the movetext (skipping the
+// header block); if it's "(", strips exactly that opening paren and its
+// matching close (respecting nesting), promoting the bracketed line to be
+// the real mainline. Leaves the text untouched if the movetext doesn't
+// start this way, or if the leading paren is unbalanced (nothing safe to
+// guess there).
+export function promoteLeadingBracketedLine(pgnText) {
+  const headerEnd = pgnText.indexOf("\n\n");
+  if (headerEnd === -1) {
+    return pgnText;
+  }
+  const headers = pgnText.slice(0, headerEnd);
+  const movetext = pgnText.slice(headerEnd);
+
+  let i = 0;
+  while (i < movetext.length) {
+    if (/\s/.test(movetext[i])) {
+      i++;
+      continue;
+    }
+    if (movetext[i] === "{") {
+      const close = movetext.indexOf("}", i);
+      if (close === -1) {
+        return pgnText; // malformed comment - don't touch
+      }
+      i = close + 1;
+      continue;
+    }
+    break;
+  }
+
+  if (movetext[i] !== "(") {
+    return pgnText;
+  }
+
+  let depth = 0;
+  let j = i;
+  for (; j < movetext.length; j++) {
+    if (movetext[j] === "(") depth++;
+    else if (movetext[j] === ")") {
+      depth--;
+      if (depth === 0) break;
+    }
+  }
+  if (depth !== 0) {
+    return pgnText; // unbalanced - don't guess
+  }
+
+  const withoutClose = movetext.slice(0, j) + movetext.slice(j + 1);
+  const withoutBoth = withoutClose.slice(0, i) + withoutClose.slice(i + 1);
+  return headers + withoutBoth;
+}
+
 export function sanitizePgnText(pgnText) {
-  return stripUnrecognizedMoveGlyphs(normalizeEvaluationSymbols(sanitizeCyrillicHomoglyphs(pgnText)));
+  return promoteLeadingBracketedLine(
+    stripUnrecognizedMoveGlyphs(normalizeEvaluationSymbols(sanitizeCyrillicHomoglyphs(pgnText)))
+  );
 }
 
 // Parses raw PGN text into the pgn-parser library's tree shape. `parsePgn` is

@@ -19,6 +19,7 @@ import {
   stripUnrecognizedMoveGlyphs,
   sanitizePgnText,
   splitPgnGames,
+  promoteLeadingBracketedLine,
   replaceGameInPgnText,
   addMove,
   serializeGameTree,
@@ -237,6 +238,84 @@ test("sanitizePgnText composes all three normalization passes", () => {
   // is scoped to skip headers/comments, since it deletes rather than
   // translates.
   assert.equal(sanitizePgnText(messy), '[Black "Kuipers"]\n\n2. Qxb4± Qxc5 Rb8');
+});
+
+// Real-world bug report: a puzzle-exercise PGN writes its answer entirely
+// inside parentheses with no real move preceding them - e.g.
+// "{Aanval op gepend stuk!} ( 1. ... Rc8 )" - instead of a normal mainline.
+// This isn't valid PGN (a "(...)" variation needs a preceding mainline move
+// to branch from) and the grammar rejects it outright, but the intent is
+// unambiguous: the bracketed line *is* the answer. Promote it by stripping
+// that specific matched pair of parens - the ones wrapping the *entire*
+// movetext with no move before them - leaving any other, legitimately
+// nested parens (real sidelines to a real move) untouched.
+// Exact trailing whitespace where a stripped paren used to be isn't the
+// behavior under test (the grammar doesn't care) - trim it per line so the
+// assertion stays focused on "parens gone, content preserved".
+function trimTrailingSpaces(text) {
+  return text.replace(/ +$/gm, "");
+}
+
+test("promoteLeadingBracketedLine strips parens wrapping the entire movetext", () => {
+  const pgn = `[Event "Test"]
+[Result "*"]
+
+{Aanval op gepend stuk!} ( 1. ... Rc8 )
+0-1`;
+  assert.equal(
+    trimTrailingSpaces(promoteLeadingBracketedLine(pgn)),
+    `[Event "Test"]
+[Result "*"]
+
+{Aanval op gepend stuk!}  1. ... Rc8
+0-1`
+  );
+});
+
+test("promoteLeadingBracketedLine leaves normal movetext (no leading parens) untouched", () => {
+  assert.equal(promoteLeadingBracketedLine(RUY_LOPEZ_PGN), RUY_LOPEZ_PGN);
+});
+
+test("promoteLeadingBracketedLine only strips the outer pair, keeping any nesting inside intact", () => {
+  const pgn = `[Event "Test"]
+[Result "*"]
+
+( 1. e4 (1. d4) e5 )
+*`;
+  assert.equal(
+    trimTrailingSpaces(promoteLeadingBracketedLine(pgn)),
+    `[Event "Test"]
+[Result "*"]
+
+ 1. e4 (1. d4) e5
+*`
+  );
+});
+
+test("promoteLeadingBracketedLine leaves an unbalanced leading paren alone rather than guessing", () => {
+  const pgn = `[Event "Test"]
+[Result "*"]
+
+( 1. e4 e5
+*`;
+  assert.equal(promoteLeadingBracketedLine(pgn), pgn);
+});
+
+test("parseGame promotes and parses a whole real-world puzzle-answer game end to end", () => {
+  const pgn = `[Event "Aanval op gepend stuk."]
+[Result "0-1"]
+[SetUp "1"]
+[FEN "4rbk1/1p4p1/p3qpnp/P3p3/1PN1P3/7P/Q1PB1PP1/5RK1 b - - 0 1"]
+
+{Aanval op gepend stuk!} ( 1. ... Rc8 )
+0-1`;
+  const game = parseGame(parse, pgn);
+  assert.equal(game.moves.length, 1);
+  assert.equal(game.moves[0].notation.notation, "Rc8");
+
+  const tree = buildGameTree(Chess, game);
+  assert.equal(tree.rootFen, "4rbk1/1p4p1/p3qpnp/P3p3/1PN1P3/7P/Q1PB1PP1/5RK1 b - - 0 1");
+  assert.equal(tree.mainLine[0].san, "Rc8");
 });
 
 test("buildGameTree replays a move that arrived with a Cyrillic homoglyph in it", () => {
