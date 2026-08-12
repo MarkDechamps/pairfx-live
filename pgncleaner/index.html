@@ -614,6 +614,8 @@ const INPUT_NORMALIZERS = Object.freeze({
     { token: '[/fen]',  replacement: '@@EndFEN@@',   label: 'FEN end (from Chess Tempo)'        },
     { token: '[moves]', replacement: '@@StartV@@',   label: 'Move sequence start (from Chess Tempo)' },
     { token: '[/moves]',replacement: '@@EndV@@',     label: 'Move sequence end (from Chess Tempo)'   },
+    { token: '[h3]',    replacement: '@@HeaderStart@@', label: 'Header start (from Chess Tempo)' },
+    { token: '[/h3]',   replacement: '@@HeaderEnd@@',   label: 'Header end (from Chess Tempo)'   },
     { token: '[b]',     replacement: '**',           label: 'Bold open (from Chess Tempo)'      },
     { token: '[/b]',    replacement: '**',           label: 'Bold close (from Chess Tempo)'     },
     { token: '\n• ',    replacement: '@@li@@',       label: 'List item (from Chess Tempo)'      },
@@ -621,13 +623,15 @@ const INPUT_NORMALIZERS = Object.freeze({
     { token: '[cal ',   replacement: '[%cal ',       label: 'Colored arrow list (from Chess Tempo)'  },
   ],
   // Lichess is already markdown + standard [%csl]/[%cal] — only its
-  // markdown bullet style needs folding back to the canonical list token.
+  // markdown bullet style and ### headers need folding back to canonical.
   lichess: [
+    { pattern: /\n### (.*?)\n/g, display: '\\n### text\\n', displayReplacement: '@@HeaderStart@@text@@HeaderEnd@@', replacement: '@@HeaderStart@@$1@@HeaderEnd@@', label: 'Header (from Lichess)' },
     { token: '\n* ', replacement: '@@li@@', label: 'List item (from Lichess)' },
   ],
   // ChessBase has no bold markup to undo (plain text), so only its
-  // bullet style needs folding back.
+  // bullet style and "=== text ===" header separators need folding back.
   chessbase: [
+    { pattern: /\n=== (.*?) ===\n/g, display: '\\n=== text ===\\n', displayReplacement: '@@HeaderStart@@text@@HeaderEnd@@', replacement: '@@HeaderStart@@$1@@HeaderEnd@@', label: 'Header (from ChessBase)' },
     { token: '\n- ', replacement: '@@li@@', label: 'List item (from ChessBase)' },
   ],
 });
@@ -641,6 +645,10 @@ const TARGET_REPLACEMENTS = Object.freeze({
     { token: '@@EndFEN@@',   replacement: '[/fen]',   label: 'FEN end'             },
     { token: '@@StartV@@',   replacement: '[moves]',  label: 'Move sequence start' },
     { token: '@@EndV@@',     replacement: '[/moves]', label: 'Move sequence end'   },
+    // [h3]/[/h3] renders as a heading in the Opening Trainer; swap for
+    // [b]/[/b] instead if h3 turns out visually too large.
+    { token: '@@HeaderStart@@', replacement: '[h3]',  label: 'Header start' },
+    { token: '@@HeaderEnd@@',   replacement: '[/h3]', label: 'Header end'   },
     { token: '@@li@@', replacement: '\n• ', displayReplacement: '↵• ', label: 'List item' },
     { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: '[b]text[/b]', replacement: '[b]$1[/b]', label: 'Bold → BBCode' },
     { token: '[%csl ', replacement: '[csl ', label: 'Colored square list' },
@@ -653,6 +661,7 @@ const TARGET_REPLACEMENTS = Object.freeze({
     { pattern: /@@StartFEN@@[\s\S]*?@@EndFEN@@/g, display: '@@StartFEN@@…@@EndFEN@@', displayReplacement: '(removed)', replacement: '', label: 'FEN diagram (unsupported, stripped)' },
     { token: '@@StartV@@', replacement: '', label: 'Move sequence start (unwrapped)' },
     { token: '@@EndV@@',   replacement: '', label: 'Move sequence end (unwrapped)'   },
+    { pattern: /@@HeaderStart@@(.*?)@@HeaderEnd@@/g, display: '@@HeaderStart@@text@@HeaderEnd@@', displayReplacement: '\\n### text\\n', replacement: '\n### $1\n', label: 'Header → Markdown H3' },
     { token: '@@li@@', replacement: '\n* ', displayReplacement: '↵* ', label: 'List item' },
     // Bold and [%csl]/[%cal] are already Lichess-native — nothing to do.
   ],
@@ -662,6 +671,7 @@ const TARGET_REPLACEMENTS = Object.freeze({
     { pattern: /@@StartFEN@@[\s\S]*?@@EndFEN@@/g, display: '@@StartFEN@@…@@EndFEN@@', displayReplacement: '(removed)', replacement: '', label: 'FEN diagram (unsupported, stripped)' },
     { token: '@@StartV@@', replacement: '', label: 'Move sequence start (unwrapped)' },
     { token: '@@EndV@@',   replacement: '', label: 'Move sequence end (unwrapped)'   },
+    { pattern: /@@HeaderStart@@(.*?)@@HeaderEnd@@/g, display: '@@HeaderStart@@text@@HeaderEnd@@', displayReplacement: '\\n=== text ===\\n', replacement: '\n=== $1 ===\n', label: 'Header → separator line' },
     { token: '@@li@@', replacement: '\n- ', displayReplacement: '↵- ', label: 'List item' },
     { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: 'text', replacement: '$1', label: 'Bold → plain text' },
     // [%csl]/[%cal] are already ChessBase-native — nothing to do.
@@ -1052,6 +1062,49 @@ const TESTS = [
     desc: 'cleanPgn: defaults (no from/to given) still behave as Chessable → Chess Tempo',
     fn:  () => cleanPgn('@@StartBracket@@1. e4@@EndBracket@@ [%csl Ge4]'),
     expected: '(1. e4) [csl Ge4]',
+  },
+  // ── Header tags (@@HeaderStart@@ / @@HeaderEnd@@) ──
+  {
+    id: 'T45',
+    desc: 'cleanPgn: Chessable → Chess Tempo header becomes [h3]...[/h3]',
+    fn:  () => cleanPgn('@@HeaderStart@@Main Line@@HeaderEnd@@ 1. e4', 'chessable', 'chesstempo'),
+    expected: '[h3]Main Line[/h3] 1. e4',
+  },
+  {
+    id: 'T46',
+    desc: 'cleanPgn: Chessable → Lichess header becomes a Markdown H3',
+    fn:  () => cleanPgn('@@HeaderStart@@Main Line@@HeaderEnd@@ 1. e4', 'chessable', 'lichess'),
+    expected: '\n### Main Line\n 1. e4',
+  },
+  {
+    id: 'T47',
+    desc: 'cleanPgn: Chessable → ChessBase header becomes a plain separator line',
+    fn:  () => cleanPgn('@@HeaderStart@@Main Line@@HeaderEnd@@ 1. e4', 'chessable', 'chessbase'),
+    expected: '\n=== Main Line ===\n 1. e4',
+  },
+  {
+    id: 'T48',
+    desc: 'cleanPgn: Chess Tempo [h3]...[/h3] → Lichess Markdown H3',
+    fn:  () => cleanPgn('[h3]Main Line[/h3] 1. e4', 'chesstempo', 'lichess'),
+    expected: '\n### Main Line\n 1. e4',
+  },
+  {
+    id: 'T49',
+    desc: 'cleanPgn: Lichess Markdown H3 → Chess Tempo [h3]...[/h3]',
+    fn:  () => cleanPgn('\n### Main Line\n 1. e4', 'lichess', 'chesstempo'),
+    expected: '[h3]Main Line[/h3] 1. e4',
+  },
+  {
+    id: 'T50',
+    desc: 'cleanPgn: Lichess → Lichess header round-trips unchanged',
+    fn:  () => cleanPgn('\n### Main Line\n 1. e4', 'lichess', 'lichess'),
+    expected: '\n### Main Line\n 1. e4',
+  },
+  {
+    id: 'T51',
+    desc: 'cleanPgn: ChessBase → ChessBase header round-trips unchanged',
+    fn:  () => cleanPgn('\n=== Main Line ===\n 1. e4', 'chessbase', 'chessbase'),
+    expected: '\n=== Main Line ===\n 1. e4',
   },
 ];
 
