@@ -525,6 +525,9 @@ const REPLACEMENTS = Object.freeze([
   { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: '[b]text[/b]', replacement: '[b]$1[/b]', label: 'Bold → BBCode' },
   // 6. Trailing whitespace before punctuation
   { pattern: /\s+(\.|\!|\?)/g, display: '\\s+[.!?]', displayReplacement: '[.!?]', replacement: '$1', label: 'Trailing spaces' },
+  // 7. Chessable-style annotation tags → Chess Tempo-style annotation tags
+  { token: '[%csl ', replacement: '[csl ', label: 'Colored square list' },
+  { token: '[%cal ', replacement: '[cal ', label: 'Colored arrow list'  },
 ]);
 
 
@@ -810,6 +813,37 @@ const TESTS = [
       '@@li@@item **bold** move .'
     ),
     expected: '(1. e4) [fen]pos[/fen] [moves]1. d4[/moves] \n• item [b]bold[/b] move.',
+  },
+  // ── Chessable → Chess Tempo annotation tags ────
+  {
+    id: 'T33',
+    desc: 'cleanPgn: [%csl → [csl (colored squares)',
+    fn:  () => cleanPgn('1. e4 {[%csl Ge4,Rd5]} e5'),
+    expected: '1. e4 {[csl Ge4,Rd5]} e5',
+  },
+  {
+    id: 'T34',
+    desc: 'cleanPgn: [%cal → [cal (colored arrows)',
+    fn:  () => cleanPgn('1. e4 {[%cal Ge2e4,Rd7d5]} e5'),
+    expected: '1. e4 {[cal Ge2e4,Rd7d5]} e5',
+  },
+  {
+    id: 'T35',
+    desc: 'cleanPgn: [%csl and [%cal both present, multiple occurrences',
+    fn:  () => cleanPgn('{[%csl Ge4][%cal Rd7d5,Gg1f3]}'),
+    expected: '{[csl Ge4][cal Rd7d5,Gg1f3]}',
+  },
+  {
+    id: 'T36',
+    desc: 'replaceToken: [%csl → [csl (direct)',
+    fn:  () => replaceToken('[%csl Ge4]', '[%csl ', '[csl '),
+    expected: '[csl Ge4]',
+  },
+  {
+    id: 'T37',
+    desc: 'replaceToken: [%cal → [cal (direct)',
+    fn:  () => replaceToken('[%cal Ge2e4]', '[%cal ', '[cal '),
+    expected: '[cal Ge2e4]',
   },
 ];
 
