@@ -125,6 +125,51 @@ body {
   margin-bottom:  1rem;
 }
 
+/* ── Conversion row ─────────────────────────────── */
+.convert-row {
+  display:     flex;
+  align-items: flex-end;
+  gap:         .75rem;
+}
+
+.convert-field {
+  display:        flex;
+  flex-direction: column;
+  gap:            .35rem;
+  flex:           1;
+}
+
+.convert-label {
+  font-size:      .6875rem;
+  font-weight:    600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color:          var(--muted);
+}
+
+.convert-select {
+  width:         100%;
+  padding:       .625rem .75rem;
+  font-family:   var(--sans);
+  font-size:     .875rem;
+  color:         var(--text);
+  background:    var(--surface-2);
+  border:        1px solid var(--border);
+  border-radius: calc(var(--r) - 2px);
+  cursor:        pointer;
+}
+
+.convert-select:focus-visible {
+  outline:        2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.convert-arrow {
+  color:       var(--muted);
+  font-size:   1.1rem;
+  padding-bottom: .625rem;
+}
+
 /* ── Drop zone ──────────────────────────────────── */
 .dropzone {
   border:        2px dashed var(--border);
@@ -445,6 +490,32 @@ details[open] .test-chevron { transform: rotate(180deg); }
     <p>Strip Chessable annotations · restore standard PGN notation</p>
   </header>
 
+  <!-- Conversion settings -->
+  <section class="card" aria-label="Conversion settings">
+    <p class="card-title">Convert</p>
+    <div class="convert-row">
+      <label class="convert-field">
+        <span class="convert-label">From</span>
+        <select id="fromSelect" class="convert-select">
+          <option value="chessable">Chessable</option>
+          <option value="lichess">Lichess</option>
+          <option value="chesstempo">Chess Tempo</option>
+          <option value="chessbase">ChessBase</option>
+        </select>
+      </label>
+      <span class="convert-arrow" aria-hidden="true">→</span>
+      <label class="convert-field">
+        <span class="convert-label">To</span>
+        <select id="toSelect" class="convert-select">
+          <option value="chessable">Chessable</option>
+          <option value="lichess">Lichess</option>
+          <option value="chesstempo" selected>Chess Tempo</option>
+          <option value="chessbase">ChessBase</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
   <!-- Upload card -->
   <section class="card" aria-label="File upload">
     <p class="card-title">Upload PGN</p>
@@ -508,27 +579,110 @@ details[open] .test-chevron { transform: rotate(180deg); }
 
 // ═══════════════════════════════════════════════════
 //  REPLACEMENTS — single source of truth
+//
+//  Chessable's exported PGN is treated as the canonical intermediate
+//  form (its @@Start...@@ placeholders, **markdown** bold, [%csl/[%cal
+//  with the leading %). Cleaning a PGN is two independent stages:
+//
+//   1. INPUT_NORMALIZERS[from]  — rewrite the source dialect's own
+//      markup back into that canonical form. Chessable needs no
+//      normalizing (it IS the canonical form); the other platforms
+//      never emit @@ placeholders, so this only undoes each one's
+//      native tags (ChessTempo's [b]/[fen]/[csl] BBCode, Lichess' and
+//      ChessBase's list-bullet styles, etc).
+//   2. TARGET_REPLACEMENTS[to]  — render the canonical form into the
+//      destination platform's own markup.
+//
+//  COMMON_REPLACEMENTS run unconditionally in both directions: they
+//  fix universal Chessable export artifacts (mismatched variation
+//  brackets, stray space before punctuation) that every target wants
+//  cleaned up regardless of source or destination.
 // ═══════════════════════════════════════════════════
-const REPLACEMENTS = Object.freeze([
-  // 1. Restore brackets
-  { token: '@@StartBracket@@', replacement: '(',           label: 'Variation open'      },
-  { token: '@@EndBracket@@',   replacement: ')',           label: 'Variation close'     },
-  // 2. FEN diagram tags
-  { token: '@@StartFEN@@',     replacement: '[fen]',      label: 'FEN start'           },
-  { token: '@@EndFEN@@',       replacement: '[/fen]',     label: 'FEN end'             },
-  // 3. Inline move sequence tags
-  { token: '@@StartV@@',       replacement: '[moves]',    label: 'Move sequence start' },
-  { token: '@@EndV@@',         replacement: '[/moves]',   label: 'Move sequence end'   },
-  // 4. List items  (• = •, ↵ = ↵ for display)
-  { token: '@@li@@', replacement: '\n• ', displayReplacement: '↵• ', label: 'List item' },
-  // 5. Markdown bold → BBCode
-  { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: '[b]text[/b]', replacement: '[b]$1[/b]', label: 'Bold → BBCode' },
-  // 6. Trailing whitespace before punctuation
+
+const COMMON_REPLACEMENTS = Object.freeze([
+  { token: '@@StartBracket@@', replacement: '(', label: 'Variation open'  },
+  { token: '@@EndBracket@@',   replacement: ')', label: 'Variation close' },
   { pattern: /\s+(\.|\!|\?)/g, display: '\\s+[.!?]', displayReplacement: '[.!?]', replacement: '$1', label: 'Trailing spaces' },
-  // 7. Chessable-style annotation tags → Chess Tempo-style annotation tags
-  { token: '[%csl ', replacement: '[csl ', label: 'Colored square list' },
-  { token: '[%cal ', replacement: '[cal ', label: 'Colored arrow list'  },
 ]);
+
+const INPUT_NORMALIZERS = Object.freeze({
+  // Chessable's export already IS the canonical form — nothing to undo.
+  chessable: [],
+  // ChessTempo's own BBCode-flavoured markup, unwound back to canonical.
+  chesstempo: [
+    { token: '[fen]',   replacement: '@@StartFEN@@', label: 'FEN start (from Chess Tempo)'      },
+    { token: '[/fen]',  replacement: '@@EndFEN@@',   label: 'FEN end (from Chess Tempo)'        },
+    { token: '[moves]', replacement: '@@StartV@@',   label: 'Move sequence start (from Chess Tempo)' },
+    { token: '[/moves]',replacement: '@@EndV@@',     label: 'Move sequence end (from Chess Tempo)'   },
+    { token: '[b]',     replacement: '**',           label: 'Bold open (from Chess Tempo)'      },
+    { token: '[/b]',    replacement: '**',           label: 'Bold close (from Chess Tempo)'     },
+    { token: '\n• ',    replacement: '@@li@@',       label: 'List item (from Chess Tempo)'      },
+    { token: '[csl ',   replacement: '[%csl ',       label: 'Colored square list (from Chess Tempo)' },
+    { token: '[cal ',   replacement: '[%cal ',       label: 'Colored arrow list (from Chess Tempo)'  },
+  ],
+  // Lichess is already markdown + standard [%csl]/[%cal] — only its
+  // markdown bullet style needs folding back to the canonical list token.
+  lichess: [
+    { token: '\n* ', replacement: '@@li@@', label: 'List item (from Lichess)' },
+  ],
+  // ChessBase has no bold markup to undo (plain text), so only its
+  // bullet style needs folding back.
+  chessbase: [
+    { token: '\n- ', replacement: '@@li@@', label: 'List item (from ChessBase)' },
+  ],
+});
+
+const TARGET_REPLACEMENTS = Object.freeze({
+  // Canonical form already is Chessable's own — nothing further to render.
+  chessable: [],
+  // ChessTempo's Opening Trainer renders BBCode-style tags natively.
+  chesstempo: [
+    { token: '@@StartFEN@@', replacement: '[fen]',    label: 'FEN start'           },
+    { token: '@@EndFEN@@',   replacement: '[/fen]',   label: 'FEN end'             },
+    { token: '@@StartV@@',   replacement: '[moves]',  label: 'Move sequence start' },
+    { token: '@@EndV@@',     replacement: '[/moves]', label: 'Move sequence end'   },
+    { token: '@@li@@', replacement: '\n• ', displayReplacement: '↵• ', label: 'List item' },
+    { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: '[b]text[/b]', replacement: '[b]$1[/b]', label: 'Bold → BBCode' },
+    { token: '[%csl ', replacement: '[csl ', label: 'Colored square list' },
+    { token: '[%cal ', replacement: '[cal ', label: 'Colored arrow list'  },
+  ],
+  // Lichess studies support Markdown and standard [%csl]/[%cal] natively,
+  // but have no inline-FEN-diagram or move-block tag — those get dropped
+  // rather than left behind as dead text.
+  lichess: [
+    { pattern: /@@StartFEN@@[\s\S]*?@@EndFEN@@/g, display: '@@StartFEN@@…@@EndFEN@@', displayReplacement: '(removed)', replacement: '', label: 'FEN diagram (unsupported, stripped)' },
+    { token: '@@StartV@@', replacement: '', label: 'Move sequence start (unwrapped)' },
+    { token: '@@EndV@@',   replacement: '', label: 'Move sequence end (unwrapped)'   },
+    { token: '@@li@@', replacement: '\n* ', displayReplacement: '↵* ', label: 'List item' },
+    // Bold and [%csl]/[%cal] are already Lichess-native — nothing to do.
+  ],
+  // ChessBase uses plain PGN text (no Markdown, no inline-FEN/move tags),
+  // but keeps the standard [%csl]/[%cal] annotation syntax it originated.
+  chessbase: [
+    { pattern: /@@StartFEN@@[\s\S]*?@@EndFEN@@/g, display: '@@StartFEN@@…@@EndFEN@@', displayReplacement: '(removed)', replacement: '', label: 'FEN diagram (unsupported, stripped)' },
+    { token: '@@StartV@@', replacement: '', label: 'Move sequence start (unwrapped)' },
+    { token: '@@EndV@@',   replacement: '', label: 'Move sequence end (unwrapped)'   },
+    { token: '@@li@@', replacement: '\n- ', displayReplacement: '↵- ', label: 'List item' },
+    { pattern: /\*\*(.*?)\*\*/g, display: '**text**', displayReplacement: 'text', replacement: '$1', label: 'Bold → plain text' },
+    // [%csl]/[%cal] are already ChessBase-native — nothing to do.
+  ],
+});
+
+/**
+ * Flatten the replacement rules that apply to one from→to conversion,
+ * in the order they must run: universal fixups, then undo the source
+ * dialect's own markup, then render the destination dialect's markup.
+ * @param {string} from
+ * @param {string} to
+ * @returns {Array<object>}
+ */
+function getActiveReplacements(from, to) {
+  return [
+    ...COMMON_REPLACEMENTS,
+    ...(INPUT_NORMALIZERS[from]   || []),
+    ...(TARGET_REPLACEMENTS[to]   || []),
+  ];
+}
 
 
 // ═══════════════════════════════════════════════════
@@ -559,12 +713,15 @@ function applyReplacement(pgn, repl) {
 }
 
 /**
- * Apply all known replacements to a PGN string in declaration order.
+ * Apply the from→to replacement chain to a PGN string, in order.
+ * Defaults preserve this tool's original behaviour (Chessable → Chess Tempo).
  * @param {string} pgn
+ * @param {string} [from='chessable']
+ * @param {string} [to='chesstempo']
  * @returns {string}
  */
-function cleanPgn(pgn) {
-  return REPLACEMENTS.reduce(
+function cleanPgn(pgn, from = 'chessable', to = 'chesstempo') {
+  return getActiveReplacements(from, to).reduce(
     (acc, repl) => applyReplacement(acc, repl),
     pgn
   );
@@ -584,10 +741,12 @@ function countOccurrences(str, token) {
 /**
  * Build a stats array describing how many times each replacement matched.
  * @param {string} original  — raw uploaded PGN
+ * @param {string} [from='chessable']
+ * @param {string} [to='chesstempo']
  * @returns {Array<{display, displayReplacement, label, count}>}
  */
-function getStats(original) {
-  return REPLACEMENTS.map(repl => ({
+function getStats(original, from = 'chessable', to = 'chesstempo') {
+  return getActiveReplacements(from, to).map(repl => ({
     display:            repl.display            || repl.token,
     displayReplacement: repl.displayReplacement || repl.replacement,
     label:              repl.label,
@@ -719,16 +878,22 @@ const TESTS = [
   // ── getStats ───────────────────────────────────
   {
     id: 'T19',
-    desc: 'getStats: returns one entry per replacement',
-    fn:  () => getStats('').length,
-    expected: REPLACEMENTS.length,
+    desc: 'getStats: returns one entry per active replacement (chessable → chesstempo)',
+    fn:  () => getStats('', 'chessable', 'chesstempo').length,
+    expected: getActiveReplacements('chessable', 'chesstempo').length,
   },
   {
     id: 'T20',
-    desc: 'getStats: counts literal tokens correctly',
+    desc: 'getStats: counts literal tokens correctly (chessable → chesstempo)',
     fn:  () => {
-      const stats = getStats('@@StartBracket@@@@StartBracket@@@@EndFEN@@');
-      return JSON.stringify([stats[0].count, stats[1].count, stats[2].count, stats[3].count]);
+      const stats  = getStats('@@StartBracket@@@@StartBracket@@@@EndFEN@@', 'chessable', 'chesstempo');
+      const byLabel = label => stats.find(s => s.label === label).count;
+      return JSON.stringify([
+        byLabel('Variation open'),
+        byLabel('Variation close'),
+        byLabel('FEN start'),
+        byLabel('FEN end'),
+      ]);
     },
     expected: JSON.stringify([2, 0, 0, 1]),
   },
@@ -845,6 +1010,49 @@ const TESTS = [
     fn:  () => replaceToken('[%cal Ge2e4]', '[%cal ', '[cal '),
     expected: '[cal Ge2e4]',
   },
+  // ── From/To conversion matrix ──────────────────
+  {
+    id: 'T38',
+    desc: 'cleanPgn: Chess Tempo → Lichess strips FEN diagrams, keeps Markdown bold and adds back %csl/%cal',
+    fn:  () => cleanPgn('[fen]rnbq[/fen] [b]Strong[/b] move [csl Ge4]', 'chesstempo', 'lichess'),
+    expected: ' **Strong** move [%csl Ge4]',
+  },
+  {
+    id: 'T39',
+    desc: 'cleanPgn: Lichess → ChessBase converts bullet style and strips Markdown bold to plain text',
+    fn:  () => cleanPgn('Idea:\n* First\n* Second **key** move [%csl Ge4]', 'lichess', 'chessbase'),
+    expected: 'Idea:\n- First\n- Second key move [%csl Ge4]',
+  },
+  {
+    id: 'T40',
+    desc: 'cleanPgn: ChessBase → Chess Tempo converts bullet style and strips the % from csl/cal',
+    fn:  () => cleanPgn('Plan:\n- Step one\n- Step two [%csl Rd5]', 'chessbase', 'chesstempo'),
+    expected: 'Plan:\n• Step one\n• Step two [csl Rd5]',
+  },
+  {
+    id: 'T41',
+    desc: 'cleanPgn: Chess Tempo → Chess Tempo round-trips unchanged (normalize + re-render cancel out)',
+    fn:  () => cleanPgn('[fen]X[/fen] [b]Y[/b] [csl Ge4]', 'chesstempo', 'chesstempo'),
+    expected: '[fen]X[/fen] [b]Y[/b] [csl Ge4]',
+  },
+  {
+    id: 'T42',
+    desc: 'cleanPgn: Chessable → Lichess strips FEN diagram contents entirely, keeps Markdown bold as-is',
+    fn:  () => cleanPgn('@@StartFEN@@rnbq/8@@EndFEN@@ **plan** .', 'chessable', 'lichess'),
+    expected: ' **plan**.',
+  },
+  {
+    id: 'T43',
+    desc: "cleanPgn: Chessable → ChessBase unwraps move-sequence tags and strips bold markers",
+    fn:  () => cleanPgn('@@StartV@@1. d4 d5@@EndV@@ is **solid**', 'chessable', 'chessbase'),
+    expected: '1. d4 d5 is solid',
+  },
+  {
+    id: 'T44',
+    desc: 'cleanPgn: defaults (no from/to given) still behave as Chessable → Chess Tempo',
+    fn:  () => cleanPgn('@@StartBracket@@1. e4@@EndBracket@@ [%csl Ge4]'),
+    expected: '(1. e4) [csl Ge4]',
+  },
 ];
 
 function runTests() {
@@ -876,9 +1084,12 @@ const testBody   = document.getElementById('testBody');
 const testBadge  = document.getElementById('testBadge');
 const runTestsBtn= document.getElementById('runTestsBtn');
 const testPanel  = document.getElementById('testPanel');
+const fromSelect = document.getElementById('fromSelect');
+const toSelect   = document.getElementById('toSelect');
 
-let cleanedContent = '';
+let cleanedContent  = '';
 let cleanedFileName = 'cleaned.pgn';
+let lastOriginal    = null;   // raw text of the most recently loaded file
 
 // ── Drag & drop ────────────────────────────────────
 dropzone.addEventListener('dragover', e => {
@@ -902,21 +1113,35 @@ fileInput.addEventListener('change', () => {
   if (file) processFile(file);
 });
 
+// ── From/To conversion ─────────────────────────────
+fromSelect.addEventListener('change', reprocess);
+toSelect.addEventListener('change', reprocess);
+
 // ── File processing ────────────────────────────────
 function processFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
-    const original = e.target.result;
-    cleanedContent  = cleanPgn(original);
+    lastOriginal    = e.target.result;
     cleanedFileName = file.name.replace(/(\.[^.]+)?$/, '-cleaned.pgn');
 
-    renderFileInfo(file.name, original);
-    renderStats(original);
-    renderPreview(cleanedContent);
+    renderFileInfo(file.name, lastOriginal);
+    reprocess();
     resultArea.classList.remove('hidden');
     resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   reader.readAsText(file);
+}
+
+// Re-run cleanPgn/getStats against the currently loaded file using whatever
+// From/To pair is selected right now. Called on file load and whenever
+// either dropdown changes, so switching targets never requires re-uploading.
+function reprocess() {
+  if (lastOriginal === null) return;
+  const from = fromSelect.value;
+  const to   = toSelect.value;
+  cleanedContent = cleanPgn(lastOriginal, from, to);
+  renderStats(lastOriginal, from, to);
+  renderPreview(cleanedContent);
 }
 
 function renderFileInfo(name, original) {
@@ -927,8 +1152,8 @@ function renderFileInfo(name, original) {
     : `${(original.length / 1024).toFixed(1)} KB`;
 }
 
-function renderStats(original) {
-  const stats = getStats(original);
+function renderStats(original, from, to) {
+  const stats = getStats(original, from, to);
   statsGrid.innerHTML = '';
   stats.forEach(({ display, displayReplacement, label, count }) => {
     const row = document.createElement('div');
