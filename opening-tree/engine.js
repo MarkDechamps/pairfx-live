@@ -7,7 +7,7 @@
 // lichessGameToRecord/chessComGameToRecord from each source's raw API shape:
 //   { moves: string[] (SAN, mainline only), color: "white"|"black" (the studied player's side),
 //     outcome: "win"|"draw"|"loss" (from the studied player's side), speed: string,
-//     rated: boolean, playedAt: number|null (ms epoch) }
+//     rated: boolean, playedAt: number|null (ms epoch), url: string (the game, on its own site) }
 
 const RESULT_TOKENS = new Set(["1-0", "0-1", "1/2-1/2", "*"]);
 
@@ -55,6 +55,7 @@ export function lichessGameToRecord(game, username) {
     speed: game.speed,
     rated: Boolean(game.rated),
     playedAt: game.createdAt ?? null,
+    url: `https://lichess.org/${game.id}`,
   };
 }
 
@@ -88,6 +89,7 @@ export function chessComGameToRecord(game, username) {
     speed: game.time_class,
     rated: Boolean(game.rated),
     playedAt: typeof game.end_time === "number" ? game.end_time * 1000 : null,
+    url: game.url,
   };
 }
 
@@ -109,36 +111,51 @@ export function filterRecords(records, { speeds, rated } = {}) {
 }
 
 function emptyNode() {
-  return { total: 0, wins: 0, draws: 0, losses: 0, children: {} };
+  return { total: 0, wins: 0, draws: 0, losses: 0, children: {}, games: [] };
 }
 
-function addOutcome(node, outcome) {
+// Every node a game's move sequence passes through gets the same small summary of that game —
+// enough to list and link to it (app.js: "see the games behind this variation") without keeping
+// the full record (its `moves` array in particular) reachable from the tree.
+function gameSummary(record) {
+  return {
+    url: record.url,
+    outcome: record.outcome,
+    speed: record.speed,
+    rated: record.rated,
+    playedAt: record.playedAt,
+  };
+}
+
+function addGame(node, record) {
   node.total += 1;
-  if (outcome === "win") node.wins += 1;
-  else if (outcome === "loss") node.losses += 1;
+  if (record.outcome === "win") node.wins += 1;
+  else if (record.outcome === "loss") node.losses += 1;
   else node.draws += 1;
+  node.games.push(gameSummary(record));
 }
 
 const DEFAULT_MAX_PLY = 40;
 
 /**
- * Merges every record's move sequence into one tree. The root's own stats are the totals across
- * every record passed in; each descendant node's stats are the totals across every record whose
- * move sequence passes through that exact position. `maxPly` bounds how many plies deep a single
- * game can extend the tree (a prep tool has no use for a 300-move correspondence game producing
- * a 300-node-deep single-child chain).
+ * Merges every record's move sequence into one tree. The root's own stats/games are the totals
+ * across every record passed in; each descendant node's are the totals across every record whose
+ * move sequence passes through that exact position — including `games`, the list a "see the
+ * games behind this variation" UI reads directly off the node being browsed. `maxPly` bounds how
+ * many plies deep a single game can extend the tree (a prep tool has no use for a 300-move
+ * correspondence game producing a 300-node-deep single-child chain).
  */
 export function buildTree(records, { maxPly = DEFAULT_MAX_PLY } = {}) {
   const root = emptyNode();
 
   for (const record of records) {
     let node = root;
-    addOutcome(node, record.outcome);
+    addGame(node, record);
 
     for (const san of record.moves.slice(0, maxPly)) {
       if (!node.children[san]) node.children[san] = emptyNode();
       node = node.children[san];
-      addOutcome(node, record.outcome);
+      addGame(node, record);
     }
   }
 

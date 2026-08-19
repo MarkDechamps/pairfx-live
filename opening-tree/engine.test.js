@@ -45,6 +45,7 @@ test("extractSanMoves returns an empty array for a headers-only/empty movetext",
 
 function lichessLine(overrides = {}) {
   return {
+    id: "abcd1234",
     rated: true,
     variant: "standard",
     speed: "blitz",
@@ -67,6 +68,7 @@ test("lichessGameToRecord matches the studied username case-insensitively as Whi
   assert.equal(record.speed, "blitz");
   assert.equal(record.rated, true);
   assert.equal(record.playedAt, 1700000000000);
+  assert.equal(record.url, "https://lichess.org/abcd1234");
 });
 
 test("lichessGameToRecord matches as Black and scores a loss when the other side wins", () => {
@@ -112,6 +114,7 @@ test("parseLichessNdjson parses one JSON object per line and skips blank lines",
 
 function chessComGame(overrides = {}) {
   return {
+    url: "https://www.chess.com/game/live/97872578329",
     pgn: "1. e4 {[%clk 0:03:00]} 1... c5 {[%clk 0:02:58]} 2. Nc3 g6 1-0",
     time_class: "blitz",
     rated: true,
@@ -131,6 +134,7 @@ test("chessComGameToRecord matches the studied username case-insensitively as Bl
   assert.equal(record.speed, "blitz");
   assert.equal(record.rated, true);
   assert.equal(record.playedAt, 1700000000000);
+  assert.equal(record.url, "https://www.chess.com/game/live/97872578329");
 });
 
 test("chessComGameToRecord scores a draw when neither side's result is 'win'", () => {
@@ -172,6 +176,7 @@ function record(overrides = {}) {
     speed: "blitz",
     rated: true,
     playedAt: 1700000000000,
+    url: "https://example.com/game/1",
     ...overrides,
   };
 }
@@ -224,6 +229,43 @@ test("buildTree caps how many plies deep it records (maxPly)", () => {
   const root = buildTree(records, { maxPly: 2 });
   assert.ok(root.children.e4.children.e5);
   assert.deepEqual(Object.keys(root.children.e4.children.e5.children), []);
+});
+
+test("buildTree tracks which games reached each node, so a variation's actual games can be opened", () => {
+  const gameA = record({ moves: ["e4", "e5"], outcome: "win", url: "https://x/a" });
+  const gameB = record({ moves: ["e4", "c5"], outcome: "loss", url: "https://x/b" });
+  const root = buildTree([gameA, gameB]);
+
+  assert.equal(root.games.length, 2);
+  assert.equal(root.children.e4.games.length, 2);
+  assert.deepEqual(
+    root.children.e4.children.e5.games.map((g) => g.url),
+    ["https://x/a"],
+  );
+  assert.deepEqual(
+    root.children.e4.children.c5.games.map((g) => g.url),
+    ["https://x/b"],
+  );
+});
+
+test("buildTree's per-node games entries carry outcome/speed/rated/playedAt alongside the url", () => {
+  const game = record({
+    moves: ["e4"],
+    outcome: "win",
+    speed: "rapid",
+    rated: false,
+    playedAt: 1234,
+    url: "https://x/a",
+  });
+  const root = buildTree([game]);
+
+  assert.deepEqual(root.children.e4.games[0], {
+    url: "https://x/a",
+    outcome: "win",
+    speed: "rapid",
+    rated: false,
+    playedAt: 1234,
+  });
 });
 
 test("childrenOf sorts by popularity and computes rates", () => {
