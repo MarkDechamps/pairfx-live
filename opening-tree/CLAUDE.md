@@ -39,40 +39,78 @@ There is no build step for the app itself.
 | `app.js` | (untested, DOM glue) | Form handling, state, and rendering. The only place `chess.js` is used — to turn a SAN path into a FEN for the board. |
 
 **`engine.js`** turns each platform's raw API shape into one common record — `{moves: string[]
-(SAN), color: "white"|"black", outcome: "win"|"draw"|"loss", speed, rated, playedAt}` — via
-`lichessGameToRecord`/`chessComGameToRecord`, then `buildTree(records)` merges every record's
-move sequence into a single tree keyed by SAN at each ply, with `{total, wins, draws, losses,
-children}` at every node. `childrenOf(node)` returns the next moves sorted by popularity with
-win/draw/loss rates attached; `nodeAtPath(root, path)` walks a SAN sequence down from the root.
-No chess-legality/replay library is used here — both platforms already emit standard SAN, so
-merging games into a tree is a plain string-keyed walk (see
-`wayfinder/tickets/0001-data-sourcing-and-tree-architecture.md`).
+(SAN), color: "white"|"black", outcome: "win"|"draw"|"loss", speed, rated, playedAt, url}` (`url`
+being the game's own page on Lichess/Chess.com) — via `lichessGameToRecord`/
+`chessComGameToRecord`, then `buildTree(records)` merges every record's move sequence into a
+single tree keyed by SAN at each ply, with `{total, wins, draws, losses, children, games}` at
+every node. `games` is a lightweight `{url, outcome, speed, rated, playedAt}` summary per game
+that reached that exact node — what the "see the games behind this variation" panel in `app.js`
+reads directly, rather than re-deriving it from the flat record list by move-prefix matching.
+`childrenOf(node)` returns the next moves sorted by popularity with win/draw/loss rates attached;
+`nodeAtPath(root, path)` walks a SAN sequence down from the root. No chess-legality/replay
+library is used here — both platforms already emit standard SAN, so merging games into a tree is
+a plain string-keyed walk (see `wayfinder/tickets/0001-data-sourcing-and-tree-architecture.md`).
 
 **`client.js`** makes exactly one request to Lichess (`GET /api/games/user/{username}`, NDJSON)
 and one-request-per-recent-month to Chess.com (`GET /pub/player/{username}/games/archives` then
 each monthly archive, newest-first, capped at `maxMonths`) per lookup. Both are called directly
 from the browser — no proxy — since both are confirmed CORS-open (ticket 0001). A month that
 fails to fetch on Chess.com is skipped rather than failing the whole lookup. `UserNotFoundError`
-distinguishes "no such account" from other failures so `app.js` can show a clearer message.
+distinguishes "no such account" from other failures so `app.js` can show a clearer message. Both
+fetch functions take an optional `onProgress` — Chess.com's month-by-month fetch has a known
+total up front, so it reports a real `{completed, total}` after each month settles; Lichess's is
+a single streamed request with no known total until it's done, so instead it reports a running
+count of complete NDJSON lines (= games) read straight off `response.body`'s stream, without
+waiting for the whole download.
 
 **`app.js`** fetches once per lookup (`LICHESS_MAX_GAMES = 500`, `CHESSCOM_MAX_MONTHS = 24`) and
 keeps every fetched record in `state.records`. Switching the color tab, toggling a speed filter,
 or changing rated-only re-derives the tree from that same in-memory set (`filterRecords` +
 `buildTree`) — it never refetches. Changing any filter or the color tab resets the browsed
-`state.path` back to the root, since the tree underneath it just changed shape. The board is
-rendered by replaying `state.path` through vendored `chess.js` to get a FEN, then drawing an 8x8
-grid from `chess.js`'s own `.board()` output with Unicode chess glyphs — no board-UI library is
+`state.path` back to the root, since the tree underneath it just changed shape (and collapses the
+games panel — see below — for the same reason). The board is rendered by replaying `state.path`
+through vendored `chess.js` to get a FEN, then drawing an 8x8 grid from `chess.js`'s own
+`.board()` output with the vendored piece sprite (see "Piece art" below) — no board-UI library is
 vendored, since this app only ever needs a read-only board (no drag-to-move input, no annotation
 drawing), unlike chess-classroom's `cm-chessboard` use case.
+
+While a lookup is in flight, `renderStatus()` shows the `onProgress` data above as a progress
+bar: a real determinate fill for Chess.com (`completed/total` months), an indeterminate
+animated-fill bar with a live "N games loaded" label for Lichess (there's no percentage to show
+honestly, so it doesn't pretend to have one).
+
+The currently-viewed node's `games` list (from `engine.js`'s `buildTree`) is rendered as a
+collapsed-by-default "Show games (N)" panel under the board (`renderGamesPanel`) —
+openingtree.com-style "see the actual games behind this variation, open one in a new tab."
+Sorted most-recent-first and capped at `GAMES_PANEL_DISPLAY_CAP` (30) so a common early position
+(which can mean "every game in the lookup") doesn't render an unbounded list; each row links to
+the game's own Lichess/Chess.com page with `target="_blank" rel="noopener noreferrer"`.
 
 ## The vendoring deviation
 
 Same pattern as `chess-classroom/CLAUDE.md` describes in full — `package.json`/`node_modules`
 exist purely as a dev-time vendoring and testing mechanism, `npm run vendor`
-(`scripts/vendor-libs.mjs`) copies chess.js's built ESM dist verbatim into the committed
-`vendor/` directory, and the app imports only from `vendor/`, never from `node_modules` or a
-CDN. This app vendors chess.js alone (no `@mliebelt/pgn-parser`, no `cm-chessboard`) — it has no
-PGN-variation parsing or drag/annotation UI to support.
+(`scripts/vendor-libs.mjs`) copies files verbatim into the committed `vendor/` directory, and the
+app imports only from `vendor/`, never from `node_modules` or a CDN. Two devDependencies, two
+narrow reasons — neither pulled in for what it's mainly known for:
+
+- **`chess.js`** — SAN-path replay to a FEN for the board, nothing else (no PGN-variation
+  parsing; `engine.js`'s tree building doesn't touch it at all, see above).
+- **`cm-chessboard`** — vendored *only* for its bundled piece-art SVG sprite
+  (`assets/pieces/standard.svg`, copied to `vendor/chess-pieces/`), not its board-rendering JS —
+  this board is custom-rendered and read-only (no drag-to-move input, no annotation drawing), so
+  none of cm-chessboard's actual code ships here, only the artwork.
+
+## Piece art
+
+The board draws pieces via `<svg><use href="#wk"></svg>` against the vendored sprite
+(`loadPieceSprite()` fetches it once and injects it hidden into the DOM at startup) rather than
+unicode glyphs — chess-classroom already uses this exact sprite, and it's the same Cburnett set
+Lichess itself defaults to. `chess.js`'s own `{color: "w"|"b", type: "p"|"n"|"b"|"r"|"q"|"k"}`
+piece shape happens to spell out the sprite's element ids directly, so `pieceIcon()` needs no
+mapping table. The art is CC BY-SA 3.0 (Cburnett/Rfc1394, via Wikimedia Commons) — attribution is
+the footer credit line in `index.html`; that license is why this couldn't just be swapped for a
+"the same as Lichess" set found some other way without checking that too.
 
 ## Judgment calls made while implementing
 

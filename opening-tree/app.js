@@ -9,6 +9,7 @@ import { parseLichessNdjson, parseChessComGames, filterRecords, buildTree, child
 
 const LICHESS_MAX_GAMES = 500;
 const CHESSCOM_MAX_MONTHS = 24; // ~2 years back
+const GAMES_PANEL_DISPLAY_CAP = 30;
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const PIECE_SPRITE_URL = "./vendor/chess-pieces/standard.svg";
@@ -22,8 +23,10 @@ const state = {
   ratedFilter: null, // null = any, true = rated only, false = casual only
   path: [], // SAN moves from the starting position to the currently viewed node
   loading: false,
+  progress: null, // null | { kind: "lichess", gamesLoaded } | { kind: "chesscom", completed, total }
   error: null,
   hasResults: false,
+  showGames: false, // whether the "games at this position" panel is expanded
 };
 
 const app = document.getElementById("app");
@@ -51,6 +54,10 @@ function el(tag, attrs = {}, children = []) {
 
 function formatPercent(rate) {
   return `${Math.round(rate * 100)}%`;
+}
+
+function formatDate(ms) {
+  return typeof ms === "number" ? new Date(ms).toLocaleDateString() : "Unknown date";
 }
 
 function svgEl(tag, attrs = {}) {
@@ -83,12 +90,18 @@ async function loadPieceSprite() {
 // Data fetch + parse
 // ---------------------------------------------------------------------------
 
-async function lookupRecords(platform, username) {
+async function lookupRecords(platform, username, onProgress) {
   if (platform === "lichess") {
-    const text = await fetchLichessGames(username, { max: LICHESS_MAX_GAMES });
+    const text = await fetchLichessGames(username, {
+      max: LICHESS_MAX_GAMES,
+      onProgress: (gamesLoaded) => onProgress({ kind: "lichess", gamesLoaded }),
+    });
     return parseLichessNdjson(text, username);
   }
-  const games = await fetchChessComGames(username, { maxMonths: CHESSCOM_MAX_MONTHS });
+  const games = await fetchChessComGames(username, {
+    maxMonths: CHESSCOM_MAX_MONTHS,
+    onProgress: (p) => onProgress({ kind: "chesscom", ...p }),
+  });
   return parseChessComGames(games, username);
 }
 
@@ -112,17 +125,22 @@ async function handleLookup(event) {
   state.platform = platform;
   state.username = username;
   state.loading = true;
+  state.progress = null;
   state.error = null;
   state.hasResults = false;
   render();
 
   try {
-    const records = await lookupRecords(platform, username);
+    const records = await lookupRecords(platform, username, (progress) => {
+      state.progress = progress;
+      render();
+    });
     state.records = records;
     state.color = defaultColorFor(records);
     state.speedFilter = [];
     state.ratedFilter = null;
     state.path = [];
+    state.showGames = false;
     state.hasResults = true;
   } catch (error) {
     // client.js already produces user-presentable messages (unknown user, rate-limited,
@@ -130,6 +148,7 @@ async function handleLookup(event) {
     state.error = error instanceof Error ? error : new Error("Something went wrong fetching those games. Please try again.");
   } finally {
     state.loading = false;
+    state.progress = null;
     render();
   }
 }
@@ -150,6 +169,7 @@ function currentTree() {
 function setColor(color) {
   state.color = color;
   state.path = [];
+  state.showGames = false;
   render();
 }
 
@@ -158,22 +178,31 @@ function toggleSpeed(speed, checked) {
     ? [...state.speedFilter, speed]
     : state.speedFilter.filter((s) => s !== speed);
   state.path = [];
+  state.showGames = false;
   render();
 }
 
 function setRatedFilter(value) {
   state.ratedFilter = value === "any" ? null : value === "rated";
   state.path = [];
+  state.showGames = false;
   render();
 }
 
 function descend(san) {
   state.path = [...state.path, san];
+  state.showGames = false;
   render();
 }
 
 function jumpTo(plyCount) {
   state.path = state.path.slice(0, plyCount);
+  state.showGames = false;
+  render();
+}
+
+function toggleGamesPanel() {
+  state.showGames = !state.showGames;
   render();
 }
 
@@ -217,12 +246,36 @@ function renderLookupForm() {
 
 function renderStatus() {
   if (state.loading) {
-    return el("p", { class: "status loading", text: `Fetching ${state.username}'s games from ${state.platform === "lichess" ? "Lichess" : "Chess.com"}…` });
+    const platformLabel = state.platform === "lichess" ? "Lichess" : "Chess.com";
+    const wrap = el("div", { class: "status loading" });
+    wrap.appendChild(el("p", { text: `Fetching ${state.username}'s games from ${platformLabel}…` }));
+    wrap.appendChild(renderProgressBar());
+    return wrap;
   }
   if (state.error) {
     return el("p", { class: "status error", text: state.error.message });
   }
   return null;
+}
+
+// Chess.com's month-by-month fetch has a known total, so it gets a real determinate bar; a
+// single streamed Lichess request doesn't (no total game count until it's done), so it gets a
+// live "N games loaded" counter on an indeterminate bar instead — see client.js.
+function renderProgressBar() {
+  if (state.progress?.kind === "chesscom" && state.progress.total) {
+    const { completed, total } = state.progress;
+    const pct = Math.round((completed / total) * 100);
+    return el("div", { class: "progress-bar", role: "progressbar", "aria-valuenow": pct }, [
+      el("div", { class: "progress-bar-fill", style: `width:${pct}%` }),
+      el("span", { class: "progress-bar-label", text: `${completed}/${total} months fetched (${pct}%)` }),
+    ]);
+  }
+
+  const label = state.progress?.kind === "lichess" ? `${state.progress.gamesLoaded} games loaded so far…` : "Starting…";
+  return el("div", { class: "progress-bar indeterminate" }, [
+    el("div", { class: "progress-bar-fill" }),
+    el("span", { class: "progress-bar-label", text: label }),
+  ]);
 }
 
 function renderResults() {
@@ -323,6 +376,54 @@ function renderBoardPane(node) {
       text: node.total ? `${node.total} game${node.total === 1 ? "" : "s"} reach this position — ${record}` : "No games match these filters.",
     }),
   );
+  wrap.appendChild(renderGamesPanel(node));
+  return wrap;
+}
+
+// The actual games behind the currently-viewed position — openingtree.com-style "see the games,
+// open one in a new tab." Collapsed by default (a root node's list can be the entire lookup);
+// capped to the most recent GAMES_PANEL_DISPLAY_CAP so a very common position doesn't render an
+// unbounded list.
+function renderGamesPanel(node) {
+  const wrap = el("div", { class: "games-panel" });
+  if (!node.total) return wrap;
+
+  wrap.appendChild(
+    el("button", {
+      type: "button",
+      class: "games-toggle",
+      text: state.showGames ? "Hide games ▲" : `Show games (${node.total}) ▼`,
+      onclick: toggleGamesPanel,
+    }),
+  );
+
+  if (!state.showGames) return wrap;
+
+  const sorted = [...node.games].sort((a, b) => (b.playedAt ?? 0) - (a.playedAt ?? 0));
+  const shown = sorted.slice(0, GAMES_PANEL_DISPLAY_CAP);
+
+  const list = el("ul", { class: "games-list" });
+  for (const game of shown) {
+    list.appendChild(
+      el("li", { class: "game-row" }, [
+        el("span", { class: `game-outcome ${game.outcome}`, text: game.outcome.toUpperCase() }),
+        el("span", { class: "game-date", text: formatDate(game.playedAt) }),
+        el("span", { class: "game-speed", text: game.speed }),
+        el("a", { class: "game-link", href: game.url, target: "_blank", rel: "noopener noreferrer", text: "Open ↗" }),
+      ]),
+    );
+  }
+  wrap.appendChild(list);
+
+  if (sorted.length > GAMES_PANEL_DISPLAY_CAP) {
+    wrap.appendChild(
+      el("p", {
+        class: "games-more-note",
+        text: `Showing the ${GAMES_PANEL_DISPLAY_CAP} most recent of ${sorted.length} games.`,
+      }),
+    );
+  }
+
   return wrap;
 }
 
