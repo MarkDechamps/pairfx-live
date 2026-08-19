@@ -416,8 +416,21 @@ header .subtitle {
 }
 
 .game-date {
-  flex: 1;
+  flex: 0 0 auto;
   color: #b8b8b8;
+  white-space: nowrap;
+}
+
+.game-players {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-players strong {
+  color: var(--color-light);
 }
 
 .game-speed {
