@@ -30,9 +30,17 @@ function assertNotRateLimited(response, platform) {
  * know the game count until it's done), so there's no `{completed, total}` to report the way
  * Chess.com's per-month fetch can. If `onProgress` is given, it's instead called with a running
  * count of complete NDJSON lines (= games) seen so far, read straight off the response stream —
- * enough for a live "N games loaded" indicator without waiting for the whole download.
+ * enough for a live "N games loaded" indicator without waiting for the whole download. If
+ * `onGames` is given, it's called once per chunk with the (already-`JSON.parse`d) games that
+ * chunk completed — letting a caller show results building up live rather than waiting for the
+ * whole download, the way openingtree.com does. A line split across two chunks is buffered and
+ * reassembled rather than dropped or double-counted.
  */
-export async function fetchLichessGames(username, { max = 500, speeds, rated, onProgress } = {}, fetchImpl = fetch) {
+export async function fetchLichessGames(
+  username,
+  { max = 500, speeds, rated, onProgress, onGames } = {},
+  fetchImpl = fetch,
+) {
   const params = new URLSearchParams({ max: String(max), moves: "true", opening: "true" });
   if (speeds && speeds.length) params.set("perfType", speeds.join(","));
   if (rated === true) params.set("rated", "true");
@@ -45,20 +53,40 @@ export async function fetchLichessGames(username, { max = 500, speeds, rated, on
   assertNotRateLimited(response, "Lichess");
   if (!response.ok) throw new Error(`Lichess request failed (${response.status})`);
 
-  if (!onProgress || !response.body) return response.text();
+  if (!onProgress && !onGames) return response.text();
+  if (!response.body) return response.text();
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let text = "";
+  let lineBuffer = "";
   let gamesSeen = 0;
+
+  const takeCompleteLines = (chunk) => {
+    lineBuffer += chunk;
+    const lines = lineBuffer.split("\n");
+    lineBuffer = lines.pop(); // last element is either "" or an incomplete trailing line
+    return lines.map((line) => line.trim()).filter(Boolean);
+  };
+
+  const flush = (lines) => {
+    if (!lines.length) return;
+    gamesSeen += lines.length;
+    onProgress?.(gamesSeen);
+    onGames?.(lines.map((line) => JSON.parse(line)));
+  };
+
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     const chunk = decoder.decode(value, { stream: true });
     text += chunk;
-    gamesSeen += (chunk.match(/\n/g) ?? []).length;
-    onProgress(gamesSeen);
+    flush(takeCompleteLines(chunk));
   }
+
+  const finalLine = lineBuffer.trim(); // the stream can end without a trailing newline
+  if (finalLine) flush([finalLine]);
+
   return text;
 }
 
@@ -69,9 +97,11 @@ export async function fetchLichessGames(username, { max = 500, speeds, rated, on
  * rather than failing the whole lookup, since one bad month shouldn't hide every other one.
  * Unlike Lichess's single streamed request, the month count is known up front, so `onProgress`
  * (if given) gets a real `{completed, total}` after each month settles — a determinate progress
- * bar, not just an activity indicator.
+ * bar, not just an activity indicator. If `onGames` is given, it's called once per month with
+ * that month's raw games array as soon as it's fetched, so a caller can show results building up
+ * live (newest month first) instead of waiting for every month to finish.
  */
-export async function fetchChessComGames(username, { maxMonths = 24, onProgress } = {}, fetchImpl = fetch) {
+export async function fetchChessComGames(username, { maxMonths = 24, onProgress, onGames } = {}, fetchImpl = fetch) {
   const archivesUrl = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/archives`;
   const archivesResponse = await fetchImpl(archivesUrl);
 
@@ -88,7 +118,9 @@ export async function fetchChessComGames(username, { maxMonths = 24, onProgress 
     const response = await fetchImpl(url);
     if (response.ok) {
       const data = await response.json();
-      games.push(...(data.games ?? []));
+      const monthGames = data.games ?? [];
+      games.push(...monthGames);
+      if (monthGames.length) onGames?.(monthGames);
     }
     onProgress?.({ completed: index + 1, total });
   }

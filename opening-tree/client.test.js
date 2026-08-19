@@ -102,6 +102,36 @@ test("fetchLichessGames without onProgress still just returns the full text (unc
   assert.equal(text, "line1\nline2\n");
 });
 
+test("fetchLichessGames hands parsed games to onGames as each chunk completes them", async () => {
+  const line = (id) => JSON.stringify({ id }) + "\n";
+  const fetchImpl = fakeFetch(() => streamedResponse([line("a") + line("b"), line("c")]));
+  const batches = [];
+
+  await fetchLichessGames("p", { onGames: (games) => batches.push(games) }, fetchImpl);
+
+  assert.deepEqual(batches, [[{ id: "a" }, { id: "b" }], [{ id: "c" }]]);
+});
+
+test("fetchLichessGames reassembles a game whose line is split across two chunks", async () => {
+  const fetchImpl = fakeFetch(() =>
+    streamedResponse(['{"id":"a"}\n{"i', 'd":"b"}\n']),
+  );
+  const batches = [];
+
+  await fetchLichessGames("p", { onGames: (games) => batches.push(games) }, fetchImpl);
+
+  assert.deepEqual(batches, [[{ id: "a" }], [{ id: "b" }]]);
+});
+
+test("fetchLichessGames flushes a final line that has no trailing newline", async () => {
+  const fetchImpl = fakeFetch(() => streamedResponse(['{"id":"a"}\n{"id":"b"}']));
+  const batches = [];
+
+  await fetchLichessGames("p", { onGames: (games) => batches.push(games) }, fetchImpl);
+
+  assert.deepEqual(batches.flat(), [{ id: "a" }, { id: "b" }]);
+});
+
 // ---------------------------------------------------------------------------
 // fetchChessComGames
 // ---------------------------------------------------------------------------
@@ -147,6 +177,24 @@ test("fetchChessComGames reports {completed, total} as each month is fetched, wh
     { completed: 2, total: 3 },
     { completed: 3, total: 3 },
   ]);
+});
+
+test("fetchChessComGames hands each month's games to onGames as soon as that month is fetched", async () => {
+  const archives = [
+    "https://api.chess.com/pub/player/p/games/2024/01",
+    "https://api.chess.com/pub/player/p/games/2024/02",
+  ];
+  const fetchImpl = fakeFetch((url) => {
+    if (url.endsWith("/archives")) return jsonResponse({ archives });
+    if (url.endsWith("2024/02")) return jsonResponse({ games: [{ id: "feb" }] });
+    return jsonResponse({ games: [{ id: "jan" }] });
+  });
+  const batches = [];
+
+  await fetchChessComGames("p", { onGames: (games) => batches.push(games) }, fetchImpl);
+
+  // newest month (02) is fetched first, per the existing most-recent-first ordering
+  assert.deepEqual(batches, [[{ id: "feb" }], [{ id: "jan" }]]);
 });
 
 test("fetchChessComGames caps how many months back it fetches via maxMonths", async () => {
