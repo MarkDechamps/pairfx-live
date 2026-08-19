@@ -60,6 +60,18 @@ function formatDate(ms) {
   return typeof ms === "number" ? new Date(ms).toLocaleDateString() : "Unknown date";
 }
 
+// "white vs black", with whichever side is the looked-up player bolded — makes it easy to spot
+// at a glance who their actual opponent was in each listed game.
+function renderPlayersLabel(game) {
+  const span = el("span", { class: "game-players" });
+  [game.white, game.black].forEach((name, index) => {
+    if (index === 1) span.appendChild(document.createTextNode(" vs "));
+    const isStudiedPlayer = name?.toLowerCase() === state.username.toLowerCase();
+    span.appendChild(isStudiedPlayer ? el("strong", { text: name }) : document.createTextNode(name ?? "Unknown"));
+  });
+  return span;
+}
+
 function svgEl(tag, attrs = {}) {
   const node = document.createElementNS(SVG_NS, tag);
   for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
@@ -260,22 +272,29 @@ function renderStatus() {
 
 // Chess.com's month-by-month fetch has a known total, so it gets a real determinate bar; a
 // single streamed Lichess request doesn't (no total game count until it's done), so it gets a
-// live "N games loaded" counter on an indeterminate bar instead — see client.js.
+// live "N games loaded" counter on an indeterminate bar instead — see client.js. The label is a
+// sibling of the bar, not a child of it — the bar itself is a short, `overflow: hidden` strip
+// (so the indeterminate sweep has something to clip against), and text placed inside that would
+// get clipped down to a sliver too.
 function renderProgressBar() {
+  const wrap = el("div", { class: "progress-wrap" });
+
   if (state.progress?.kind === "chesscom" && state.progress.total) {
     const { completed, total } = state.progress;
     const pct = Math.round((completed / total) * 100);
-    return el("div", { class: "progress-bar", role: "progressbar", "aria-valuenow": pct }, [
-      el("div", { class: "progress-bar-fill", style: `width:${pct}%` }),
-      el("span", { class: "progress-bar-label", text: `${completed}/${total} months fetched (${pct}%)` }),
-    ]);
+    wrap.appendChild(
+      el("div", { class: "progress-bar", role: "progressbar", "aria-valuenow": pct }, [
+        el("div", { class: "progress-bar-fill", style: `width:${pct}%` }),
+      ]),
+    );
+    wrap.appendChild(el("span", { class: "progress-bar-label", text: `${completed}/${total} months fetched (${pct}%)` }));
+    return wrap;
   }
 
   const label = state.progress?.kind === "lichess" ? `${state.progress.gamesLoaded} games loaded so far…` : "Starting…";
-  return el("div", { class: "progress-bar indeterminate" }, [
-    el("div", { class: "progress-bar-fill" }),
-    el("span", { class: "progress-bar-label", text: label }),
-  ]);
+  wrap.appendChild(el("div", { class: "progress-bar indeterminate" }, [el("div", { class: "progress-bar-fill" })]));
+  wrap.appendChild(el("span", { class: "progress-bar-label", text: label }));
+  return wrap;
 }
 
 function renderResults() {
@@ -408,6 +427,7 @@ function renderGamesPanel(node) {
       el("li", { class: "game-row" }, [
         el("span", { class: `game-outcome ${game.outcome}`, text: game.outcome.toUpperCase() }),
         el("span", { class: "game-date", text: formatDate(game.playedAt) }),
+        renderPlayersLabel(game),
         el("span", { class: "game-speed", text: game.speed }),
         el("a", { class: "game-link", href: game.url, target: "_blank", rel: "noopener noreferrer", text: "Open ↗" }),
       ]),

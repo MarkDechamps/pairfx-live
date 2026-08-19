@@ -69,6 +69,16 @@ test("lichessGameToRecord matches the studied username case-insensitively as Whi
   assert.equal(record.rated, true);
   assert.equal(record.playedAt, 1700000000000);
   assert.equal(record.url, "https://lichess.org/abcd1234");
+  assert.equal(record.white, "Foo");
+  assert.equal(record.black, "Bar");
+});
+
+test("lichessGameToRecord names an AI opponent by its level, when there's no user account", () => {
+  const record = lichessGameToRecord(
+    lichessLine({ players: { white: { user: { name: "Foo" }, rating: 1500 }, black: { aiLevel: 5 } } }),
+    "foo",
+  );
+  assert.equal(record.black, "Stockfish level 5");
 });
 
 test("lichessGameToRecord matches as Black and scores a loss when the other side wins", () => {
@@ -135,6 +145,8 @@ test("chessComGameToRecord matches the studied username case-insensitively as Bl
   assert.equal(record.rated, true);
   assert.equal(record.playedAt, 1700000000000);
   assert.equal(record.url, "https://www.chess.com/game/live/97872578329");
+  assert.equal(record.white, "Hikaru");
+  assert.equal(record.black, "Gravity_Chess");
 });
 
 test("chessComGameToRecord scores a draw when neither side's result is 'win'", () => {
@@ -177,6 +189,8 @@ function record(overrides = {}) {
     rated: true,
     playedAt: 1700000000000,
     url: "https://example.com/game/1",
+    white: "Foo",
+    black: "Bar",
     ...overrides,
   };
 }
@@ -248,7 +262,7 @@ test("buildTree tracks which games reached each node, so a variation's actual ga
   );
 });
 
-test("buildTree's per-node games entries carry outcome/speed/rated/playedAt alongside the url", () => {
+test("buildTree's per-node games entries carry outcome/speed/rated/playedAt/players alongside the url", () => {
   const game = record({
     moves: ["e4"],
     outcome: "win",
@@ -256,6 +270,8 @@ test("buildTree's per-node games entries carry outcome/speed/rated/playedAt alon
     rated: false,
     playedAt: 1234,
     url: "https://x/a",
+    white: "Zobedie",
+    black: "Zabeda",
   });
   const root = buildTree([game]);
 
@@ -265,6 +281,8 @@ test("buildTree's per-node games entries carry outcome/speed/rated/playedAt alon
     speed: "rapid",
     rated: false,
     playedAt: 1234,
+    white: "Zobedie",
+    black: "Zabeda",
   });
 });
 

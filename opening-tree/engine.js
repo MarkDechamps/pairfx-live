@@ -7,7 +7,9 @@
 // lichessGameToRecord/chessComGameToRecord from each source's raw API shape:
 //   { moves: string[] (SAN, mainline only), color: "white"|"black" (the studied player's side),
 //     outcome: "win"|"draw"|"loss" (from the studied player's side), speed: string,
-//     rated: boolean, playedAt: number|null (ms epoch), url: string (the game, on its own site) }
+//     rated: boolean, playedAt: number|null (ms epoch), url: string (the game, on its own site),
+//     white: string, black: string (both players' display names, whichever side is "the studied
+//     player" included, so a UI can show "white vs black" without knowing which color that was) }
 
 const RESULT_TOKENS = new Set(["1-0", "0-1", "1/2-1/2", "*"]);
 
@@ -37,6 +39,14 @@ function matchColor(username, whiteName, blackName) {
   return null;
 }
 
+// A Lichess player slot is either a real account ({user: {name}}) or an AI opponent
+// ({aiLevel: N}, no `user` at all).
+function lichessPlayerName(player) {
+  if (player?.user?.name) return player.user.name;
+  if (typeof player?.aiLevel === "number") return `Stockfish level ${player.aiLevel}`;
+  return "Anonymous";
+}
+
 /** One Lichess games-export NDJSON line -> a record, or null if it doesn't apply. */
 export function lichessGameToRecord(game, username) {
   if (game.variant !== "standard") return null;
@@ -56,6 +66,8 @@ export function lichessGameToRecord(game, username) {
     rated: Boolean(game.rated),
     playedAt: game.createdAt ?? null,
     url: `https://lichess.org/${game.id}`,
+    white: lichessPlayerName(game.players?.white),
+    black: lichessPlayerName(game.players?.black),
   };
 }
 
@@ -90,6 +102,8 @@ export function chessComGameToRecord(game, username) {
     rated: Boolean(game.rated),
     playedAt: typeof game.end_time === "number" ? game.end_time * 1000 : null,
     url: game.url,
+    white: game.white?.username ?? "Unknown",
+    black: game.black?.username ?? "Unknown",
   };
 }
 
@@ -124,6 +138,8 @@ function gameSummary(record) {
     speed: record.speed,
     rated: record.rated,
     playedAt: record.playedAt,
+    white: record.white,
+    black: record.black,
   };
 }
 
