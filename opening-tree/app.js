@@ -10,8 +10,8 @@ import { parseLichessNdjson, parseChessComGames, filterRecords, buildTree, child
 const LICHESS_MAX_GAMES = 500;
 const CHESSCOM_MAX_MONTHS = 24; // ~2 years back
 
-const WHITE_GLYPHS = { p: "♙", n: "♘", b: "♗", r: "♖", q: "♕", k: "♔" };
-const BLACK_GLYPHS = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛", k: "♚" };
+const SVG_NS = "http://www.w3.org/2000/svg";
+const PIECE_SPRITE_URL = "./vendor/chess-pieces/standard.svg";
 
 const state = {
   platform: "lichess",
@@ -51,6 +51,32 @@ function el(tag, attrs = {}, children = []) {
 
 function formatPercent(rate) {
   return `${Math.round(rate * 100)}%`;
+}
+
+function svgEl(tag, attrs = {}) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  return node;
+}
+
+// Draws one piece via a <use> reference into the sprite loaded by loadPieceSprite() — the same
+// Cburnett-set artwork chess-classroom (and Lichess itself, as its default set) uses, rather
+// than unicode glyphs. chess.js's {color: "w"|"b", type: "p"|"n"|"b"|"r"|"q"|"k"} happens to
+// spell out the sprite's own element ids ("wk", "bp", ...) directly.
+function pieceIcon(piece) {
+  const svg = svgEl("svg", { viewBox: "0 0 40 40", class: "piece" });
+  svg.appendChild(svgEl("use", { href: `#${piece.color}${piece.type}` }));
+  return svg;
+}
+
+// Fetches the vendored piece sprite once and injects it (hidden) into the document, so any
+// <use href="#wk"> elsewhere in the page can resolve against it.
+async function loadPieceSprite() {
+  const response = await fetch(PIECE_SPRITE_URL);
+  const host = document.createElement("div");
+  host.hidden = true;
+  host.innerHTML = await response.text();
+  document.body.appendChild(host);
 }
 
 // ---------------------------------------------------------------------------
@@ -318,12 +344,7 @@ function renderBoard(fen, orientation) {
   const boardEl = el("div", { class: "board" });
   for (const cell of ordered) {
     const square = el("div", { class: `square ${cell.isLight ? "light" : "dark"}` });
-    if (cell.piece) {
-      const glyphs = cell.piece.color === "w" ? WHITE_GLYPHS : BLACK_GLYPHS;
-      square.appendChild(
-        el("span", { class: cell.piece.color === "w" ? "white-piece" : "black-piece", text: glyphs[cell.piece.type] }),
-      );
-    }
+    if (cell.piece) square.appendChild(pieceIcon(cell.piece));
     boardEl.appendChild(square);
   }
   return boardEl;
@@ -376,4 +397,5 @@ function renderMoveList(node) {
   return wrap;
 }
 
+await loadPieceSprite();
 render();
