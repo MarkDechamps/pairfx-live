@@ -61,6 +61,12 @@ test("fetchLichessGames throws a plain Error on other failures", async () => {
   await assert.rejects(() => fetchLichessGames("p", {}, fetchImpl), /500/);
 });
 
+test("fetchLichessGames gives a specific message on a 429 (real users can hit this too)", async () => {
+  const fetchImpl = fakeFetch(() => textResponse("", { ok: false, status: 429 }));
+
+  await assert.rejects(() => fetchLichessGames("p", {}, fetchImpl), /rate.?limit/i);
+});
+
 // ---------------------------------------------------------------------------
 // fetchChessComGames
 // ---------------------------------------------------------------------------
@@ -107,6 +113,12 @@ test("fetchChessComGames throws UserNotFoundError when the archives list 404s", 
   const fetchImpl = fakeFetch(() => jsonResponse({}, { ok: false, status: 404 }));
 
   await assert.rejects(() => fetchChessComGames("ghost", {}, fetchImpl), UserNotFoundError);
+});
+
+test("fetchChessComGames gives a specific message when the archives list is rate-limited", async () => {
+  const fetchImpl = fakeFetch(() => jsonResponse({}, { ok: false, status: 429 }));
+
+  await assert.rejects(() => fetchChessComGames("p", {}, fetchImpl), /rate.?limit/i);
 });
 
 test("fetchChessComGames skips a month that fails instead of aborting the whole lookup", async () => {

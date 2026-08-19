@@ -4,7 +4,7 @@
 // client.js (the parts that actually have logic) are covered. See CLAUDE.md.
 
 import { Chess } from "./vendor/chess-js/chess.js";
-import { fetchLichessGames, fetchChessComGames, UserNotFoundError } from "./client.js";
+import { fetchLichessGames, fetchChessComGames } from "./client.js";
 import { parseLichessNdjson, parseChessComGames, filterRecords, buildTree, childrenOf, nodeAtPath } from "./engine.js";
 
 const LICHESS_MAX_GAMES = 500;
@@ -99,10 +99,9 @@ async function handleLookup(event) {
     state.path = [];
     state.hasResults = true;
   } catch (error) {
-    state.error =
-      error instanceof UserNotFoundError
-        ? error
-        : new Error("Something went wrong fetching those games. Please try again.");
+    // client.js already produces user-presentable messages (unknown user, rate-limited,
+    // platform request failed); anything else is a genuinely unexpected failure.
+    state.error = error instanceof Error ? error : new Error("Something went wrong fetching those games. Please try again.");
   } finally {
     state.loading = false;
     render();

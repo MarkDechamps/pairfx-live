@@ -95,22 +95,27 @@ PGN-variation parsing or drag/annotation UI to support.
   unauthenticated, it would remove the need to build the White/Black trees by hand for Lichess
   lookups specifically (Chess.com has no equivalent, so its games-export path would stay either
   way).
-- **A live headless-browser/`curl` smoke test of the Lichess path returned 404 "Not found" for
-  every username tried, including real, active accounts — until the request carried an ordinary
-  desktop-browser User-Agent string, at which point the same request was correctly rate-limited
-  (`429`) instead, confirming the endpoint and account were both fine all along.** This points to
-  Lichess's edge (or a CDN in front of it) treating a `curl`/headless-Chromium User-Agent as bot
-  traffic and returning a deliberately uninformative 404 rather than a 403. This should **not**
-  affect real users: browser `fetch()` cannot override the `User-Agent` header, so a genuine
-  visitor's browser always sends its own real, non-headless UA when this app calls the Lichess
-  API client-side. Flagged here rather than silently worked around because it means **this
-  specific failure mode cannot be re-verified from this sandbox's tooling (`curl`, Playwright's
-  default headless Chromium)** — only Chess.com's path was confirmed working end-to-end from
-  automated tooling in this environment (11,900+ games fetched and rendered for a real account).
-  If a real user reports "no public Lichess account found" for an account that does exist, this
-  is the first thing to revisit — e.g. Lichess's own rate limiting (20 anonymous req/s, gets
-  stricter under load) misfiring as a 404 rather than a genuine block would look identical from
-  here.
+- **Confirmed, not just suspected: this sandbox's default `curl`/headless-Chromium User-Agent
+  gets silently treated as bot traffic by Lichess's edge on the games-export path.** Every
+  username tried through it — including real, active accounts — came back `404 "Not found"`.
+  Swapping in an ordinary desktop-Chrome User-Agent string, with everything else about the
+  request identical, turned that same call into a genuine `429` ("Please only run 1 request(s)
+  at a time") instead — proof the account and endpoint were fine all along, and that the 404 was
+  UA-based bot mitigation, not a real "not found." This should **not** affect real users: browser
+  `fetch()` cannot override the `User-Agent` header, so a genuine visitor's browser always sends
+  its own real, non-headless UA when this app calls the Lichess API client-side — the
+  app's own `client.js`/`app.js` code path is identical either way, and `client.test.js` covers
+  its request shape and error handling directly (including the 404-vs-429 distinction) without
+  depending on live Lichess access at all. Flagged here because it means **a clean, successful
+  live run of the Lichess path could not be produced from this sandbox** — repeated attempts kept
+  landing on the still-open 429 window rather than a 200 (this sandbox's shared egress IP was
+  already rate-limited before this feature's own testing added to it). Only Chess.com's path was
+  verified end-to-end with an actual 200 and real data from automated tooling here (11,900+ games
+  fetched and rendered for a real account, screenshots in the session — Lichess's own equivalent
+  screenshot is a rate-limit message, not a rendered tree). If a real user reports "no public
+  Lichess account found" for an account that does exist, or a persistent rate-limit message,
+  those are the two things to check first — not the parsing/tree-building logic, which is
+  identical to the already-verified Chess.com path and independently unit-tested.
 
 ## Fixtures / manual QA
 

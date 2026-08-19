@@ -13,6 +13,12 @@ export class UserNotFoundError extends Error {
   }
 }
 
+function assertNotRateLimited(response, platform) {
+  if (response.status === 429) {
+    throw new Error(`${platform} is rate-limiting requests right now — please wait a bit and try again.`);
+  }
+}
+
 /**
  * One request to Lichess's games-export endpoint. Returns the raw NDJSON response text — parse
  * it with engine.js's `parseLichessNdjson`. `speeds`/`rated` are forwarded as server-side filters
@@ -30,6 +36,7 @@ export async function fetchLichessGames(username, { max = 500, speeds, rated } =
   const response = await fetchImpl(url, { headers: { Accept: "application/x-ndjson" } });
 
   if (response.status === 404) throw new UserNotFoundError(username, "Lichess");
+  assertNotRateLimited(response, "Lichess");
   if (!response.ok) throw new Error(`Lichess request failed (${response.status})`);
 
   return response.text();
@@ -46,6 +53,7 @@ export async function fetchChessComGames(username, { maxMonths = 24 } = {}, fetc
   const archivesResponse = await fetchImpl(archivesUrl);
 
   if (archivesResponse.status === 404) throw new UserNotFoundError(username, "Chess.com");
+  assertNotRateLimited(archivesResponse, "Chess.com");
   if (!archivesResponse.ok) throw new Error(`Chess.com request failed (${archivesResponse.status})`);
 
   const { archives } = await archivesResponse.json();
