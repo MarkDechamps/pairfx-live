@@ -5,7 +5,16 @@
 
 import { Chess } from "./vendor/chess-js/chess.js";
 import { fetchLichessGames, fetchChessComGames } from "./client.js";
-import { parseLichessNdjson, parseChessComGames, filterRecords, buildTree, childrenOf, nodeAtPath } from "./engine.js";
+import {
+  lichessGameToRecord,
+  chessComGameToRecord,
+  parseLichessNdjson,
+  parseChessComGames,
+  filterRecords,
+  buildTree,
+  childrenOf,
+  nodeAtPath,
+} from "./engine.js";
 
 const LICHESS_MAX_GAMES = 500;
 const CHESSCOM_MAX_MONTHS = 24; // ~2 years back
@@ -102,17 +111,31 @@ async function loadPieceSprite() {
 // Data fetch + parse
 // ---------------------------------------------------------------------------
 
-async function lookupRecords(platform, username, onProgress) {
+// Fetches games for `platform`, reporting progress and newly-parsed records as they arrive
+// (`onProgress`/`onGames`) so the caller can render a partial tree while the lookup is still in
+// flight — openingtree.com does the same rather than making you wait for the whole download.
+// The final return value is still the complete, authoritative record list (parsed the normal,
+// non-streaming way too), so the caller doesn't have to trust that nothing was missed along the
+// way — it's a convenience for responsiveness, not the source of truth.
+async function lookupRecords(platform, username, { onProgress, onGames } = {}) {
   if (platform === "lichess") {
     const text = await fetchLichessGames(username, {
       max: LICHESS_MAX_GAMES,
-      onProgress: (gamesLoaded) => onProgress({ kind: "lichess", gamesLoaded }),
+      onProgress: (gamesLoaded) => onProgress?.({ kind: "lichess", gamesLoaded }),
+      onGames: (rawGames) => {
+        const records = rawGames.map((g) => lichessGameToRecord(g, username)).filter(Boolean);
+        if (records.length) onGames?.(records);
+      },
     });
     return parseLichessNdjson(text, username);
   }
   const games = await fetchChessComGames(username, {
     maxMonths: CHESSCOM_MAX_MONTHS,
-    onProgress: (p) => onProgress({ kind: "chesscom", ...p }),
+    onProgress: (p) => onProgress?.({ kind: "chesscom", ...p }),
+    onGames: (rawGames) => {
+      const records = rawGames.map((g) => chessComGameToRecord(g, username)).filter(Boolean);
+      if (records.length) onGames?.(records);
+    },
   });
   return parseChessComGames(games, username);
 }
@@ -140,20 +163,38 @@ async function handleLookup(event) {
   state.progress = null;
   state.error = null;
   state.hasResults = false;
+  state.records = [];
   render();
 
-  try {
-    const records = await lookupRecords(platform, username, (progress) => {
-      state.progress = progress;
-      render();
-    });
-    state.records = records;
-    state.color = defaultColorFor(records);
+  // Once real data starts arriving, set the color/filters/path defaults exactly once — flipping
+  // them again on every later batch would yank the tree out from under someone already browsing
+  // it mid-load.
+  let resultsStarted = false;
+  const showFirstResults = () => {
+    if (resultsStarted) return;
+    resultsStarted = true;
+    state.color = defaultColorFor(state.records);
     state.speedFilter = [];
     state.ratedFilter = null;
     state.path = [];
     state.showGames = false;
     state.hasResults = true;
+  };
+
+  try {
+    const records = await lookupRecords(platform, username, {
+      onProgress: (progress) => {
+        state.progress = progress;
+        render();
+      },
+      onGames: (newRecords) => {
+        state.records = [...state.records, ...newRecords];
+        showFirstResults();
+        render();
+      },
+    });
+    state.records = records; // the authoritative final list, in case it ever differs from the streamed total
+    showFirstResults(); // covers the edge case of zero games ever reaching onGames (e.g. all filtered out)
   } catch (error) {
     // client.js already produces user-presentable messages (unknown user, rate-limited,
     // platform request failed); anything else is a genuinely unexpected failure.
@@ -302,10 +343,11 @@ function renderResults() {
   const { filtered, tree } = currentTree();
   const node = nodeAtPath(tree, state.path) ?? tree;
 
+  const fetchedSoFar = state.loading ? `${state.records.length} fetched so far, still loading…` : `${state.records.length} total fetched`;
   section.appendChild(
     el("p", {
       class: "summary",
-      text: `${filtered.length} of ${state.records.filter((r) => r.color === state.color).length} games as ${state.color} match the current filters (${state.records.length} total fetched).`,
+      text: `${filtered.length} of ${state.records.filter((r) => r.color === state.color).length} games as ${state.color} match the current filters (${fetchedSoFar}).`,
     }),
   );
 
