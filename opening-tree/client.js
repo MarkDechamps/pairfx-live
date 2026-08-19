@@ -25,8 +25,14 @@ function assertNotRateLimited(response, platform) {
  * so a narrower lookup can also mean a smaller download, but the app itself fetches once with no
  * filters and re-filters client-side (ticket 0001) to avoid repeat requests against Lichess's
  * rate limit.
+ *
+ * This is a single request with no known total up front (Lichess streams the response; we don't
+ * know the game count until it's done), so there's no `{completed, total}` to report the way
+ * Chess.com's per-month fetch can. If `onProgress` is given, it's instead called with a running
+ * count of complete NDJSON lines (= games) seen so far, read straight off the response stream —
+ * enough for a live "N games loaded" indicator without waiting for the whole download.
  */
-export async function fetchLichessGames(username, { max = 500, speeds, rated } = {}, fetchImpl = fetch) {
+export async function fetchLichessGames(username, { max = 500, speeds, rated, onProgress } = {}, fetchImpl = fetch) {
   const params = new URLSearchParams({ max: String(max), moves: "true", opening: "true" });
   if (speeds && speeds.length) params.set("perfType", speeds.join(","));
   if (rated === true) params.set("rated", "true");
@@ -39,7 +45,21 @@ export async function fetchLichessGames(username, { max = 500, speeds, rated } =
   assertNotRateLimited(response, "Lichess");
   if (!response.ok) throw new Error(`Lichess request failed (${response.status})`);
 
-  return response.text();
+  if (!onProgress || !response.body) return response.text();
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  let gamesSeen = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    text += chunk;
+    gamesSeen += (chunk.match(/\n/g) ?? []).length;
+    onProgress(gamesSeen);
+  }
+  return text;
 }
 
 /**
@@ -47,8 +67,11 @@ export async function fetchLichessGames(username, { max = 500, speeds, rated } =
  * the most recent `maxMonths` of them (newest first) and concatenate their raw game objects —
  * parse the result with engine.js's `parseChessComGames`. A month that fails to fetch is skipped
  * rather than failing the whole lookup, since one bad month shouldn't hide every other one.
+ * Unlike Lichess's single streamed request, the month count is known up front, so `onProgress`
+ * (if given) gets a real `{completed, total}` after each month settles — a determinate progress
+ * bar, not just an activity indicator.
  */
-export async function fetchChessComGames(username, { maxMonths = 24 } = {}, fetchImpl = fetch) {
+export async function fetchChessComGames(username, { maxMonths = 24, onProgress } = {}, fetchImpl = fetch) {
   const archivesUrl = `https://api.chess.com/pub/player/${encodeURIComponent(username.toLowerCase())}/games/archives`;
   const archivesResponse = await fetchImpl(archivesUrl);
 
@@ -58,13 +81,16 @@ export async function fetchChessComGames(username, { maxMonths = 24 } = {}, fetc
 
   const { archives } = await archivesResponse.json();
   const recentArchivesNewestFirst = archives.slice(-maxMonths).reverse();
+  const total = recentArchivesNewestFirst.length;
 
   const games = [];
-  for (const url of recentArchivesNewestFirst) {
+  for (const [index, url] of recentArchivesNewestFirst.entries()) {
     const response = await fetchImpl(url);
-    if (!response.ok) continue;
-    const data = await response.json();
-    games.push(...(data.games ?? []));
+    if (response.ok) {
+      const data = await response.json();
+      games.push(...(data.games ?? []));
+    }
+    onProgress?.({ completed: index + 1, total });
   }
   return games;
 }

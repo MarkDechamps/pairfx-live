@@ -20,6 +20,19 @@ function textResponse(body, { ok = true, status = 200 } = {}) {
   return { ok, status, text: async () => body };
 }
 
+// A response whose body streams in the given chunks — lets fetchLichessGames's progress path
+// (which reads response.body incrementally) be exercised without a real network stream.
+function streamedResponse(chunks, { ok = true, status = 200 } = {}) {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(encoder.encode(chunk));
+      controller.close();
+    },
+  });
+  return { ok, status, body, text: async () => chunks.join("") };
+}
+
 // ---------------------------------------------------------------------------
 // fetchLichessGames
 // ---------------------------------------------------------------------------
@@ -67,6 +80,28 @@ test("fetchLichessGames gives a specific message on a 429 (real users can hit th
   await assert.rejects(() => fetchLichessGames("p", {}, fetchImpl), /rate.?limit/i);
 });
 
+test("fetchLichessGames reports how many games have streamed in so far, when given onProgress", async () => {
+  const line = (id) => JSON.stringify({ id }) + "\n";
+  const fetchImpl = fakeFetch(() =>
+    streamedResponse([line("a") + line("b"), line("c")]),
+  );
+  const seen = [];
+
+  const text = await fetchLichessGames("p", { onProgress: (n) => seen.push(n) }, fetchImpl);
+
+  assert.equal(text, line("a") + line("b") + line("c"));
+  // first chunk contains 2 complete lines, second chunk 1 more
+  assert.deepEqual(seen, [2, 3]);
+});
+
+test("fetchLichessGames without onProgress still just returns the full text (unchanged behavior)", async () => {
+  const fetchImpl = fakeFetch(() => streamedResponse(["line1\n", "line2\n"]));
+
+  const text = await fetchLichessGames("p", {}, fetchImpl);
+
+  assert.equal(text, "line1\nline2\n");
+});
+
 // ---------------------------------------------------------------------------
 // fetchChessComGames
 // ---------------------------------------------------------------------------
@@ -91,6 +126,27 @@ test("fetchChessComGames fetches archives most-recent-first and concatenates the
   assert.equal(fetchImpl.calls[1].url, archives[2]);
   assert.equal(fetchImpl.calls[2].url, archives[1]);
   assert.equal(fetchImpl.calls[3].url, archives[0]);
+});
+
+test("fetchChessComGames reports {completed, total} as each month is fetched, when given onProgress", async () => {
+  const archives = [
+    "https://api.chess.com/pub/player/p/games/2024/01",
+    "https://api.chess.com/pub/player/p/games/2024/02",
+    "https://api.chess.com/pub/player/p/games/2024/03",
+  ];
+  const fetchImpl = fakeFetch((url) => {
+    if (url.endsWith("/archives")) return jsonResponse({ archives });
+    return jsonResponse({ games: [] });
+  });
+  const seen = [];
+
+  await fetchChessComGames("p", { onProgress: (p) => seen.push(p) }, fetchImpl);
+
+  assert.deepEqual(seen, [
+    { completed: 1, total: 3 },
+    { completed: 2, total: 3 },
+    { completed: 3, total: 3 },
+  ]);
 });
 
 test("fetchChessComGames caps how many months back it fetches via maxMonths", async () => {
