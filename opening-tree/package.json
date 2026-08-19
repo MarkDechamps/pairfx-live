@@ -1,0 +1,16 @@
+{
+  "name": "opening-tree",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Opponent opening-prep tool (static, zero-build-step app). package.json exists only to vendor chess.js (board FEN generation) and cm-chessboard's piece sprite (board art, same Cburnett set chess-classroom and Lichess itself use) and to run node's built-in test runner during development — see CLAUDE.md.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 8000",
+    "vendor": "node scripts/vendor-libs.mjs"
+  },
+  "devDependencies": {
+    "chess.js": "1.4.0",
+    "cm-chessboard": "8.12.19"
+  }
+}
