@@ -10,7 +10,7 @@ import {
   isDue,
   gradeCard,
   nodesInScope,
-  shuffle,
+  leastRecentFirst,
   pickNextDue,
   resolveSquareClick,
   isTraineeMove,
@@ -246,18 +246,40 @@ test("nodesInScope returns an empty array for a path the tree doesn't contain", 
   assert.deepEqual(nodesInScope(root, ["d4"]), []);
 });
 
-test("shuffle reorders using an injected RNG and never drops or duplicates entries", () => {
-  const nodes = [{ path: ["a"] }, { path: ["b"] }, { path: ["c"] }, { path: ["d"] }];
-  // A fixed sequence stands in for Math.random() so the reordering itself is deterministic.
-  const sequence = [0.9, 0.1, 0.5];
-  let i = 0;
-  const shuffled = shuffle(nodes, () => sequence[i++ % sequence.length]);
+// ---------------------------------------------------------------------------
+// leastRecentFirst — the third real Method (ChessTempo manual §17.15.1: "Least recent/unseen
+// first"), replacing an invented "random" shuffle that never matched anything in the actual
+// settings (see wayfinder/research/0001).
+// ---------------------------------------------------------------------------
 
+test("leastRecentFirst puts every unseen (card-less) entry ahead of any seen one", () => {
+  const entries = [
+    { path: ["seen"], node: { card: { due: "2026-01-01T00:00:00Z" } } },
+    { path: ["unseen"], node: {} },
+  ];
   assert.deepEqual(
-    shuffled.map((n) => n.path[0]).sort(),
-    ["a", "b", "c", "d"],
+    leastRecentFirst(entries).map((e) => e.path[0]),
+    ["unseen", "seen"],
   );
-  assert.notDeepEqual(shuffled, nodes);
+});
+
+test("leastRecentFirst preserves the given order among unseen entries", () => {
+  const entries = [{ path: ["b"], node: {} }, { path: ["a"], node: {} }, { path: ["c"], node: {} }];
+  assert.deepEqual(
+    leastRecentFirst(entries).map((e) => e.path[0]),
+    ["b", "a", "c"],
+  );
+});
+
+test("leastRecentFirst orders seen entries by their card's due date, earliest first", () => {
+  const entries = [
+    { path: ["later"], node: { card: { due: "2026-02-01T00:00:00Z" } } },
+    { path: ["sooner"], node: { card: { due: "2026-01-01T00:00:00Z" } } },
+  ];
+  assert.deepEqual(
+    leastRecentFirst(entries).map((e) => e.path[0]),
+    ["sooner", "later"],
+  );
 });
 
 test("pickNextDue prefers the most-overdue card over a merely-due one", () => {

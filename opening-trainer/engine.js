@@ -240,14 +240,24 @@ export function nodesInScope(root, path = []) {
   return [...self, ...collectDescendants(startNode, path)];
 }
 
-/** Fisher-Yates shuffle for the "random" Method — `randomFn` defaults to `Math.random`. */
-export function shuffle(nodes, randomFn = Math.random) {
-  const result = nodes.slice();
-  for (let i = result.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(randomFn() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-  return result;
+/**
+ * The "Least recent/unseen first" Method (ChessTempo manual §17.15.1 — see
+ * `wayfinder/research/0001`; there is no real "random" method, which an earlier version of
+ * this app invented instead). Every never-trained (card-less) entry sorts ahead of every
+ * trained one, in whatever order they were given (typically `nodesInScope`'s own pre-order,
+ * i.e. main-lines-first) — relies on `Array.prototype.sort` being stable, guaranteed since
+ * ES2019. Trained entries then sort by their Card's `due` date, earliest first: an
+ * approximation of "least recently reviewed" using the scheduling data this app already has,
+ * rather than a separate last-reviewed timestamp.
+ */
+export function leastRecentFirst(entries) {
+  return entries.slice().sort((a, b) => {
+    const aSeen = Boolean(a.node.card);
+    const bSeen = Boolean(b.node.card);
+    if (aSeen !== bSeen) return aSeen ? 1 : -1;
+    if (!aSeen) return 0;
+    return new Date(a.node.card.due) - new Date(b.node.card.due);
+  });
 }
 
 function pathKey(path) {

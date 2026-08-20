@@ -88,6 +88,18 @@ entirely and starts a session directly — Branch scope, review-in-order, strict
 `wayfinder/map.md`'s Notes). The **list screen's "Train"/"Train all &lt;color&gt;"** buttons
 open the real settings screen instead.
 
+**Both boards accept drag-and-drop as well as click-to-move** — native HTML5 drag-and-drop
+(`wireDragAndDrop`), not a hand-rolled pointer-tracking drag. It's wired as a second way to
+supply the exact same "from square, to square" the click flow already resolves against
+(`resolveSquareClick` / the legal-move lookup below): a piece's `dragstart` plays the role of
+the first click (selects the source), and the target square's `drop` plays the role of the
+second (calls the same `onclick` closure that square already has). Only a square with an actual
+move out of it is `draggable`, matching what's clickable. One care point: nothing renders
+synchronously inside `dragstart` — the browser is actively dragging that DOM node, and a
+`render()` rebuild (`app.innerHTML = ""`) at that moment would tear it out and abort the
+gesture; the render happens on `drop`/`dragend` instead, same as the click flow only reacts on
+its second click.
+
 The **training board accepts any `chess.js`-legal move**, not just tracked ones — unlike the
 browsing board (which only ever offers moves this app has data for, via `resolveSquareClick`),
 training has to let a genuinely wrong move happen for wrong-move handling to have something to
@@ -135,6 +147,18 @@ CLAUDE.md for the attribution/license detail; the footer credit line here matche
 - **No promotion-piece picker.** `resolveLegalMove` defaults to queen when a click matches more
   than one legal move (i.e. an under-promotion). Fine for a repertoire trainer — under-promotion
   prep is rare — but a real gap if it ever isn't.
+- **There is no "random" training Method, and there never should be one.** An earlier version
+  of this app invented a shuffle for the third Method before the real ChessTempo manual text
+  became available; the real third option is "Least recent/unseen first"
+  (`leastRecentFirst`/`wayfinder/research/0001`), a deterministic ordering, not a shuffle. If a
+  future session is tempted to add randomness back in (e.g. "make review-in-order less
+  monotonous"), that's new scope, not a restoration of something that was correct before.
+- **Testing drag-and-drop in an automated browser needs real `DragEvent`s, not Playwright's
+  `page.dragAndDrop()`.** That convenience helper simulates a drag via mouse movement, which
+  doesn't reliably trigger native HTML5 drag-and-drop against this app's SVG-piece draggables —
+  it silently no-ops rather than erroring. Dispatch `dragstart`/`dragenter`/`dragover`/`drop`/
+  `dragend` directly (each with a real `DataTransfer`) on the piece/square elements instead; that
+  exercises `wireDragAndDrop`'s actual listeners the way a real mouse gesture would.
 - **Bug caught only by running the app, not by the test suite**, worth flagging since `app.js`
   is deliberately untested: `gradedThisTurn` was checked before grading a Card but never *set*,
   so a wrong-then-correct turn silently graded twice (once incorrect, once correct). Fixed by

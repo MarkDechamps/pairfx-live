@@ -50,10 +50,14 @@ Which Nodes are eligible for a Training Session: the current **branch** (a Node 
 subtree), one whole **Repertoire**, or **all Repertoires of a color**.
 
 **Method**:
-How eligible Nodes are ordered within a Training Session: **review-in-order** (fixed
-depth-first walk, generated once at session start), **random** (the same fixed walk, shuffled
-once at session start), or **spaced-repetition** (dynamically picks the most-overdue Card each
-turn, recomputed live so a missed Node can resurface later in the same session).
+How eligible Nodes are ordered within a Training Session, matching ChessTempo's own three
+options (manual §17.15.1 — `wayfinder/research/0001`): **review-in-order** (fixed depth-first
+walk, generated once at session start), **least recent/unseen first** (that same walk
+reordered — every never-trained Node first, then trained ones oldest-due-first), or
+**spaced-repetition** (dynamically picks the most-overdue Card each turn, recomputed live so a
+missed Node can resurface later in the same session).
+_Avoid_: Random (there's no shuffle-based Method — an earlier version of this app invented one
+that didn't match ChessTempo's real settings; see the research note above)
 
 **Drill**:
 The action of starting a Training Session scoped to one specific Node's branch, in

@@ -23,7 +23,7 @@ import {
   initCard,
   gradeCard,
   pickNextDue,
-  shuffle,
+  leastRecentFirst,
 } from "./engine.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -140,6 +140,37 @@ function boardCells(fen, orientation) {
     }
   }
   return orientation === "black" ? [...cells].reverse() : cells;
+}
+
+// Wires native HTML5 drag-and-drop onto one square so dragging a piece behaves exactly like
+// "click the source square, then click the destination" — both boards' move-resolution logic
+// (resolveSquareClick for browsing, the legal-move lookup for training) only ever needs a from
+// and a to square, however they were supplied. `dragstart` plays the role of that first click
+// (selecting the source, via `setSelectedSquare`) and `drop` plays the second (`handleClick`,
+// the exact same closure the square's own `onclick` uses) — so dragging and clicking are two
+// input methods for one gesture, not two separate code paths.
+function wireDragAndDrop(squareEl, pieceEl, square, canDragFrom, setSelectedSquare, handleClick) {
+  squareEl.addEventListener("dragover", (event) => event.preventDefault());
+  squareEl.addEventListener("dragenter", (event) => event.currentTarget.classList.add("drag-over"));
+  squareEl.addEventListener("dragleave", (event) => event.currentTarget.classList.remove("drag-over"));
+  squareEl.addEventListener("drop", (event) => {
+    event.preventDefault();
+    squareEl.classList.remove("drag-over");
+    handleClick();
+  });
+
+  if (!pieceEl || !canDragFrom) return;
+  pieceEl.setAttribute("draggable", "true");
+  pieceEl.addEventListener("dragstart", (event) => {
+    event.dataTransfer.setData("text/plain", square); // Firefox won't start a drag without this
+    event.dataTransfer.effectAllowed = "move";
+    setSelectedSquare(square);
+  });
+  // Re-render on dragend (fires after drop, success or not) so a drop outside any square — or
+  // one that only reselects rather than completes a move — still reflects the new selection.
+  // Never render synchronously inside dragstart itself: that would tear down the very DOM node
+  // the browser is currently dragging and abort the gesture.
+  pieceEl.addEventListener("dragend", () => render());
 }
 
 // ---------------------------------------------------------------------------
@@ -392,12 +423,15 @@ function renderStaticBoard(fen, orientation, trackedMoves, onSquareClick) {
     const classes = ["square", cell.isLight ? "light" : "dark"];
     if (cell.square === state.selectedSquare) classes.push("selected");
     if (targets?.has(cell.square)) classes.push("move-target");
-    const squareEl = el("div", {
-      class: classes.join(" "),
-      "data-square": cell.square,
-      onclick: () => onSquareClick(cell.square, trackedMoves),
-    });
-    if (cell.piece) squareEl.appendChild(pieceIcon(cell.piece));
+
+    const handleClick = () => onSquareClick(cell.square, trackedMoves);
+    const squareEl = el("div", { class: classes.join(" "), "data-square": cell.square, onclick: handleClick });
+    const pieceEl = cell.piece ? pieceIcon(cell.piece) : null;
+    if (pieceEl) squareEl.appendChild(pieceEl);
+
+    const canDragFrom = trackedMoves.some((m) => m.from === cell.square);
+    wireDragAndDrop(squareEl, pieceEl, cell.square, canDragFrom, (sq) => { state.selectedSquare = sq; }, handleClick);
+
     boardEl.appendChild(squareEl);
   }
   return boardEl;
@@ -533,7 +567,7 @@ function renderSettings() {
         [
           el("option", { value: "spaced-repetition", selected: state.settingsForm.method === "spaced-repetition", text: "Spaced repetition (recommended)" }),
           el("option", { value: "review-in-order", selected: state.settingsForm.method === "review-in-order", text: "Review in order" }),
-          el("option", { value: "random", selected: state.settingsForm.method === "random", text: "Random" }),
+          el("option", { value: "least-recent", selected: state.settingsForm.method === "least-recent", text: "Least recent / unseen first" }),
         ],
       ),
     ]),
@@ -615,7 +649,7 @@ function startSession(scope, settings) {
     scope,
     settings,
     color: sessionColorFor(scope),
-    entries: settings.method === "random" ? shuffle(entries) : entries,
+    entries: settings.method === "least-recent" ? leastRecentFirst(entries) : entries,
     index: 0, // fixed-order methods only
     current: null,
     selectedSquare: null,
@@ -741,12 +775,15 @@ function renderTrainingBoard(fen, orientation, expectedSan) {
     if (cell.square === session.selectedSquare) classes.push("selected");
     if (targets?.has(cell.square)) classes.push("move-target");
     if (cell.square === hintFrom || cell.square === hintTo) classes.push("hint");
-    const squareEl = el("div", {
-      class: classes.join(" "),
-      "data-square": cell.square,
-      onclick: () => attemptTrainingMove(cell.square, legalMoves),
-    });
-    if (cell.piece) squareEl.appendChild(pieceIcon(cell.piece));
+
+    const handleClick = () => attemptTrainingMove(cell.square, legalMoves);
+    const squareEl = el("div", { class: classes.join(" "), "data-square": cell.square, onclick: handleClick });
+    const pieceEl = cell.piece ? pieceIcon(cell.piece) : null;
+    if (pieceEl) squareEl.appendChild(pieceEl);
+
+    const canDragFrom = legalMoves.some((m) => m.from === cell.square);
+    wireDragAndDrop(squareEl, pieceEl, cell.square, canDragFrom, (sq) => { session.selectedSquare = sq; }, handleClick);
+
     boardEl.appendChild(squareEl);
   }
   return boardEl;

@@ -74,6 +74,18 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
 - [Simplified SM-2 scheduler, binary correct/incorrect grading](../docs/adr/0002-simplified-sm2-scheduler-binary-grading.md):
   no 0-5 quality self-rating, since the board already knows objectively whether the move matched.
 
+- **ChessTempo manual §17.15 primary source captured** (`wayfinder/research/0001-chesstempo-manual-17.15-17.23.md`):
+  the requester pasted the real manual text mid-session. It corrected one invented detail —
+  the third training Method was a shuffle-based "random" that doesn't exist in the real
+  settings; replaced with the real "Least recent/unseen first" (`leastRecentFirst`, TDD,
+  49/49 tests green) — and confirmed one default already matched by luck (a new Card's first
+  correct answer schedules 1 day out, same as ChessTempo's "Initial Correct Scheduled time").
+- **Drag-and-drop added to both boards** (native HTML5 DnD, `wireDragAndDrop` in `app.js`),
+  alongside click-to-move rather than replacing it — reuses the exact same move-resolution
+  logic, no `engine.js` changes needed. Verified with real dispatched `DragEvent`s (Playwright's
+  `dragAndDrop()` helper doesn't reliably trigger native DnD against this app's SVG pieces —
+  see `CLAUDE.md`'s Judgment calls); click-to-move re-verified as a regression check.
+
 ## Not yet specified
 
 - Automatic transposition merging across move orders (ruled out for v1 by ADR 0001; could
@@ -86,8 +98,13 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
   splitting a branch into a new repertoire).
 - Any mobile/touch-specific interaction polish for the board beyond what click-to-move already
   gives for free.
-- Verbatim reconciliation against ChessTempo's actual manual §17.15 wording, once it's reachable
-  from an environment without the bot-challenge (see Notes).
+- Real ChessTempo features confirmed by `wayfinder/research/0001` but not built into this v1:
+  move previews (arrows showing the correct move before/after an attempt), pause-at-end-of-line,
+  leadup/reinforcement tuning for branch training, opening-tree line management (disable/delete/
+  copy lines, with the transposition-truncation warning that implies), repertoire shortcuts,
+  an opening-explorer panel, an engine-analysis panel, and move comments/annotations. All
+  legitimate, all beyond this v1's destination — a candidate list for a future map, not this
+  one.
 
 ## Out of scope
 
