@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Three independent, static front-end apps in one repo, cross-linked from the same nav bar:
+Five independent, static front-end apps in one repo, cross-linked from the same nav bar:
 
 - **PairFX** (repo root: `index.html`, `js/`, `css/`) — a chess tournament pairing manager.
   No build step, no bundler, no framework. Plain `<script defer>` tags loading global classes,
@@ -17,17 +17,28 @@ Three independent, static front-end apps in one repo, cross-linked from the same
   (a teacher tab plus a projector tab kept in live sync), with its own `CLAUDE.md`. Read that
   file when working under `chess-classroom/` — its architecture, commands, and conventions are
   unrelated to PairFX and are not repeated here.
+- **Opening Tree** (`opening-tree/`) — an opponent-prep tool: fetches a Lichess/Chess.com
+  username's public games and shows them as a move tree. Its own `CLAUDE.md`; unrelated to
+  PairFX.
+- **Opening Trainer** (`opening-trainer/`) — a browser-local opening-repertoire trainer: upload
+  your own PGNs, browse them as a move tree, and drill a branch with spaced repetition
+  (ChessTempo-style training settings). Its own `CLAUDE.md`; unrelated to PairFX.
 
-Opening Selector and Chess Classroom were both built using **wayfinder**, a local-markdown
-spec/ticket workflow that lives entirely inside each app's own `wayfinder/` directory
-(`opening-selector/wayfinder/`, `chess-classroom/wayfinder/` — `map*.md` destinations,
-`tickets/NNNN-slug.md` child tickets — see either app's `wayfinder/README.md` for the
-convention). These are two separate wayfinder instances, not a shared one. PairFX itself was
+Opening Selector, Chess Classroom, Opening Tree, and Opening Trainer were all built using
+**wayfinder**, a local-markdown spec/ticket workflow that lives entirely inside each app's own
+`wayfinder/` directory (`opening-selector/wayfinder/`, `chess-classroom/wayfinder/`,
+`opening-tree/wayfinder/`, `opening-trainer/wayfinder/` — `map*.md` destinations,
+`tickets/NNNN-slug.md` child tickets — see any of these apps' `wayfinder/README.md` for the
+convention). These are four separate wayfinder instances, not a shared one. PairFX itself was
 not built this way and has no `wayfinder/` directory — don't go looking for tickets or maps for
-root-level PairFX work; that process only applies inside `opening-selector/` and
-`chess-classroom/`. If you're asked to extend either app (new criteria/rescoring/screens for
-Opening Selector; new product behavior for Chess Classroom), check that app's
-`wayfinder/tickets/` first — decisions and rationale live there, not just in code comments.
+root-level PairFX work; that process only applies inside the four sub-apps above. If you're
+asked to extend one of them (new criteria/rescoring/screens for Opening Selector; new product
+behavior for Chess Classroom; new lookup/tree behavior for Opening Tree; new training behavior
+for Opening Trainer), check that app's `wayfinder/tickets/` first — decisions and rationale
+live there, not just in code comments. Opening Trainer additionally keeps a `CONTEXT.md`
+glossary and `docs/adr/` (domain-modeling's convention, not wayfinder's) for its Repertoire/
+Node/Card language and its two hard-to-reverse calls — read those before touching its
+`engine.js`.
 
 The rest of this file covers the root PairFX app only.
 
