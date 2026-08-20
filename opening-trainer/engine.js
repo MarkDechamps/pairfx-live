@@ -51,21 +51,40 @@ export function parseHeaders(headerBlock) {
   return headers;
 }
 
+const COMMENT_PLACEHOLDER = "COMMENT";
+
+/** Removes ChessBase-style annotation-drawing commands ("[%csl Ce7]", "[%cal Yb1a3]") — this
+ * app has no board arrows/highlights to render them as, so they're just noise in displayed
+ * comment text — then collapses the whitespace left behind. */
+function stripAnnotationCommands(text) {
+  return text.replace(/\[%[^\]]*\]/g, "").replace(/\s+/g, " ").trim();
+}
+
 /**
- * Movetext -> a flat token stream of just SAN moves, "(", and ")" — move numbers ("1.", "1..."),
- * `{...}` comments, `$n` NAGs, and result tokens are all stripped before the recursive
- * variation parser (mergeMovetextIntoTree) ever sees them, so that parser only has to deal with
- * moves and variation boundaries.
+ * Movetext -> a flat token stream of SAN moves, "(", ")", and comment placeholders — move
+ * numbers ("1.", "1..."), `$n` NAGs, and result tokens are stripped entirely (never becoming
+ * tokens at all) before the recursive variation parser (playTokens) ever sees them, so that
+ * parser only has to deal with moves, variation boundaries, and comments. A `{...}` comment
+ * becomes a placeholder token referencing `comments` by index, rather than being stripped
+ * outright: playTokens attaches its text to whichever Node is current when it's encountered
+ * (see mergeMovetextIntoTree's `comments` parameter — populated here as a side effect).
  */
-function tokenizeMovetext(movetext) {
-  const withoutComments = movetext.replace(/\{[^}]*\}/g, " ");
-  const spaced = withoutComments.replace(/([()])/g, " $1 ");
+function tokenizeMovetext(movetext, comments) {
+  const withPlaceholders = movetext.replace(/\{([^}]*)\}/g, (_, text) => {
+    const cleaned = stripAnnotationCommands(text);
+    if (!cleaned) return " ";
+    const index = comments.length;
+    comments.push(cleaned);
+    return ` ${COMMENT_PLACEHOLDER}${index} `;
+  });
+  const spaced = withPlaceholders.replace(/([()])/g, " $1 ");
 
   return spaced
     .split(/\s+/)
     .filter(Boolean)
     .filter((token) => {
       if (token === "(" || token === ")") return true;
+      if (token.startsWith(COMMENT_PLACEHOLDER)) return true;
       if (RESULT_TOKENS.has(token)) return false;
       if (/^\d+\.(\.\.)?$/.test(token)) return false; // move numbers: "1." / "1..."
       if (/^\$\d+$/.test(token)) return false; // NAGs
@@ -74,7 +93,9 @@ function tokenizeMovetext(movetext) {
     // Traditional annotation glyphs ("e4!", "Nf3?!", ...) are appended straight onto the move
     // itself rather than expressed as a separate "$n" NAG — strip them so the SAN stays a valid
     // tree key.
-    .map((token) => (token === "(" || token === ")" ? token : token.replace(/[!?]+$/, "")));
+    .map((token) =>
+      token === "(" || token === ")" || token.startsWith(COMMENT_PLACEHOLDER) ? token : token.replace(/[!?]+$/, ""),
+    );
 }
 
 function emptyNode() {
@@ -93,9 +114,13 @@ function childOf(node, san) {
  * recently played move — i.e. it's a sibling of that move, not a child of it — so entering one
  * recurses with `beforeLastMove` as its starting node; the recursive call consumes its own
  * closing `)` and returns, and this loop then resumes exactly where it left off (`current`,
- * `beforeLastMove` are both untouched by a nested variation's own moves).
+ * `beforeLastMove` are both untouched by a nested variation's own moves). A comment placeholder
+ * attaches its (already-cleaned) text to `current` — the Node the move right before it just
+ * reached — same rule PGN readers use themselves: a comment describes the move just played, not
+ * the one about to be. Two games commenting the same Node get both comments, space-joined,
+ * rather than one overwriting the other.
  */
-function playTokens(tokens, pos, node) {
+function playTokens(tokens, pos, node, comments) {
   let current = node;
   let beforeLastMove = node;
 
@@ -109,7 +134,14 @@ function playTokens(tokens, pos, node) {
 
     if (token === "(") {
       pos.i += 1;
-      playTokens(tokens, pos, beforeLastMove);
+      playTokens(tokens, pos, beforeLastMove, comments);
+      continue;
+    }
+
+    if (token.startsWith(COMMENT_PLACEHOLDER)) {
+      const text = comments[Number(token.slice(COMMENT_PLACEHOLDER.length))];
+      current.comment = current.comment ? `${current.comment} ${text}` : text;
+      pos.i += 1;
       continue;
     }
 
@@ -121,8 +153,9 @@ function playTokens(tokens, pos, node) {
 
 /** Merges one game's movetext (mainline + any RAV variations) into `root`, in place. */
 export function mergeMovetextIntoTree(root, movetext) {
-  const tokens = tokenizeMovetext(movetext);
-  playTokens(tokens, { i: 0 }, root);
+  const comments = [];
+  const tokens = tokenizeMovetext(movetext, comments);
+  playTokens(tokens, { i: 0 }, root, comments);
 }
 
 /**
@@ -130,13 +163,33 @@ export function mergeMovetextIntoTree(root, movetext) {
  * (ADR 0001 — no FEN/transposition merging; games only share nodes where their SAN paths are
  * literally identical prefixes, the same way opening-tree/engine.js's buildTree merges games).
  */
+/**
+ * Merges every ordinary game in one PGN file's text into `root`, in place — same as
+ * `buildRepertoireTree` does per file, but as its own function because it also has to *not*
+ * merge some games: one documenting a transposition via `[SetUp "1"]`/`[FEN "..."]` headers,
+ * common in repertoire-book PGN exports, has no leadup moves in its movetext at all (it starts
+ * mid-game, from that FEN) — this app's SAN-path tree (ADR 0001) has no correct place to put
+ * such a game's first recorded move, and blindly merging it anyway used to insert that move
+ * straight under the tree's root, which is *always* wrong and corrupts browsing/training for
+ * every other line sharing that root. Skipped games are returned (their parsed headers) so the
+ * caller can tell the user what got left out, rather than silently dropping content.
+ */
+export function mergeGamesIntoTree(root, pgnText) {
+  const skipped = [];
+  for (const game of splitPgnGames(pgnText)) {
+    const headers = parseHeaders(game.headers);
+    if (headers.SetUp === "1" || headers.FEN) {
+      skipped.push(headers);
+      continue;
+    }
+    mergeMovetextIntoTree(root, game.movetext);
+  }
+  return skipped;
+}
+
 export function buildRepertoireTree(pgnTexts) {
   const root = emptyNode();
-  for (const pgnText of pgnTexts) {
-    for (const game of splitPgnGames(pgnText)) {
-      mergeMovetextIntoTree(root, game.movetext);
-    }
-  }
+  for (const pgnText of pgnTexts) mergeGamesIntoTree(root, pgnText);
   return root;
 }
 

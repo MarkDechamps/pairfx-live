@@ -11,8 +11,7 @@ import {
   saveRepertoireTree,
 } from "./db.js";
 import {
-  splitPgnGames,
-  mergeMovetextIntoTree,
+  mergeGamesIntoTree,
   childrenOf,
   nodeAtPath,
   resolveSquareClick,
@@ -40,6 +39,7 @@ const state = {
   path: [], // browse: SAN moves from the root to the currently viewed node
   selectedSquare: null, // browse board's click-to-move source square
   boardFlipped: false,
+  showComments: false, // browse: whether the currently-viewed Node's comment (if any) is shown
   newRepertoireName: "",
   uploadTargetId: "", // "" | a repertoire id | "__new__"
   uploadNewName: "",
@@ -47,6 +47,7 @@ const state = {
   settingsForm: { method: "spaced-repetition", boardOrientation: "auto", wrongMoveHandling: "strict" },
   session: null,
   error: null,
+  notice: null, // benign, dismissible FYI — e.g. "N chapters were skipped" — not an error banner
 };
 
 const app = document.getElementById("app");
@@ -233,16 +234,22 @@ async function handleUpload(event) {
   }
 
   const texts = await Promise.all(files.map((file) => file.text()));
-  for (const text of texts) {
-    for (const game of splitPgnGames(text)) {
-      mergeMovetextIntoTree(repertoire.tree, game.movetext);
-    }
-  }
+  const skippedGames = texts.flatMap((text) => mergeGamesIntoTree(repertoire.tree, text));
   await saveRepertoireTree(state.store, repertoire.id, repertoire.tree);
 
   state.uploadTargetId = "";
   state.uploadNewName = "";
+  state.notice = skippedGames.length ? skippedGamesNotice(skippedGames) : null;
   await refreshRepertoires();
+}
+
+// A game documenting a transposition via [SetUp "1"]/[FEN "..."] has no leadup moves for this
+// app's SAN-path tree to place it by (see engine.js's mergeGamesIntoTree) — skipped rather than
+// corrupting the tree, but the upload should say so rather than silently dropping content.
+function skippedGamesNotice(skippedGames) {
+  const names = skippedGames.map((headers) => headers.White || headers.Event || "an unnamed chapter");
+  const plural = skippedGames.length !== 1;
+  return `Uploaded, but skipped ${skippedGames.length} chapter${plural ? "s" : ""} that start${plural ? "" : "s"} from a custom position via a FEN, rather than replaying moves from the start — this app can't place ${plural ? "those" : "it"} in the tree without knowing the moves that lead there: ${names.join(", ")}.`;
 }
 
 function renderCreateForm() {
@@ -462,6 +469,18 @@ function renderBreadcrumb() {
   return crumb;
 }
 
+function renderShowCommentsToggle() {
+  const checkbox = el("input", {
+    type: "checkbox",
+    checked: state.showComments,
+    onchange: (e) => {
+      state.showComments = e.target.checked;
+      render();
+    },
+  });
+  return el("label", { class: "show-comments-toggle" }, [checkbox, " Show comments"]);
+}
+
 function moveBadge(repertoire, childPath, childNode) {
   if (!isTraineeMove(childPath, repertoire.color)) return "opponent";
   const card = childNode.card;
@@ -538,6 +557,10 @@ function renderBrowseBoardPane(repertoire, node) {
   const masterySummary = formatMasterySummary(summarizeMastery(repertoire.tree, repertoire.color, state.path));
   if (masterySummary) wrap.appendChild(el("p", { class: "mastery-summary", text: masterySummary }));
 
+  if (state.showComments && node.comment) {
+    wrap.appendChild(el("p", { class: "position-comment", text: node.comment }));
+  }
+
   return wrap;
 }
 
@@ -563,6 +586,7 @@ function renderBrowse() {
     ]),
   );
   section.appendChild(renderBreadcrumb());
+  section.appendChild(renderShowCommentsToggle());
 
   const explorer = el("div", { class: "explorer" });
   explorer.appendChild(renderBrowseBoardPane(repertoire, node));
@@ -945,6 +969,15 @@ function render() {
       el("div", { class: "error-banner" }, [
         el("span", { text: state.error.message }),
         el("button", { type: "button", text: "✕", onclick: () => { state.error = null; render(); } }),
+      ]),
+    );
+  }
+
+  if (state.notice) {
+    app.appendChild(
+      el("div", { class: "notice-banner" }, [
+        el("span", { text: state.notice }),
+        el("button", { type: "button", text: "✕", onclick: () => { state.notice = null; render(); } }),
       ]),
     );
   }

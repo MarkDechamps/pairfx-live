@@ -105,6 +105,14 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
   well... [ChessTempo] plays them for you"). Deliberately scoped to the two non-spaced-repetition
   Methods only — spaced-repetition's whole point is testing at increasing intervals to verify
   retention, so it still tests a well-known-but-due Card normally.
+- **Real repertoire upload found and fixed a tree-corrupting parsing bug**: chapters
+  documenting a transposition via `[SetUp "1"]`/`[FEN "..."]` (no leadup moves in their
+  movetext at all) had their first recorded move inserted straight under the tree's root.
+  `mergeGamesIntoTree` (62/62 tests green) now skips such games and reports them via a new,
+  non-error `state.notice` banner, rather than silently corrupting the tree.
+- **Comments toggle**: `{...}` comments from uploaded PGNs are no longer discarded — captured
+  per-Node (`Comment` in `CONTEXT.md`), stripped of ChessBase drawing commands, and shown behind
+  a "Show comments" checkbox on the browse screen (off by default).
 
 ## Not yet specified
 

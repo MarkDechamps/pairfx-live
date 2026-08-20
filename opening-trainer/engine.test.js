@@ -18,6 +18,7 @@ import {
   isWellKnown,
   WELL_KNOWN_REPS,
   summarizeMastery,
+  mergeGamesIntoTree,
 } from "./engine.js";
 
 // ---------------------------------------------------------------------------
@@ -131,6 +132,33 @@ test("buildRepertoireTree strips move numbers, comments, NAGs, and result tokens
   assert.deepEqual(Object.keys(root.children), ["e4"]);
 });
 
+// ---------------------------------------------------------------------------
+// Comments — a `{...}` right after a move is attached to the Node that move reaches, not
+// discarded, so app.js can show it (behind a toggle — see wayfinder/map.md).
+// ---------------------------------------------------------------------------
+
+test("buildRepertoireTree attaches a move's comment to the node it reaches", () => {
+  const root = buildRepertoireTree([pgn("1. e4 {King's pawn.} e5 *")]);
+  assert.equal(root.children.e4.comment, "King's pawn.");
+  assert.equal(root.children.e4.children.e5.comment, undefined);
+});
+
+test("buildRepertoireTree attaches a comment inside a variation to the right node, not the mainline's", () => {
+  const root = buildRepertoireTree([pgn("1. e4 e5 2. Nf3 (2. Bc4 {Italian.} Nc6) Nc6 *")]);
+  assert.equal(root.children.e4.children.e5.children.Bc4.comment, "Italian.");
+  assert.equal(root.children.e4.children.e5.children.Nf3.comment, undefined);
+});
+
+test("buildRepertoireTree strips [%csl ...]/[%cal ...] annotation commands out of a comment's text", () => {
+  const root = buildRepertoireTree([pgn("1. e4 {[%csl Ce7] My recommendation.} e5 *")]);
+  assert.equal(root.children.e4.comment, "My recommendation.");
+});
+
+test("buildRepertoireTree merges two games' different comments on the same node rather than overwriting", () => {
+  const root = buildRepertoireTree([pgn("1. e4 {First note.} e5 *"), pgn("1. e4 {Second note.} c5 *")]);
+  assert.equal(root.children.e4.comment, "First note. Second note.");
+});
+
 test("buildRepertoireTree merges games that share a SAN prefix into the same nodes", () => {
   const root = buildRepertoireTree([pgn("1. e4 e5 2. Nf3 Nc6 *"), pgn("1. e4 e5 2. Nf3 Nf6 *")]);
 
@@ -144,6 +172,64 @@ test("buildRepertoireTree merges games from separate uploaded files", () => {
 
   const merged = buildRepertoireTree([pgn("1. e4 e5 *"), pgn("1. d4 d5 *")]);
   assert.deepEqual(Object.keys(merged.children).sort(), ["d4", "e4"]);
+});
+
+// ---------------------------------------------------------------------------
+// mergeGamesIntoTree — a game documenting a transposition via [SetUp "1"]/[FEN "..."] (common
+// in repertoire-book PGN exports) has no leadup moves to replay, so this app's SAN-path tree has
+// nowhere correct to place it. Merging it anyway (as buildRepertoireTree/mergeMovetextIntoTree
+// blindly did) inserted its first recorded move — some arbitrary mid-game move — straight under
+// the tree's root, corrupting the whole tree. mergeGamesIntoTree skips such games instead and
+// reports them, rather than silently guessing wrong.
+// ---------------------------------------------------------------------------
+
+function pgnWithHeaders(headerLines, movetext) {
+  return [...headerLines, "", movetext].join("\n");
+}
+
+test("mergeGamesIntoTree merges an ordinary game normally, with nothing skipped", () => {
+  const root = emptyTree();
+  const skipped = mergeGamesIntoTree(root, pgn("1. e4 e5 *"));
+  assert.deepEqual(Object.keys(root.children), ["e4"]);
+  assert.deepEqual(skipped, []);
+});
+
+test("mergeGamesIntoTree skips a game with [SetUp \"1\"]/[FEN ...] rather than corrupting the tree", () => {
+  const root = emptyTree();
+  const transpositionChapter = pgnWithHeaders(
+    ['[Event "x"]', '[White "Chapter 2"]', '[SetUp "1"]', '[FEN "r1bqkb1r/pp3ppp/2n1pn2/3p4/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 7"]'],
+    "7. Be3 Qb6 8. Ndb5 Bd7 *",
+  );
+
+  const skipped = mergeGamesIntoTree(root, transpositionChapter);
+
+  assert.deepEqual(Object.keys(root.children), []); // nothing bogus landed at the root
+  assert.equal(skipped.length, 1);
+  assert.equal(skipped[0].White, "Chapter 2");
+});
+
+test("mergeGamesIntoTree merges the ordinary games in a file and skips only the FEN-based ones", () => {
+  const root = emptyTree();
+  const text = [
+    pgn("1. e4 e6 2. d4 d5 *"),
+    pgnWithHeaders(['[Event "x"]', '[SetUp "1"]', '[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]'], "5. Be3 *"),
+    pgn("1. d4 Nf6 *"),
+  ].join("\n\n");
+
+  const skipped = mergeGamesIntoTree(root, text);
+
+  assert.deepEqual(Object.keys(root.children).sort(), ["d4", "e4"]);
+  assert.equal(skipped.length, 1);
+});
+
+function emptyTree() {
+  return buildRepertoireTree([]);
+}
+
+test("buildRepertoireTree also skips FEN-based games rather than corrupting the tree", () => {
+  const text = pgnWithHeaders(['[Event "x"]', '[SetUp "1"]', '[FEN "8/8/8/8/8/8/8/8 w - - 0 1"]'], "5. Be3 *");
+  const root = buildRepertoireTree([text]);
+  assert.deepEqual(Object.keys(root.children), []);
 });
 
 // ---------------------------------------------------------------------------

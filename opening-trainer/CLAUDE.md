@@ -45,7 +45,20 @@ move, not a child of it. Node identity is the SAN path from the root (ADR 0001) 
 transposition merging, so `buildRepertoireTree`/`mergeMovetextIntoTree` stay a plain
 string-keyed walk with zero chess-legality dependency, same as `opening-tree/engine.js`.
 `childrenOf`/`nodeAtPath`/`resolveSquareClick` mirror opening-tree's shapes directly (the last
-one ported verbatim) for the browsing board to reuse.
+one ported verbatim) for the browsing board to reuse. A `{...}` comment isn't discarded — it
+becomes a placeholder token (`tokenizeMovetext`'s `comments` array, indexed by
+`COMMENT_PLACEHOLDER<n>`) that `playTokens` attaches, cleaned of `[%csl ...]`/`[%cal ...]`
+drawing commands (`stripAnnotationCommands`), to whichever Node is `current` when it's
+encountered — the move right before a comment is the one it describes.
+
+**`mergeGamesIntoTree` is the real entry point for turning PGN text into tree data** —
+`buildRepertoireTree` (mostly a test convenience) and `app.js`'s upload handler both go through
+it. It skips, rather than merges, any game whose headers carry `[SetUp "1"]`/`[FEN "..."]`:
+such a game documents a transposition from a specific position, not from the start, so it has
+no leadup moves in its movetext at all — merging it anyway used to insert its first recorded
+move straight under the tree's *root* (a real bug, found via a real user's repertoire upload;
+see Judgment calls). Skipped games are returned (their parsed headers) so the upload flow can
+tell the user what got left out instead of silently dropping content.
 
 **Card lifecycle** (`initCard`/`gradeCard`/`isDue`) is a simplified SM-2 with binary
 correct/incorrect grading, not a 0-5 quality scale (ADR 0002) — the board already knows
@@ -89,12 +102,14 @@ network. `openIndexedDbStore()` is the one real adapter; it's browser-API glue a
 `opening-tree/app.js`'s DOM code, isn't exercised by `node --test`.
 
 **`app.js`** has four screens: the repertoire list (per-color tabs; create/rename/delete;
-upload one or more PGN files into an existing or brand-new repertoire, merging their games'
-variations straight into that repertoire's tree via `mergeMovetextIntoTree`); a browse screen
+upload one or more PGN files into an existing or brand-new repertoire via `mergeGamesIntoTree`,
+surfacing any skipped FEN-based chapters as a dismissible `state.notice`); a browse screen
 reusing opening-tree's board/piece/click-to-move pattern exactly, with move-list rows showing a
-status badge (`moveBadge`: opponent's reply / not trained yet / due / learning / well known) instead of
-opening-tree's win-rate bar, since a repertoire tracks Cards, not game outcomes; a training
-settings screen (Method, board orientation, wrong-move handling); and the training session
+status badge (`moveBadge`: opponent's reply / not trained yet / due / learning / well known)
+instead of opening-tree's win-rate bar, since a repertoire tracks Cards, not game outcomes, plus
+a "Show comments" checkbox (`state.showComments`, off by default) that reveals the currently
+viewed Node's `comment`, if it has one; a training settings screen (Method, board orientation,
+wrong-move handling); and the training session
 itself. **Drill** (the per-branch button on the browse screen) skips the settings screen
 entirely and starts a session directly — Branch scope, review-in-order, strict — matching
 `CONTEXT.md`'s Drill definition and ChessTempo's own per-variation "Drill" button (research,
@@ -166,6 +181,18 @@ CLAUDE.md for the attribution/license detail; the footer credit line here matche
 - **No promotion-piece picker.** `resolveLegalMove` defaults to queen when a click matches more
   than one legal move (i.e. an under-promotion). Fine for a repertoire trainer — under-promotion
   prep is rare — but a real gap if it ever isn't.
+- **A real repertoire upload (a full French Defense book, 15 chapters, GM-annotated) found the
+  `[SetUp "1"]`/`[FEN "..."]` bug directly** — several chapters documented transpositions by
+  starting from a mid-game FEN rather than replaying moves, and their first recorded move (some
+  arbitrary deep SAN, not a legal opening move) landed straight under the tree's root, visibly
+  corrupting the whole browse view for every chapter sharing that root. `mergeGamesIntoTree` now
+  skips such games instead of guessing wrong; there is no way to correctly place one in a
+  SAN-path tree without the leadup moves it doesn't record, so skipping-and-reporting is the
+  only honest option, not a stopgap.
+- **Two different games commenting the same Node get both comments, space-joined** — plausible
+  once multiple uploaded PGNs merge into one repertoire, and preserving both authors' notes
+  beats one silently overwriting the other. No visual separator between them in v1; revisit if
+  concatenated comments turn out to read confusingly in practice.
 - **`WELL_KNOWN_REPS` (3) is a fixed constant, not a setting.** ChessTempo's real equivalent
   ("Don't show start moves threshold") is user-tunable; making it a setting here is legitimate
   future scope (`wayfinder/map.md`'s Not yet specified), not something this v1 needed to ship.

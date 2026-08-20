@@ -31,6 +31,12 @@ interchangeable; every Trainee Node is a Node, not every Node is a Trainee Node)
 The ordered list of SAN moves from a Repertoire's root down to a Node; a Node's identity.
 _Avoid_: Line, sequence
 
+**Comment**:
+Free-text annotation from an uploaded PGN's `{...}`, attached to the Node the move right before
+it reaches — shown in the browser behind a "Show comments" toggle, off by default. Drawing
+commands embedded in PGN comments (`[%csl ...]`, `[%cal ...]`) are stripped before display;
+this app renders no board arrows/highlights to show them as.
+
 **Card**:
 The spaced-repetition scheduling state attached to a Node once it has been trained at least
 once: due date, interval, ease, lapse count. Untrained Nodes have no Card yet.
