@@ -333,7 +333,7 @@ function renderRepertoireList() {
       const mastery = summarizeMastery(repertoire.tree, repertoire.color);
       list.appendChild(
         el("li", { class: "repertoire-row" }, [
-          el("span", { class: "repertoire-name", text: repertoire.name }),
+          el("span", { class: "repertoire-name", text: repertoire.name, onclick: () => openBrowse(repertoire.id) }),
           el("span", { class: "repertoire-count", text: `${positionCount} position${positionCount === 1 ? "" : "s"}` }),
           el("span", {
             class: "repertoire-mastery",
