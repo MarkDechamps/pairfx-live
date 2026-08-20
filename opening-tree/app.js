@@ -14,6 +14,7 @@ import {
   buildTree,
   childrenOf,
   nodeAtPath,
+  resolveSquareClick,
 } from "./engine.js";
 
 const LICHESS_MAX_GAMES = 500;
@@ -31,6 +32,7 @@ const state = {
   speedFilter: [], // empty = all speeds
   ratedFilter: null, // null = any, true = rated only, false = casual only
   path: [], // SAN moves from the starting position to the currently viewed node
+  selectedSquare: null, // click-to-move: the source square selected on the board, if any
   loading: false,
   progress: null, // null | { kind: "lichess", gamesLoaded } | { kind: "chesscom", completed, total }
   error: null,
@@ -222,6 +224,7 @@ function currentTree() {
 function setColor(color) {
   state.color = color;
   state.path = [];
+  state.selectedSquare = null;
   state.showGames = false;
   render();
 }
@@ -231,6 +234,7 @@ function toggleSpeed(speed, checked) {
     ? [...state.speedFilter, speed]
     : state.speedFilter.filter((s) => s !== speed);
   state.path = [];
+  state.selectedSquare = null;
   state.showGames = false;
   render();
 }
@@ -238,18 +242,24 @@ function toggleSpeed(speed, checked) {
 function setRatedFilter(value) {
   state.ratedFilter = value === "any" ? null : value === "rated";
   state.path = [];
+  state.selectedSquare = null;
   state.showGames = false;
   render();
 }
 
+// Also how a board move completes: descend() doesn't care whether the SAN came from clicking a
+// row in the move list or clicking/selecting squares on the board (see handleSquareClick) — both
+// are just "browse to this child node."
 function descend(san) {
   state.path = [...state.path, san];
+  state.selectedSquare = null;
   state.showGames = false;
   render();
 }
 
 function jumpTo(plyCount) {
   state.path = state.path.slice(0, plyCount);
+  state.selectedSquare = null;
   state.showGames = false;
   render();
 }
@@ -420,15 +430,53 @@ function renderBreadcrumb() {
 function computeFen(path) {
   const chess = new Chess();
   for (const san of path) {
-    if (!chess.move(san)) break; // defensive: stop replay on an unexpected SAN mismatch
+    // chess.js throws (rather than returning falsy) on a SAN it can't replay — defensively stop
+    // rather than crash the render on an unexpected mismatch.
+    try {
+      chess.move(san);
+    } catch {
+      break;
+    }
   }
   return chess.fen();
+}
+
+// Resolves the current node's tracked children (SAN only) to board squares, so the interactive
+// board can match a click against them — chess.js is what knows square coordinates for a SAN,
+// so this replay happens here rather than in engine.js's chess.js-free resolveSquareClick().
+function trackedMovesFromFen(fen, node) {
+  const chess = new Chess(fen);
+  const moves = [];
+  for (const child of childrenOf(node)) {
+    // A tracked SAN should always replay against its own node's FEN, but chess.js *throws*
+    // (rather than returning falsy) on one it can't parse/legalize here — defensively skip
+    // rather than let one bad/ambiguous historical SAN take the whole board down.
+    try {
+      const move = chess.move(child.san);
+      moves.push({ san: child.san, from: move.from, to: move.to });
+      chess.undo();
+    } catch {
+      continue;
+    }
+  }
+  return moves;
+}
+
+function handleSquareClick(square, moves) {
+  const { selection, san } = resolveSquareClick(state.selectedSquare, square, moves);
+  if (san) {
+    descend(san); // also resets state.selectedSquare and re-renders
+    return;
+  }
+  state.selectedSquare = selection;
+  render();
 }
 
 function renderBoardPane(node) {
   const wrap = el("div", { class: "board-wrap" });
   const fen = computeFen(state.path);
-  wrap.appendChild(renderBoard(fen, state.color));
+  const trackedMoves = trackedMovesFromFen(fen, node);
+  wrap.appendChild(renderBoard(fen, state.color, trackedMoves));
 
   const record = `${node.wins}W ${node.draws}D ${node.losses}L`;
   wrap.appendChild(
@@ -489,7 +537,7 @@ function renderGamesPanel(node) {
   return wrap;
 }
 
-function renderBoard(fen, orientation) {
+function renderBoard(fen, orientation, trackedMoves) {
   const chess = new Chess(fen);
   const rows = chess.board();
 
@@ -498,17 +546,30 @@ function renderBoard(fen, orientation) {
     for (let colIndex = 0; colIndex < 8; colIndex += 1) {
       const rankNumber = 8 - rowIndex;
       const isLight = (colIndex + rankNumber) % 2 === 0;
-      cells.push({ piece: rows[rowIndex][colIndex], isLight });
+      const square = `${"abcdefgh"[colIndex]}${rankNumber}`;
+      cells.push({ piece: rows[rowIndex][colIndex], isLight, square });
     }
   }
   // A 180° rotation of the flat, row-major cell list is exactly a board flip.
   const ordered = orientation === "black" ? [...cells].reverse() : cells;
 
+  // Squares reachable from the current selection, via a tracked move — highlighted so it's
+  // obvious which of the (potentially several) legal-looking destinations actually have data.
+  const targets = state.selectedSquare
+    ? new Set(trackedMoves.filter((m) => m.from === state.selectedSquare).map((m) => m.to))
+    : null;
+
   const boardEl = el("div", { class: "board" });
   for (const cell of ordered) {
-    const square = el("div", { class: `square ${cell.isLight ? "light" : "dark"}` });
-    if (cell.piece) square.appendChild(pieceIcon(cell.piece));
-    boardEl.appendChild(square);
+    const classes = ["square", cell.isLight ? "light" : "dark"];
+    if (cell.square === state.selectedSquare) classes.push("selected");
+    if (targets?.has(cell.square)) classes.push("move-target");
+    const squareEl = el("div", {
+      class: classes.join(" "),
+      onclick: () => handleSquareClick(cell.square, trackedMoves),
+    });
+    if (cell.piece) squareEl.appendChild(pieceIcon(cell.piece));
+    boardEl.appendChild(squareEl);
   }
   return boardEl;
 }

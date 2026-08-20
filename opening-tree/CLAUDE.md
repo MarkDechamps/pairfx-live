@@ -71,8 +71,27 @@ or changing rated-only re-derives the tree from that same in-memory set (`filter
 games panel — see below — for the same reason). The board is rendered by replaying `state.path`
 through vendored `chess.js` to get a FEN, then drawing an 8x8 grid from `chess.js`'s own
 `.board()` output with the vendored piece sprite (see "Piece art" below) — no board-UI library is
-vendored, since this app only ever needs a read-only board (no drag-to-move input, no annotation
-drawing), unlike chess-classroom's `cm-chessboard` use case.
+vendored: this app only ever needs click-to-move input (no drag, no annotation drawing), which is
+cheap enough to hand-roll, unlike chess-classroom's `cm-chessboard` use case.
+
+**Board move input is a second way to invoke the exact same navigation as clicking a row in the
+move list** — the two are equivalent, not two features. Clicking a square with at least one
+tracked move out of it selects it (highlighting its reachable squares); clicking one of those
+target squares calls the same `descend(san)` the move list uses; clicking the selected square
+again deselects it; clicking anything else (an empty square, a piece with no tracked moves, or a
+legal-looking-but-untracked destination) is a no-op. Only moves this app actually has data for
+are reachable — this is a prep tool for browsing an opponent's real history, not a legal-move
+player, so a piece can only go where the tree says it's been played from that node. The
+chess.js-free matching logic (`resolveSquareClick`) lives in `engine.js` and is unit-tested;
+resolving each tracked child SAN to its `{from, to}` squares (`trackedMovesFromFen`, via
+`chess.move()`+`.undo()` per candidate) stays in `app.js`, same rule as `computeFen` above. If a
+tree node ever has two tracked moves sharing a from/to pair (distinct underpromotion pieces on
+the same squares, historically), the more-played one wins — `childrenOf()`'s sort order is
+preserved through to the matching, so this is a "most common continuation" default rather than an
+arbitrary pick. **Gotcha found implementing this:** `chess.js` 1.x *throws* on a SAN it can't
+legalize rather than returning falsy — both `computeFen` and `trackedMovesFromFen` wrap
+`chess.move()` in try/catch for this reason; a plain `if (!chess.move(san))` check (the original,
+pre-this-feature shape of `computeFen`) silently never catches anything.
 
 While a lookup is in flight, `renderStatus()` shows the `onProgress` data above as a progress
 bar: a real determinate fill for Chess.com (`completed/total` months), an indeterminate
@@ -98,8 +117,8 @@ narrow reasons — neither pulled in for what it's mainly known for:
   parsing; `engine.js`'s tree building doesn't touch it at all, see above).
 - **`cm-chessboard`** — vendored *only* for its bundled piece-art SVG sprite
   (`assets/pieces/standard.svg`, copied to `vendor/chess-pieces/`), not its board-rendering JS —
-  this board is custom-rendered and read-only (no drag-to-move input, no annotation drawing), so
-  none of cm-chessboard's actual code ships here, only the artwork.
+  this board is custom-rendered, with hand-rolled click-to-move input (no drag, no annotation
+  drawing), so none of cm-chessboard's actual code ships here, only the artwork.
 
 ## Piece art
 

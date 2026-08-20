@@ -10,6 +10,7 @@ import {
   buildTree,
   childrenOf,
   nodeAtPath,
+  resolveSquareClick,
 } from "./engine.js";
 
 // ---------------------------------------------------------------------------
@@ -322,4 +323,54 @@ test("nodeAtPath returns null for a path the tree doesn't contain", () => {
 test("nodeAtPath with an empty path returns the root itself", () => {
   const root = buildTree([record({ moves: ["e4"] })]);
   assert.equal(nodeAtPath(root, []), root);
+});
+
+// ---------------------------------------------------------------------------
+// resolveSquareClick — the click-to-move state machine for the interactive board. `moves` is
+// the current node's tracked children pre-resolved to {san, from, to} squares (app.js does that
+// resolving with chess.js, since only it knows square coordinates; this stays chess.js-free by
+// taking the from/to pairs as given).
+// ---------------------------------------------------------------------------
+
+test("resolveSquareClick selects a square that has a tracked move starting from it", () => {
+  const moves = [{ san: "e4", from: "e2", to: "e4" }];
+  assert.deepEqual(resolveSquareClick(null, "e2", moves), { selection: "e2", san: null });
+});
+
+test("resolveSquareClick leaves nothing selected when the clicked square has no tracked move", () => {
+  const moves = [{ san: "e4", from: "e2", to: "e4" }];
+  assert.deepEqual(resolveSquareClick(null, "d2", moves), { selection: null, san: null });
+});
+
+test("resolveSquareClick completes the move when the target square matches the selected piece", () => {
+  const moves = [{ san: "e4", from: "e2", to: "e4" }];
+  assert.deepEqual(resolveSquareClick("e2", "e4", moves), { selection: null, san: "e4" });
+});
+
+test("resolveSquareClick deselects when the already-selected square is clicked again", () => {
+  const moves = [{ san: "e4", from: "e2", to: "e4" }];
+  assert.deepEqual(resolveSquareClick("e2", "e2", moves), { selection: null, san: null });
+});
+
+test("resolveSquareClick switches selection to a different square that also has a tracked move", () => {
+  const moves = [
+    { san: "e4", from: "e2", to: "e4" },
+    { san: "d4", from: "d2", to: "d4" },
+  ];
+  assert.deepEqual(resolveSquareClick("e2", "d2", moves), { selection: "d2", san: null });
+});
+
+test("resolveSquareClick deselects on a click that is neither a valid target nor a selectable square", () => {
+  const moves = [{ san: "e4", from: "e2", to: "e4" }];
+  assert.deepEqual(resolveSquareClick("e2", "a5", moves), { selection: null, san: null });
+});
+
+test("resolveSquareClick prefers the more popular move when two tracked moves share a from/to pair", () => {
+  // e.g. two different historical promotion pieces on the same from/to squares — `moves` is
+  // expected pre-sorted most-played-first, same order childrenOf() already returns.
+  const moves = [
+    { san: "e8=Q", from: "e7", to: "e8" },
+    { san: "e8=N", from: "e7", to: "e8" },
+  ];
+  assert.deepEqual(resolveSquareClick("e7", "e8", moves), { selection: null, san: "e8=Q" });
 });

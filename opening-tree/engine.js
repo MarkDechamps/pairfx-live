@@ -203,3 +203,30 @@ export function nodeAtPath(root, path) {
   }
   return node;
 }
+
+/**
+ * Click-to-move state machine for the interactive board: given the currently selected source
+ * square (or null), the square just clicked, and the current node's tracked children resolved
+ * to `{san, from, to}` squares, decides what happens next. There is no chess-legality checking
+ * here — `moves` already *is* the set of moves this app has data for (the current node's
+ * children), so a click either matches one of them or it doesn't; app.js is the only place that
+ * knows how to turn a SAN into square coordinates (via chess.js), so it resolves `moves` before
+ * calling this.
+ *
+ * Returns `{selection, san}`: a click that completes a tracked move returns the move's `san`
+ * with `selection: null`; anything else returns `san: null` and the square that should now be
+ * selected (or null to deselect). Clicking the already-selected square again deselects it.
+ */
+export function resolveSquareClick(selectedSquare, square, moves) {
+  if (selectedSquare) {
+    // `moves` is expected pre-sorted most-played-first (same order childrenOf() returns), so
+    // when two tracked moves share a from/to pair — e.g. two different promotion pieces played
+    // historically on the same squares — the more popular one wins.
+    const move = moves.find((m) => m.from === selectedSquare && m.to === square);
+    if (move) return { selection: null, san: move.san };
+  }
+
+  const hasMoveFromSquare = moves.some((m) => m.from === square);
+  const selection = hasMoveFromSquare && square !== selectedSquare ? square : null;
+  return { selection, san: null };
+}
