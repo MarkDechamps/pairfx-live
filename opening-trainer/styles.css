@@ -579,6 +579,10 @@ button {
 .training-feedback {
   text-align: center;
   margin-bottom: var(--spacing-sm);
+  /* Reserves room for the longer wrong-move message up front, so switching between the short
+     prompt and the wrong-move feedback never reflows (and so shifts) the board sitting below
+     it, on any viewport width. */
+  min-height: 2.8em;
 }
 
 .training-feedback.prompt {
@@ -590,6 +594,10 @@ button {
   font-weight: bold;
 }
 
+.training .board-toolbar {
+  justify-content: flex-end;
+}
+
 .continue-training {
   display: block;
   margin: 0 auto var(--spacing-md);
@@ -599,11 +607,6 @@ button {
   background: var(--color-info);
   color: #fff;
   cursor: pointer;
-}
-
-.training .board {
-  max-width: 420px;
-  margin: 0 auto;
 }
 
 /* ---------- summary ---------- */

@@ -86,6 +86,16 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
   `dragAndDrop()` helper doesn't reliably trigger native DnD against this app's SVG pieces —
   see `CLAUDE.md`'s Judgment calls); click-to-move re-verified as a regression check.
 
+- **Drag-and-drop was actually broken for real users** despite passing its own verification:
+  `draggable="true"` had been set on the piece `<svg>`, which Chromium accepts silently but
+  never fires `dragstart` for on a real mouse gesture — only a dispatched, synthetic `DragEvent`
+  "worked," which is why the original verification missed it (see `CLAUDE.md`'s Judgment
+  calls, corrected in place rather than left as a second entry). Fixed by moving `draggable` to
+  the wrapping square `<div>` and re-verified with real `page.mouse.*` gestures.
+- **Training gained its own flip-board button** (`toggleSessionBoardFlip`/
+  `sessionBoardOrientation`), a live override on top of the settings screen's Board orientation
+  choice — same relationship browse's existing flip button has to its color-tab default.
+
 ## Not yet specified
 
 - Automatic transposition merging across move orders (ruled out for v1 by ADR 0001; could

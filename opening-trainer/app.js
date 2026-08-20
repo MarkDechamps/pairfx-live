@@ -160,17 +160,25 @@ function wireDragAndDrop(squareEl, pieceEl, square, canDragFrom, setSelectedSqua
   });
 
   if (!pieceEl || !canDragFrom) return;
-  pieceEl.setAttribute("draggable", "true");
-  pieceEl.addEventListener("dragstart", (event) => {
+  // `draggable` has to live on the square (an HTML <div>), not the piece (an inline <svg>).
+  // Chromium accepts draggable="true" on an <svg> without complaint, but never actually fires
+  // dragstart for it on a real mouse gesture — only synthetic, JS-dispatched DragEvents "work",
+  // which is exactly why that's a poor way to test this (see CLAUDE.md's Judgment calls: a real
+  // mouse drag was the only thing that caught this). `setDragImage` keeps the *visual* drag
+  // ghost as just the piece, not the whole square tile, so this doesn't look any different from
+  // dragging the SVG would have.
+  squareEl.setAttribute("draggable", "true");
+  squareEl.addEventListener("dragstart", (event) => {
     event.dataTransfer.setData("text/plain", square); // Firefox won't start a drag without this
     event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setDragImage(pieceEl, pieceEl.clientWidth / 2, pieceEl.clientHeight / 2);
     setSelectedSquare(square);
   });
   // Re-render on dragend (fires after drop, success or not) so a drop outside any square — or
   // one that only reselects rather than completes a move — still reflects the new selection.
   // Never render synchronously inside dragstart itself: that would tear down the very DOM node
   // the browser is currently dragging and abort the gesture.
-  pieceEl.addEventListener("dragend", () => render());
+  squareEl.addEventListener("dragend", () => render());
 }
 
 // ---------------------------------------------------------------------------
@@ -653,6 +661,7 @@ function startSession(scope, settings) {
     index: 0, // fixed-order methods only
     current: null,
     selectedSquare: null,
+    boardFlipped: false, // manual override of settings.boardOrientation, like browse's flip button
     wrongThisTurn: false,
     gradedThisTurn: false,
     results: { correct: 0, incorrect: 0 },
@@ -719,6 +728,20 @@ function continueAfterLenientMiss() {
 function endSession() {
   state.view = "summary";
   render();
+}
+
+function toggleSessionBoardFlip() {
+  state.session.boardFlipped = !state.session.boardFlipped;
+  render();
+}
+
+// The settings-screen orientation choice (auto/white/black) is the session's default; flipping
+// during training is a purely visual override on top of it, same relationship browse's flip
+// button has to the color-tab default — it never touches session.current or move input.
+function sessionBoardOrientation(session) {
+  const base = session.settings.boardOrientation === "auto" ? session.color : session.settings.boardOrientation;
+  if (!session.boardFlipped) return base;
+  return base === "white" ? "black" : "white";
 }
 
 // A pawn reaching the last rank offers one legal move per promotion piece, all sharing the same
@@ -795,7 +818,7 @@ function renderTrainingSession() {
   const repertoire = getRepertoireById(session.current.repertoireId);
   const expectedSan = path[path.length - 1];
   const beforeFen = computeFen(path.slice(0, -1));
-  const orientation = session.settings.boardOrientation === "auto" ? session.color : session.settings.boardOrientation;
+  const orientation = sessionBoardOrientation(session);
   const answered = session.results.correct + session.results.incorrect;
 
   const section = el("section", { class: "training" });
@@ -820,7 +843,14 @@ function renderTrainingSession() {
     section.appendChild(el("p", { class: "training-feedback prompt", text: "Your move — what's the prepared response here?" }));
   }
 
-  section.appendChild(renderTrainingBoard(beforeFen, orientation, expectedSan));
+  section.appendChild(
+    el("div", { class: "board-wrap" }, [
+      el("div", { class: "board-toolbar" }, [
+        el("button", { type: "button", class: "flip-board", text: "⇅ Flip board", onclick: toggleSessionBoardFlip }),
+      ]),
+      renderTrainingBoard(beforeFen, orientation, expectedSan),
+    ]),
+  );
   return section;
 }
 

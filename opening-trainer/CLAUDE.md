@@ -100,6 +100,12 @@ synchronously inside `dragstart` — the browser is actively dragging that DOM n
 gesture; the render happens on `drop`/`dragend` instead, same as the click flow only reacts on
 its second click.
 
+**The training screen has its own flip-board button**, separate from the settings screen's
+Board orientation choice (auto/white/black) — that choice is the session's fixed default
+(`sessionBoardOrientation`); the flip button is a live, visual-only override on top of it for
+this one session, same relationship browse's flip button has to its color-tab default. Neither
+flip touches `session.current` or move input, just which orientation `renderTrainingBoard` draws.
+
 The **training board accepts any `chess.js`-legal move**, not just tracked ones — unlike the
 browsing board (which only ever offers moves this app has data for, via `resolveSquareClick`),
 training has to let a genuinely wrong move happen for wrong-move handling to have something to
@@ -153,12 +159,21 @@ CLAUDE.md for the attribution/license detail; the footer credit line here matche
   (`leastRecentFirst`/`wayfinder/research/0001`), a deterministic ordering, not a shuffle. If a
   future session is tempted to add randomness back in (e.g. "make review-in-order less
   monotonous"), that's new scope, not a restoration of something that was correct before.
-- **Testing drag-and-drop in an automated browser needs real `DragEvent`s, not Playwright's
-  `page.dragAndDrop()`.** That convenience helper simulates a drag via mouse movement, which
-  doesn't reliably trigger native HTML5 drag-and-drop against this app's SVG-piece draggables —
-  it silently no-ops rather than erroring. Dispatch `dragstart`/`dragenter`/`dragover`/`drop`/
-  `dragend` directly (each with a real `DataTransfer`) on the piece/square elements instead; that
-  exercises `wireDragAndDrop`'s actual listeners the way a real mouse gesture would.
+- **Correction to an earlier version of this note — testing drag-and-drop needs a *real* mouse
+  gesture, not dispatched `DragEvent`s.** A first pass at drag support (`draggable="true"` set
+  directly on the piece `<svg>`) was "verified" by dispatching synthetic
+  `dragstart`/`dragenter`/`dragover`/`drop`/`dragend` events via `element.dispatchEvent(new
+  DragEvent(...))` — that passed, because dispatching a `DragEvent` directly only tests that
+  `wireDragAndDrop`'s *listeners* react correctly; it completely bypasses the browser's actual
+  native drag-initiation logic; a real mouse gesture (`mousedown` → `mousemove` → `mouseup`,
+  via Playwright's `page.mouse.*` or a real `page.dragAndDrop()`) never fired `dragstart` at
+  all for that `<svg>`. **`draggable="true"` on an SVG element doesn't reliably start a native
+  drag in Chromium for a real mouse gesture, even though the attribute is accepted without
+  complaint** — this is why `wireDragAndDrop` sets `draggable` on the wrapping square `<div>`
+  instead (an HTML element) and uses `dataTransfer.setDragImage(pieceEl, ...)` to keep the
+  *visual* drag ghost as just the piece. If drag-and-drop is touched again, verify with a real
+  mouse gesture, not a dispatched event — the dispatched-event version will falsely pass even
+  if dragging is completely broken for an actual user.
 - **Bug caught only by running the app, not by the test suite**, worth flagging since `app.js`
   is deliberately untested: `gradedThisTurn` was checked before grading a Card but never *set*,
   so a wrong-then-correct turn silently graded twice (once incorrect, once correct). Fixed by
