@@ -309,6 +309,26 @@ header .subtitle {
   margin: 0 auto;
 }
 
+.board-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--spacing-xs);
+}
+
+.flip-board {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-accent);
+  background: var(--color-secondary);
+  color: var(--color-light);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.flip-board:hover {
+  background: var(--color-accent);
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(8, 1fr);

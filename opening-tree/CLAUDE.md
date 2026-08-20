@@ -141,7 +141,13 @@ the footer credit line in `index.html`; that license is why this couldn't just b
   opponent who's mostly played Black historically shouldn't land on an empty White tree first.
 - **Board orientation follows the color tab** (White tab shows the board White-side-up, Black
   tab flips it) rather than always White-side-up, since the tree being browsed is specifically
-  "what they play as this color."
+  "what they play as this color." A "⇅ Flip board" button lets that default be overridden
+  manually (`state.boardFlipped`, `boardOrientation()` in `app.js`) — e.g. to view the position
+  from the opponent's own seat. Purely a display toggle, so it doesn't touch `state.path` or the
+  board's move-input selection; it resets to the tab's own default on a color-tab switch or a new
+  lookup, same as the other per-tab view state (`selectedSquare`, `showGames`), since it's a
+  transient viewing preference rather than one worth carrying across a context switch that
+  already changes which tree you're looking at.
 - **`maxPly = 40` in `buildTree`** — a prep tool has no use for a single very long game
   extending one branch of the tree 150 plies deep with no branching; capped well past any
   realistic "opening" depth without being unbounded.

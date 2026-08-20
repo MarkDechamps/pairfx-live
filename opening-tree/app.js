@@ -33,6 +33,7 @@ const state = {
   ratedFilter: null, // null = any, true = rated only, false = casual only
   path: [], // SAN moves from the starting position to the currently viewed node
   selectedSquare: null, // click-to-move: the source square selected on the board, if any
+  boardFlipped: false, // manual override of the color-tab-driven default orientation
   loading: false,
   progress: null, // null | { kind: "lichess", gamesLoaded } | { kind: "chesscom", completed, total }
   error: null,
@@ -179,6 +180,7 @@ async function handleLookup(event) {
     state.speedFilter = [];
     state.ratedFilter = null;
     state.path = [];
+    state.boardFlipped = false;
     state.showGames = false;
     state.hasResults = true;
   };
@@ -225,7 +227,21 @@ function setColor(color) {
   state.color = color;
   state.path = [];
   state.selectedSquare = null;
+  state.boardFlipped = false; // back to the sensible default for whichever color's tree this is
   state.showGames = false;
+  render();
+}
+
+// The board's actual orientation: the color tab's own sensible default ("what they play as this
+// color" reads naturally with that color's pieces at the bottom — see CLAUDE.md), unless the
+// flip button has manually overridden it for this browsing session.
+function boardOrientation() {
+  if (!state.boardFlipped) return state.color;
+  return state.color === "white" ? "black" : "white";
+}
+
+function toggleBoardFlip() {
+  state.boardFlipped = !state.boardFlipped;
   render();
 }
 
@@ -476,7 +492,18 @@ function renderBoardPane(node) {
   const wrap = el("div", { class: "board-wrap" });
   const fen = computeFen(state.path);
   const trackedMoves = trackedMovesFromFen(fen, node);
-  wrap.appendChild(renderBoard(fen, state.color, trackedMoves));
+
+  wrap.appendChild(
+    el("div", { class: "board-toolbar" }, [
+      el("button", {
+        type: "button",
+        class: "flip-board",
+        text: "⇅ Flip board",
+        onclick: toggleBoardFlip,
+      }),
+    ]),
+  );
+  wrap.appendChild(renderBoard(fen, boardOrientation(), trackedMoves));
 
   const record = `${node.wins}W ${node.draws}D ${node.losses}L`;
   wrap.appendChild(
