@@ -24,6 +24,8 @@ import {
   gradeCard,
   pickNextDue,
   leastRecentFirst,
+  isWellKnown,
+  summarizeMastery,
 } from "./engine.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -328,10 +330,15 @@ function renderRepertoireList() {
     const list = el("ul", { class: "repertoires" });
     for (const repertoire of repertoires) {
       const positionCount = nodesInScope(repertoire.tree).length;
+      const mastery = summarizeMastery(repertoire.tree, repertoire.color);
       list.appendChild(
         el("li", { class: "repertoire-row" }, [
           el("span", { class: "repertoire-name", text: repertoire.name }),
           el("span", { class: "repertoire-count", text: `${positionCount} position${positionCount === 1 ? "" : "s"}` }),
+          el("span", {
+            class: "repertoire-mastery",
+            text: `${mastery.known} known · ${mastery.learning} learning · ${mastery.new} new`,
+          }),
           el("button", { type: "button", text: "Browse", onclick: () => openBrowse(repertoire.id) }),
           el("button", { type: "button", text: "Train", onclick: () => openSettings({ kind: "repertoire", repertoireId: repertoire.id }) }),
           el("button", { type: "button", text: "Rename", onclick: () => runAction(handleRename(repertoire)) }),
@@ -457,11 +464,26 @@ function renderBreadcrumb() {
 
 function moveBadge(repertoire, childPath, childNode) {
   if (!isTraineeMove(childPath, repertoire.color)) return "opponent";
-  if (!childNode.card) return "new";
-  return isDue(childNode.card) ? "due" : "learned";
+  const card = childNode.card;
+  if (!card) return "new";
+  if (isDue(card)) return "due";
+  return isWellKnown(card) ? "known" : "learning";
 }
 
-const BADGE_LABEL = { opponent: "opponent's reply", new: "not trained yet", due: "due for review", learned: "learned" };
+const BADGE_LABEL = {
+  opponent: "opponent's reply",
+  new: "not trained yet",
+  due: "due for review",
+  learning: "learning",
+  known: "well known",
+};
+
+function formatMasterySummary(mastery) {
+  const total = mastery.new + mastery.learning + mastery.known;
+  if (!total) return null;
+  const duePart = mastery.dueCount ? ` (${mastery.dueCount} due now)` : "";
+  return `This line: ${mastery.known} well known · ${mastery.learning} learning · ${mastery.new} not yet trained${duePart}`;
+}
 
 function renderMoveList(repertoire, node) {
   const wrap = el("div", { class: "move-list" });
@@ -512,6 +534,10 @@ function renderBrowseBoardPane(repertoire, node) {
         : "End of this line — nothing tracked beyond here.",
     }),
   );
+
+  const masterySummary = formatMasterySummary(summarizeMastery(repertoire.tree, repertoire.color, state.path));
+  if (masterySummary) wrap.appendChild(el("p", { class: "mastery-summary", text: masterySummary }));
+
   return wrap;
 }
 
@@ -665,29 +691,48 @@ function startSession(scope, settings) {
     wrongThisTurn: false,
     gradedThisTurn: false,
     results: { correct: 0, incorrect: 0 },
+    autoPlayed: 0, // well-known moves skipped past rather than quizzed — see advanceSession
   };
   state.view = "train";
   advanceSession();
 }
 
+// Spaced-repetition's whole point is testing at increasing intervals to verify retention, so a
+// well-known-but-due Card there is still tested normally, on schedule — auto-play only applies
+// to the two non-SRS-scheduled Methods (review-in-order — how a Drill walks a branch — and
+// least-recent/unseen-first), matching ChessTempo's own "Don't show start moves threshold"
+// scope (leadup moves during branch training, not spaced-repetition review itself).
+function autoPlaysWellKnownMoves(session) {
+  return session.settings.method !== "spaced-repetition";
+}
+
 function advanceSession() {
   const session = state.session;
-  const next =
-    session.settings.method === "spaced-repetition"
-      ? pickNextDue(session.entries, { excludePath: session.current?.path })
-      : session.entries[session.index++] ?? null;
 
-  if (!next) {
-    state.view = "summary";
+  for (;;) {
+    const next =
+      session.settings.method === "spaced-repetition"
+        ? pickNextDue(session.entries, { excludePath: session.current?.path })
+        : session.entries[session.index++] ?? null;
+
+    if (!next) {
+      state.view = "summary";
+      render();
+      return;
+    }
+
+    if (autoPlaysWellKnownMoves(session) && isWellKnown(next.node.card)) {
+      session.autoPlayed += 1;
+      continue; // already known cold — don't stop and ask, just move on to the next one
+    }
+
+    session.current = next;
+    session.selectedSquare = null;
+    session.wrongThisTurn = false;
+    session.gradedThisTurn = false;
     render();
     return;
   }
-
-  session.current = next;
-  session.selectedSquare = null;
-  session.wrongThisTurn = false;
-  session.gradedThisTurn = false;
-  render();
 }
 
 // Grades the card currently being tested — exactly once per turn (a repeated wrong attempt, or
@@ -825,7 +870,10 @@ function renderTrainingSession() {
   section.appendChild(
     el("div", { class: "training-header" }, [
       el("span", { class: "training-repertoire", text: `${repertoire.name} · ${repertoire.color}` }),
-      el("span", { class: "training-progress", text: `${answered} answered · ${session.results.correct} correct` }),
+      el("span", {
+        class: "training-progress",
+        text: `${answered} answered · ${session.results.correct} correct${session.autoPlayed ? ` · ${session.autoPlayed} auto-played (well known)` : ""}`,
+      }),
       el("button", { type: "button", class: "end-session", text: "End session", onclick: endSession }),
     ]),
   );
@@ -860,9 +908,16 @@ function renderSessionSummary() {
 
   const section = el("section", { class: "summary-screen" });
   section.appendChild(el("h2", { text: "Session complete" }));
+  const autoPlayedNote = session.autoPlayed
+    ? ` ${session.autoPlayed} already-well-known move${session.autoPlayed === 1 ? "" : "s"} played automatically.`
+    : "";
+  const nothingQuizzedText =
+    session.autoPlayed && !total
+      ? "Every move in scope is already well known — nothing needed quizzing!"
+      : `Nothing was due — you're all caught up!${autoPlayedNote}`;
   section.appendChild(
     el("p", {
-      text: total ? `${session.results.correct} / ${total} correct.` : "Nothing was due — you're all caught up!",
+      text: total ? `${session.results.correct} / ${total} correct.${autoPlayedNote}` : nothingQuizzedText,
     }),
   );
   section.appendChild(

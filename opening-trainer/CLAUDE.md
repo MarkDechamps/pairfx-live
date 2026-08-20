@@ -58,14 +58,27 @@ just that entry's own stored path, replayed through `chess.js` in `app.js` the s
 computes a FEN — the opponent's moves are already baked into the path from whichever real
 uploaded game produced it.
 
-**Scope/Method** (`nodesInScope`, `trainableNodesInScope`, `shuffle`, `pickNextDue`) resolve
-`CONTEXT.md`'s Scope (branch / repertoire / all-of-color) and Method (review-in-order / random /
-spaced-repetition). Review-in-order needed no function of its own — `nodesInScope`'s own
+**Scope/Method** (`nodesInScope`, `trainableNodesInScope`, `leastRecentFirst`, `pickNextDue`)
+resolve `CONTEXT.md`'s Scope (branch / repertoire / all-of-color) and Method (review-in-order /
+least-recent-unseen-first / spaced-repetition — ChessTempo's real three, per
+`wayfinder/research/0001`). Review-in-order needed no function of its own — `nodesInScope`'s own
 pre-order walk (self, then children in first-encountered order) already *is* that traversal.
-Random is that same list shuffled once at session start (injectable RNG). Spaced-repetition is
-the only *dynamic* method: `pickNextDue` picks the live most-overdue Card each turn (falling back
-to introducing a card-less "new" node), with an `excludePath` so a just-lapsed card doesn't
-repeat on the very next turn.
+Least-recent/unseen-first reorders that same list (every card-less entry first, then trained
+ones oldest-due-first). Spaced-repetition is the only *dynamic* method: `pickNextDue` picks the
+live most-overdue Card each turn (falling back to introducing a card-less "new" node), with an
+`excludePath` so a just-lapsed card doesn't repeat on the very next turn.
+
+**Well-known moves are auto-played rather than quizzed**, for the two non-spaced-repetition
+Methods only (`autoPlaysWellKnownMoves` in `app.js`; `isWellKnown`/`WELL_KNOWN_REPS` in
+`engine.js`) — ChessTempo's "Don't show start moves threshold" (`wayfinder/research/0001`).
+`advanceSession` loops past any node whose Card has `WELL_KNOWN_REPS` (3) correct answers in a
+row, tallying `session.autoPlayed` for the training header/summary, until it finds one that
+still needs asking or runs out. Spaced-repetition is deliberately excluded — testing at
+increasing intervals to verify retention is the entire point of that Method, so a well-known
+Card due for review there is still tested normally, on schedule. `summarizeMastery` (new /
+learning / known / due counts) surfaces the same "well known" line to two other places: the
+repertoire list (mastery for the whole Repertoire) and the browse board pane (mastery for
+whatever branch is currently in view — "how well do we know this line").
 
 **`db.js`** persists one record per Repertoire (`{id, name, color, tree, createdAt, updatedAt}`)
 in a single IndexedDB object store. Every CRUD rule — blank-name/invalid-color rejection,
@@ -79,7 +92,7 @@ network. `openIndexedDbStore()` is the one real adapter; it's browser-API glue a
 upload one or more PGN files into an existing or brand-new repertoire, merging their games'
 variations straight into that repertoire's tree via `mergeMovetextIntoTree`); a browse screen
 reusing opening-tree's board/piece/click-to-move pattern exactly, with move-list rows showing a
-status badge (`moveBadge`: opponent's reply / not trained yet / due / learned) instead of
+status badge (`moveBadge`: opponent's reply / not trained yet / due / learning / well known) instead of
 opening-tree's win-rate bar, since a repertoire tracks Cards, not game outcomes; a training
 settings screen (Method, board orientation, wrong-move handling); and the training session
 itself. **Drill** (the per-branch button on the browse screen) skips the settings screen
@@ -153,6 +166,9 @@ CLAUDE.md for the attribution/license detail; the footer credit line here matche
 - **No promotion-piece picker.** `resolveLegalMove` defaults to queen when a click matches more
   than one legal move (i.e. an under-promotion). Fine for a repertoire trainer — under-promotion
   prep is rare — but a real gap if it ever isn't.
+- **`WELL_KNOWN_REPS` (3) is a fixed constant, not a setting.** ChessTempo's real equivalent
+  ("Don't show start moves threshold") is user-tunable; making it a setting here is legitimate
+  future scope (`wayfinder/map.md`'s Not yet specified), not something this v1 needed to ship.
 - **There is no "random" training Method, and there never should be one.** An earlier version
   of this app invented a shuffle for the third Method before the real ChessTempo manual text
   became available; the real third option is "Least recent/unseen first"

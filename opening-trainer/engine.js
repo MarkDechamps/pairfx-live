@@ -333,3 +333,34 @@ export function isTraineeMove(path, color) {
 export function trainableNodesInScope(root, color, path = []) {
   return nodesInScope(root, path).filter((entry) => isTraineeMove(entry.path, color));
 }
+
+/**
+ * A move solved correctly at least this many times *in a row* (`card.reps` — which, per
+ * `gradeCard`, resets to 0 on any lapse) counts as well known: ChessTempo manual §17.15.3's
+ * "Don't show start moves threshold" (`wayfinder/research/0001`), fixed here rather than a
+ * user-tunable setting (deferred — see `wayfinder/map.md`'s Not yet specified).
+ */
+export const WELL_KNOWN_REPS = 3;
+
+export function isWellKnown(card) {
+  return Boolean(card) && card.reps >= WELL_KNOWN_REPS;
+}
+
+/**
+ * "How well do we know this line": tallies every Trainee Node at or under `path` (default: the
+ * whole Repertoire) into new (no Card yet), learning (a Card, not yet well known), or known
+ * (`isWellKnown`) — plus a separate `dueCount` of Cards that are due right now, since a Node
+ * can be both "known" and "due" at once (due just means its scheduled review has arrived, not
+ * that it's forgotten).
+ */
+export function summarizeMastery(root, color, path = []) {
+  const summary = { new: 0, learning: 0, known: 0, dueCount: 0 };
+  for (const entry of trainableNodesInScope(root, color, path)) {
+    const card = entry.node.card;
+    if (!card) summary.new += 1;
+    else if (isWellKnown(card)) summary.known += 1;
+    else summary.learning += 1;
+    if (card && isDue(card)) summary.dueCount += 1;
+  }
+  return summary;
+}

@@ -36,6 +36,13 @@ The spaced-repetition scheduling state attached to a Node once it has been train
 once: due date, interval, ease, lapse count. Untrained Nodes have no Card yet.
 _Avoid_: SRS state (fine in prose, but "Card" is the term in code/UI)
 
+**Well known**:
+A Card solved correctly at least `WELL_KNOWN_REPS` times *in a row* (ChessTempo manual
+§17.15.3's "Don't show start moves threshold" — `wayfinder/research/0001`). Well-known Trainee
+Nodes are auto-played rather than quizzed by the two non-spaced-repetition Methods, and are
+what "known" counts as in a mastery summary (new / learning / known).
+_Avoid_: Mastered, learned (pick one term; this codebase's is "well known" / "known")
+
 **Training Session**:
 One run of drilling, scoped and ordered by its Training Settings. Ephemeral — not persisted
 across a page reload.

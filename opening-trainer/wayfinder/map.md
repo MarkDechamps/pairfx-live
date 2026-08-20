@@ -95,6 +95,16 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
 - **Training gained its own flip-board button** (`toggleSessionBoardFlip`/
   `sessionBoardOrientation`), a live override on top of the settings screen's Board orientation
   choice — same relationship browse's existing flip button has to its color-tab default.
+- **Per-line mastery indicator** (`summarizeMastery`, TDD, 54/54 tests green): new/learning/known
+  counts (plus a due count) shown on the repertoire list (whole-Repertoire) and the browse board
+  pane (whatever branch is currently in view) — "how well do we know this line," requested
+  directly by name.
+- **Well-known moves are now auto-played instead of quizzed** (`isWellKnown`/`WELL_KNOWN_REPS`,
+  `autoPlaysWellKnownMoves`) — ChessTempo's "Don't show start moves threshold"
+  (`wayfinder/research/0001`), requested directly ("if you know certain moves already very
+  well... [ChessTempo] plays them for you"). Deliberately scoped to the two non-spaced-repetition
+  Methods only — spaced-repetition's whole point is testing at increasing intervals to verify
+  retention, so it still tests a well-known-but-due Card normally.
 
 ## Not yet specified
 
@@ -110,11 +120,12 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
   gives for free.
 - Real ChessTempo features confirmed by `wayfinder/research/0001` but not built into this v1:
   move previews (arrows showing the correct move before/after an attempt), pause-at-end-of-line,
-  leadup/reinforcement tuning for branch training, opening-tree line management (disable/delete/
-  copy lines, with the transposition-truncation warning that implies), repertoire shortcuts,
-  an opening-explorer panel, an engine-analysis panel, and move comments/annotations. All
-  legitimate, all beyond this v1's destination — a candidate list for a future map, not this
-  one.
+  opening-tree line management (disable/delete/copy lines, with the transposition-truncation
+  warning that implies), repertoire shortcuts, an opening-explorer panel, an engine-analysis
+  panel, and move comments/annotations. All legitimate, all beyond this v1's destination — a
+  candidate list for a future map, not this one.
+- Making `WELL_KNOWN_REPS` a user-tunable setting (ChessTempo's real "Don't show start moves
+  threshold" is), rather than the fixed constant `engine.js` uses now.
 
 ## Out of scope
 

@@ -187,6 +187,12 @@ button {
   flex: 0 0 auto;
 }
 
+.repertoire-mastery {
+  color: var(--color-success);
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+}
+
 .repertoire-row button {
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--border-radius);
@@ -448,6 +454,13 @@ button {
   margin-top: var(--spacing-sm);
 }
 
+.mastery-summary {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--color-success);
+  margin-top: var(--spacing-xs);
+}
+
 /* ---------- move list ---------- */
 
 .move-list table {
@@ -497,7 +510,11 @@ button {
   color: var(--color-warning);
 }
 
-.badge-learned {
+.badge-learning {
+  color: var(--color-light);
+}
+
+.badge-known {
   color: var(--color-success);
 }
 

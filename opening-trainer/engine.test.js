@@ -15,6 +15,9 @@ import {
   resolveSquareClick,
   isTraineeMove,
   trainableNodesInScope,
+  isWellKnown,
+  WELL_KNOWN_REPS,
+  summarizeMastery,
 } from "./engine.js";
 
 // ---------------------------------------------------------------------------
@@ -368,4 +371,43 @@ test("trainableNodesInScope can be scoped to a branch, same as nodesInScope", ()
   const root = buildRepertoireTree([pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *")]);
   const paths = trainableNodesInScope(root, "white", ["e4", "e5"]).map((entry) => entry.path.join(" "));
   assert.deepEqual(paths, ["e4 e5 Nf3", "e4 e5 Nf3 Nc6 Bb5"]);
+});
+
+// ---------------------------------------------------------------------------
+// isWellKnown / summarizeMastery — "how well do we know this line" (ChessTempo manual
+// §17.15.3's "Don't show start moves threshold": a move solved correctly this many times in a
+// row in a row is well known — see wayfinder/research/0001).
+// ---------------------------------------------------------------------------
+
+test("isWellKnown is false for a card-less (untrained) node", () => {
+  assert.equal(isWellKnown(undefined), false);
+});
+
+test("isWellKnown is false below the reps threshold, true at or above it", () => {
+  assert.equal(isWellKnown({ reps: WELL_KNOWN_REPS - 1 }), false);
+  assert.equal(isWellKnown({ reps: WELL_KNOWN_REPS }), true);
+  assert.equal(isWellKnown({ reps: WELL_KNOWN_REPS + 5 }), true);
+});
+
+test("summarizeMastery tallies every Trainee Node in scope as new, learning, or known", () => {
+  const root = buildRepertoireTree([pgn("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *")]);
+  // e4: untrained (new); Nf3: learning (below threshold); Bb5: known (at threshold)
+  root.children.e4.children.e5.children.Nf3.card = { reps: WELL_KNOWN_REPS - 1, due: "2099-01-01T00:00:00Z" };
+  root.children.e4.children.e5.children.Nf3.children.Nc6.children.Bb5.card = {
+    reps: WELL_KNOWN_REPS,
+    due: "2099-01-01T00:00:00Z",
+  };
+
+  assert.deepEqual(summarizeMastery(root, "white"), { new: 1, learning: 1, known: 1, dueCount: 0 });
+});
+
+test("summarizeMastery counts due cards separately from the new/learning/known split", () => {
+  const root = buildRepertoireTree([pgn("1. e4 e5 *")]);
+  root.children.e4.card = { reps: 1, due: "2000-01-01T00:00:00Z" }; // long past due
+  assert.deepEqual(summarizeMastery(root, "white"), { new: 0, learning: 1, known: 0, dueCount: 1 });
+});
+
+test("summarizeMastery can be scoped to a branch, same as nodesInScope/trainableNodesInScope", () => {
+  const root = buildRepertoireTree([pgn("1. e4 e5 2. Nf3 Nc6 *"), pgn("1. d4 d5 *")]);
+  assert.deepEqual(summarizeMastery(root, "white", ["e4", "e5"]), { new: 1, learning: 0, known: 0, dueCount: 0 });
 });
