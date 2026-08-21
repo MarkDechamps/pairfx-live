@@ -403,11 +403,15 @@ function toggleBoardFlip() {
   render();
 }
 
+function oppositeColor(color) {
+  return color === "white" ? "black" : "white";
+}
+
 // The board's default orientation is the repertoire's own color — "what you play as" reads
 // naturally with that color's pieces at the bottom, same rule as opening-tree — unless flipped.
 function boardOrientationForBrowse(repertoire) {
   if (!state.boardFlipped) return repertoire.color;
-  return repertoire.color === "white" ? "black" : "white";
+  return oppositeColor(repertoire.color);
 }
 
 function trackedMovesFromFen(fen, node) {
@@ -435,29 +439,41 @@ function handleBrowseSquareClick(square, moves) {
   render();
 }
 
+// Shared by renderStaticBoard (browse) and renderTrainingBoard (training) — both draw the same
+// grid of squares/pieces/drag-handlers and differ only in which classes a square gets, what a
+// click/drop on it does, and which squares are draggable.
+function renderBoardSquares(cells, { squareClasses, onSquareClick, canDragFrom, onDragSelect }) {
+  const boardEl = el("div", { class: "board" });
+  for (const cell of cells) {
+    const classes = ["square", cell.isLight ? "light" : "dark", ...squareClasses(cell.square)];
+
+    const handleClick = () => onSquareClick(cell.square);
+    const squareEl = el("div", { class: classes.join(" "), "data-square": cell.square, onclick: handleClick });
+    const pieceEl = cell.piece ? pieceIcon(cell.piece) : null;
+    if (pieceEl) squareEl.appendChild(pieceEl);
+
+    wireDragAndDrop(squareEl, pieceEl, cell.square, canDragFrom(cell.square), onDragSelect, handleClick);
+
+    boardEl.appendChild(squareEl);
+  }
+  return boardEl;
+}
+
 function renderStaticBoard(fen, orientation, trackedMoves, onSquareClick) {
   const cells = boardCells(fen, orientation);
   const targets = state.selectedSquare
     ? new Set(trackedMoves.filter((m) => m.from === state.selectedSquare).map((m) => m.to))
     : null;
 
-  const boardEl = el("div", { class: "board" });
-  for (const cell of cells) {
-    const classes = ["square", cell.isLight ? "light" : "dark"];
-    if (cell.square === state.selectedSquare) classes.push("selected");
-    if (targets?.has(cell.square)) classes.push("move-target");
-
-    const handleClick = () => onSquareClick(cell.square, trackedMoves);
-    const squareEl = el("div", { class: classes.join(" "), "data-square": cell.square, onclick: handleClick });
-    const pieceEl = cell.piece ? pieceIcon(cell.piece) : null;
-    if (pieceEl) squareEl.appendChild(pieceEl);
-
-    const canDragFrom = trackedMoves.some((m) => m.from === cell.square);
-    wireDragAndDrop(squareEl, pieceEl, cell.square, canDragFrom, (sq) => { state.selectedSquare = sq; }, handleClick);
-
-    boardEl.appendChild(squareEl);
-  }
-  return boardEl;
+  return renderBoardSquares(cells, {
+    squareClasses: (square) => [
+      ...(square === state.selectedSquare ? ["selected"] : []),
+      ...(targets?.has(square) ? ["move-target"] : []),
+    ],
+    onSquareClick: (square) => onSquareClick(square, trackedMoves),
+    canDragFrom: (square) => trackedMoves.some((m) => m.from === square),
+    onDragSelect: (sq) => { state.selectedSquare = sq; },
+  });
 }
 
 function renderBreadcrumb() {
@@ -817,7 +833,7 @@ function toggleSessionBoardFlip() {
 function sessionBoardOrientation(session) {
   const base = session.settings.boardOrientation === "auto" ? session.color : session.settings.boardOrientation;
   if (!session.boardFlipped) return base;
-  return base === "white" ? "black" : "white";
+  return oppositeColor(base);
 }
 
 // A pawn reaching the last rank offers one legal move per promotion piece, all sharing the same
@@ -868,24 +884,16 @@ function renderTrainingBoard(fen, orientation, expectedSan) {
     }
   }
 
-  const boardEl = el("div", { class: "board" });
-  for (const cell of cells) {
-    const classes = ["square", cell.isLight ? "light" : "dark"];
-    if (cell.square === session.selectedSquare) classes.push("selected");
-    if (targets?.has(cell.square)) classes.push("move-target");
-    if (cell.square === hintFrom || cell.square === hintTo) classes.push("hint");
-
-    const handleClick = () => attemptTrainingMove(cell.square, legalMoves);
-    const squareEl = el("div", { class: classes.join(" "), "data-square": cell.square, onclick: handleClick });
-    const pieceEl = cell.piece ? pieceIcon(cell.piece) : null;
-    if (pieceEl) squareEl.appendChild(pieceEl);
-
-    const canDragFrom = legalMoves.some((m) => m.from === cell.square);
-    wireDragAndDrop(squareEl, pieceEl, cell.square, canDragFrom, (sq) => { session.selectedSquare = sq; }, handleClick);
-
-    boardEl.appendChild(squareEl);
-  }
-  return boardEl;
+  return renderBoardSquares(cells, {
+    squareClasses: (square) => [
+      ...(square === session.selectedSquare ? ["selected"] : []),
+      ...(targets?.has(square) ? ["move-target"] : []),
+      ...(square === hintFrom || square === hintTo ? ["hint"] : []),
+    ],
+    onSquareClick: (square) => attemptTrainingMove(square, legalMoves),
+    canDragFrom: (square) => legalMoves.some((m) => m.from === square),
+    onDragSelect: (sq) => { session.selectedSquare = sq; },
+  });
 }
 
 function renderTrainingSession() {
