@@ -506,6 +506,8 @@ button {
   padding: var(--spacing-sm);
   margin-top: var(--spacing-sm);
   text-align: left;
+  max-height: 8rem;
+  overflow-y: auto;
 }
 
 /* ---------- move list ---------- */
@@ -638,6 +640,18 @@ button {
   color: var(--color-danger);
   cursor: pointer;
   font-size: 0.85rem;
+}
+
+.training-new-variation {
+  text-align: center;
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--color-info);
+  background: var(--color-secondary);
+  color: var(--color-info);
+  font-size: 0.85rem;
+  font-weight: bold;
 }
 
 .training-feedback {

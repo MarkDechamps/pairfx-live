@@ -65,7 +65,9 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
 - [Training settings depth: full scope×method settings screen in v1](../CONTEXT.md#language):
   not deferred; requester took the recommended choice.
 - [Wrong-move handling: strict](../CONTEXT.md#language) (must play the repertoire's move before
-  the line continues); requester took the recommended choice.
+  the line continues) was the recommended default the requester took — but it shipped as one of
+  the settings screen's own Training Settings (`CONTEXT.md`'s "Scope + Method + wrong-move
+  handling + board orientation"), a per-session strict/lenient choice, not a hardcoded behavior.
 - [Session scope: chart + build a working v1 now](./tickets/): requester took the recommended
   choice; this map's tickets are execution slices, not open decisions (see Notes).
 - [Node identity is the SAN path, not the FEN](../docs/adr/0001-node-identity-is-san-path-not-fen.md):
@@ -113,13 +115,20 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
 - **Comments toggle**: `{...}` comments from uploaded PGNs are no longer discarded — captured
   per-Node (`Comment` in `CONTEXT.md`), stripped of ChessBase drawing commands, and shown behind
   a "Show comments" checkbox on the browse screen (off by default).
+- [Surface a Training Session's variation/branch switches](./tickets/0007-variation-switch-indicator.md):
+  a Scope broader than one branch used to jump silently from a finished line to an unrelated one;
+  `isVariationSwitch` (`engine.js`, TDD, 6/6 new tests) tells that apart from `advanceSession`'s
+  well-known-move auto-play (always a deeper step on the same line) as a pure function of the two
+  paths, surfaced via a new `.training-new-variation` banner reusing the app's existing
+  informational-banner look.
 
 ## Not yet specified
 
 - Automatic transposition merging across move orders (ruled out for v1 by ADR 0001; could
   become its own future map if it turns out to matter in practice).
-- Handling of PGN comments/NAGs/clock annotations on import — v1 parses moves and variations
-  only; whether annotations are worth surfacing later isn't specified.
+- Handling of PGN NAGs/clock annotations on import — `{...}` comments are now decided and shipped
+  (see "Decisions so far"); NAGs and clock annotations are still parsed-and-discarded, and
+  whether they're worth surfacing later isn't specified.
 - Import/export of a repertoire's Card (SRS) state as its own file (backup/portability beyond
   "re-upload the PGNs"), separate from the PGN-upload flow.
 - Repertoire management polish beyond create/rename/delete (e.g. merging two repertoires,
