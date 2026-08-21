@@ -1,1 +1,6 @@
 node_modules/
+
+# Real repertoire PGNs used for local manual QA (e.g. purchased chess books) are copyrighted
+# and must never be committed — only hand-written test fixtures belong in git.
+*.pgn
+*.pgn:Zone.Identifier
