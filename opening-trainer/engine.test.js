@@ -19,6 +19,7 @@ import {
   WELL_KNOWN_REPS,
   summarizeMastery,
   mergeGamesIntoTree,
+  isVariationSwitch,
 } from "./engine.js";
 
 // ---------------------------------------------------------------------------
@@ -402,6 +403,38 @@ test("pickNextDue can exclude the node just answered, so it doesn't repeat immed
     { path: ["b"], node: { card: { due: "2025-12-31T00:00:00Z" } } },
   ];
   assert.deepEqual(pickNextDue(nodes, { now, excludePath: ["a"] }).path, ["b"]);
+});
+
+// ---------------------------------------------------------------------------
+// isVariationSwitch — a Training Session at a Scope broader than one branch moves between
+// unrelated variations turn to turn; this flags exactly the transitions that aren't a
+// continuation of the line just drilled, so app.js can surface them (as opposed to
+// advanceSession's well-known-move auto-play, which stays within the same line and must stay
+// silent).
+// ---------------------------------------------------------------------------
+
+test("isVariationSwitch is false when the next path simply continues deeper on the same line", () => {
+  assert.equal(isVariationSwitch(["e4"], ["e4", "e5", "Nf3"]), false);
+});
+
+test("isVariationSwitch is false for the exact same path", () => {
+  assert.equal(isVariationSwitch(["e4", "e5"], ["e4", "e5"]), false);
+});
+
+test("isVariationSwitch is true when the next path diverges from a shared ancestor (a sibling variation)", () => {
+  assert.equal(isVariationSwitch(["e4", "e5", "Nf3", "Nc6", "Bb5"], ["e4", "e5", "Nf3", "Nc6", "Bc4"]), true);
+});
+
+test("isVariationSwitch is true when the next path belongs to an unrelated opening entirely", () => {
+  assert.equal(isVariationSwitch(["e4", "e5", "Nf3"], ["d4", "d5"]), true);
+});
+
+test("isVariationSwitch is true when the next path is shallower than the one just finished", () => {
+  assert.equal(isVariationSwitch(["e4", "e5", "Nf3"], ["e4"]), true);
+});
+
+test("isVariationSwitch is false against an empty previous path — nothing to have switched away from", () => {
+  assert.equal(isVariationSwitch([], ["e4"]), false);
 });
 
 // ---------------------------------------------------------------------------

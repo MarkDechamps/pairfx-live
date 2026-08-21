@@ -25,6 +25,7 @@ import {
   leastRecentFirst,
   isWellKnown,
   summarizeMastery,
+  isVariationSwitch,
 } from "./engine.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -716,6 +717,7 @@ function startSession(scope, settings) {
     gradedThisTurn: false,
     results: { correct: 0, incorrect: 0 },
     autoPlayed: 0, // well-known moves skipped past rather than quizzed — see advanceSession
+    newVariation: false, // this turn's node isn't a continuation of the last one — see advanceSession
   };
   state.view = "train";
   advanceSession();
@@ -750,6 +752,11 @@ function advanceSession() {
       continue; // already known cold — don't stop and ask, just move on to the next one
     }
 
+    // Flag a genuine variation switch (a Scope broader than one branch moving on to an unrelated
+    // line) so the training screen can surface it — but only once there's a previous turn to
+    // have switched away from, and never for the well-known-move auto-play above, which always
+    // steps deeper along the same line (isVariationSwitch returns false for that case).
+    session.newVariation = Boolean(session.current) && isVariationSwitch(session.current.path, next.path);
     session.current = next;
     session.selectedSquare = null;
     session.wrongThisTurn = false;
@@ -901,6 +908,12 @@ function renderTrainingSession() {
       el("button", { type: "button", class: "end-session", text: "End session", onclick: endSession }),
     ]),
   );
+
+  if (session.newVariation) {
+    section.appendChild(
+      el("p", { class: "training-new-variation", text: "New line — this is a different variation than the one you just finished." }),
+    );
+  }
 
   if (session.wrongThisTurn) {
     const message =

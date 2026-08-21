@@ -342,6 +342,24 @@ export function pickNextDue(nodes, { now = new Date(), excludePath } = {}) {
 }
 
 /**
+ * Whether `nextPath` is a genuine variation switch away from `previousPath` — the "we've moved
+ * to training a different variation" transition a Training Session should surface — rather than
+ * a continuation of the same line. `nextPath` continues `previousPath` when `previousPath` is an
+ * exact prefix of it (same moves so far, just deeper); anything else — diverging at a shared
+ * ancestor (a sibling variation branching off), belonging to an unrelated opening entirely, or
+ * even just being shallower (jumping back up the tree) — is a switch.
+ *
+ * This is exactly what distinguishes `advanceSession`'s well-known-move auto-play (which always
+ * steps deeper along the very line it's already on, so this returns false for it) from a session
+ * at a Scope broader than one branch moving on to an unrelated line once the current one is
+ * exhausted (this returns true).
+ */
+export function isVariationSwitch(previousPath, nextPath) {
+  if (nextPath.length < previousPath.length) return true;
+  return !previousPath.every((san, i) => san === nextPath[i]);
+}
+
+/**
  * Click-to-move state machine for the browsing board — ported verbatim from
  * opening-tree/engine.js, whose doc comment this one matches. Only the *browsing* board uses
  * this: it only ever needs to move to a tracked child, so a click either matches one of the

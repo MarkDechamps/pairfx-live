@@ -113,6 +113,12 @@ a branch/repertoire/all-of-color with a ChessTempo-§17.15-style training-settin
 - **Comments toggle**: `{...}` comments from uploaded PGNs are no longer discarded — captured
   per-Node (`Comment` in `CONTEXT.md`), stripped of ChessBase drawing commands, and shown behind
   a "Show comments" checkbox on the browse screen (off by default).
+- [Surface a Training Session's variation/branch switches](./tickets/0007-variation-switch-indicator.md):
+  a Scope broader than one branch used to jump silently from a finished line to an unrelated one;
+  `isVariationSwitch` (`engine.js`, TDD, 6/6 new tests) tells that apart from `advanceSession`'s
+  well-known-move auto-play (always a deeper step on the same line) as a pure function of the two
+  paths, surfaced via a new `.training-new-variation` banner reusing the app's existing
+  informational-banner look.
 
 ## Not yet specified
 
