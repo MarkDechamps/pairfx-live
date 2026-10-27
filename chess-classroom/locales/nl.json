@@ -41,5 +41,15 @@
   "engineAnalysis": "Analyse",
   "engineLoading": "engine laden…",
   "engineDepth": "diepte {depth}",
-  "engineUnavailable": "engine niet beschikbaar"
+  "engineUnavailable": "engine niet beschikbaar",
+  "engineSettings": "Engine-instellingen",
+  "engineLines": "Lijnen",
+  "engineSearchDepth": "Diepte",
+  "engineHash": "Geheugen (hash)",
+  "engineHashMb": "{mb} MB",
+  "engineArrows": "Toon pijlen op het lerarenbord",
+  "engineSettingsNote": "Alleen jij ziet dit. Een lagere diepte is sneller, een hogere sterker.",
+  "engineReset": "Standaard",
+  "close": "Sluiten",
+  "engineProjectorArrows": "Toon engine-pijlen ook op het projectorscherm (leerlingen)"
 }

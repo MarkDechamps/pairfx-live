@@ -19,6 +19,8 @@ const ARROW_TYPE_BY_COLOR = {
   info: { class: "arrow-info" },
   danger: { class: "arrow-danger" },
   warning: { class: "arrow-warning" },
+  // Engine suggestions the teacher chose to show the students (best = engine1).
+  ...Object.fromEntries([1, 2, 3, 4, 5].map((rank) => [`engine${rank}`, { class: `arrow-engine-${rank}` }])),
 };
 const MARKER_TYPE_BY_COLOR = {
   success: { class: "marker-circle-success", slice: "markerCircle" },

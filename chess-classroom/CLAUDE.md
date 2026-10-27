@@ -265,6 +265,20 @@ weren't specified and needed a decision during implementation:
     `position`/`go` to a still-searching single-threaded stockfish.js crashed its wasm
     (`unreachable`) when stepping quickly through moves — found in browser testing.
   - Lines are display-only (not clickable/playable); scores are from White's perspective.
+  - **Gear button next to the checkbox** opens a `<dialog>` (the app's only modal; rename/delete
+    still use native prompt/confirm) with Lines (MultiPV 1-5), Depth (8-30), Hash (16-256 MB) and
+    a "show arrows" toggle. Defaults are the values above; saved in `localStorage`
+    (`chess-classroom:engineSettings`, teacher-only, not synced) and applied live via
+    `session.configure()`, which, like position changes, only sends `setoption` between
+    searches. **Threads is deliberately absent**: the vendored build is single-threaded.
+  - **Engine arrows** (first move of each line, best strongest) use their own `ENGINE_ARROW_TYPES`
+    in `app.js`, not RightClickAnnotator's types, and `serializeBoardAnnotations` filters them
+    out; otherwise they'd be copied into `state.annotations` and synced to the projector.
+  - **Engine arrows on the projector are an explicit opt-in** (`projectorArrows`, default off, a
+    checkbox in the same dialog). When on, `publishIfSynced` appends them to the pointer's `arrows`
+    as `engine1`..`engine5` colors (rendered by `projector.js` with the same `arrow-engine-N` CSS),
+    only while the analysis matches the shown position, and still subject to the "Toon pijlen"
+    overlay. `syncProjectorEngineArrows` republishes when they change, since engine output is async.
 
 ## Language note
 

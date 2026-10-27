@@ -7,6 +7,9 @@ import {
   formatScore,
   pvToSan,
   createEngineSession,
+  normalizeEngineSettings,
+  lineArrows,
+  DEFAULT_ENGINE_SETTINGS,
 } from "./engineAnalysis.js";
 
 const START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -86,9 +89,14 @@ function fakeEngine() {
 
 test("session configures the engine once, then starts a search per position", () => {
   const { sent, session } = fakeEngine();
-  assert.deepEqual(sent, ["uci", "setoption name MultiPV value 2", "isready"]);
+  assert.deepEqual(sent, [
+    "uci",
+    "setoption name MultiPV value 2",
+    "setoption name Hash value 16",
+    "isready",
+  ]);
   session.analyze(START_FEN);
-  assert.deepEqual(sent.slice(3), [`position fen ${START_FEN}`, "go depth 12"]);
+  assert.deepEqual(sent.slice(4), [`position fen ${START_FEN}`, "go depth 12"]);
   assert.equal(session.isSearching(), true);
 });
 
@@ -120,12 +128,12 @@ test("changing position stops the old search and waits for its bestmove before s
   const { sent, updates, session } = fakeEngine();
   session.analyze(START_FEN);
   session.analyze(AFTER_E4_FEN);
-  assert.deepEqual(sent.slice(5), ["stop"], "no position/go while the old search still runs");
+  assert.deepEqual(sent.slice(6), ["stop"], "no position/go while the old search still runs");
   const before = updates.length;
   session.handleLine("info depth 9 multipv 1 score cp 30 pv d2d4"); // old search, stale
   assert.equal(updates.length, before);
   session.handleLine("bestmove d2d4");
-  assert.deepEqual(sent.slice(6), [`position fen ${AFTER_E4_FEN}`, "go depth 12"]);
+  assert.deepEqual(sent.slice(7), [`position fen ${AFTER_E4_FEN}`, "go depth 12"]);
   assert.equal(session.isSearching(), true);
   session.handleLine("info depth 9 multipv 1 score cp -25 pv e7e5");
   assert.deepEqual(updates.at(-1).lines, [{ multipv: 1, score: { type: "cp", value: -25 }, pv: ["e7e5"] }]);
@@ -139,9 +147,9 @@ test("several quick position changes send one stop and then search only the late
   session.analyze(AFTER_E4_FEN);
   session.analyze("8/8/8/8/8/8/k7/4K3 w - - 0 1");
   session.analyze(START_FEN); // back to where the running search already is
-  assert.deepEqual(sent.slice(5), ["stop"]);
+  assert.deepEqual(sent.slice(6), ["stop"]);
   session.handleLine("bestmove e2e4");
-  assert.deepEqual(sent.slice(6), [`position fen ${START_FEN}`, "go depth 12"]);
+  assert.deepEqual(sent.slice(7), [`position fen ${START_FEN}`, "go depth 12"]);
 });
 
 test("a search that finished on its own doesn't send a stop on the next position", () => {
@@ -182,4 +190,91 @@ test("stop() while idle sends nothing", () => {
   session.handleLine("bestmove e2e4");
   session.stop();
   assert.equal(sent.includes("stop"), false);
+});
+
+// ---- configure ---------------------------------------------------------------
+
+test("configure while idle with no position only sends the changed options", () => {
+  const { sent, session } = fakeEngine();
+  const before = sent.length;
+  session.configure({ multiPv: 4, depth: 15, hash: 64 });
+  assert.deepEqual(sent.slice(before), ["setoption name MultiPV value 4", "setoption name Hash value 64"]);
+});
+
+test("configure during a search stops it and applies options before the restart", () => {
+  const { sent, session } = fakeEngine();
+  session.analyze(START_FEN);
+  const before = sent.length;
+  session.configure({ multiPv: 1, depth: 9, hash: 32 });
+  assert.deepEqual(sent.slice(before), ["stop"]);
+  session.handleLine("bestmove e2e4");
+  assert.deepEqual(sent.slice(before + 1), [
+    "setoption name MultiPV value 1",
+    "setoption name Hash value 32",
+    `position fen ${START_FEN}`,
+    "go depth 9",
+  ]);
+});
+
+test("configure with only a depth change restarts without resending options", () => {
+  const { sent, session } = fakeEngine();
+  session.analyze(START_FEN);
+  session.handleLine("bestmove e2e4");
+  const before = sent.length;
+  session.configure({ depth: 20 });
+  assert.deepEqual(sent.slice(before), [`position fen ${START_FEN}`, "go depth 20"]);
+});
+
+test("configure after stop() defers options until the old search's bestmove", () => {
+  const { sent, session } = fakeEngine();
+  session.analyze(START_FEN);
+  session.stop();
+  const before = sent.length;
+  session.configure({ multiPv: 5 });
+  assert.equal(sent.length, before);
+  session.handleLine("bestmove e2e4");
+  assert.deepEqual(sent.slice(before), ["setoption name MultiPV value 5", "setoption name Hash value 16"]);
+});
+
+test("lines beyond a lowered multiPv are ignored", () => {
+  const { updates, session } = fakeEngine();
+  session.analyze(START_FEN);
+  session.configure({ multiPv: 1 });
+  session.handleLine("bestmove e2e4");
+  session.handleLine("info depth 5 multipv 2 score cp 10 pv e2e4");
+  session.handleLine("info depth 5 multipv 1 score cp 10 pv e2e4");
+  assert.deepEqual(updates.at(-1).lines.map((l) => l.multipv), [1]);
+});
+
+// ---- settings + arrows ---------------------------------------------------------
+
+test("normalizeEngineSettings clamps, validates and fills defaults", () => {
+  assert.deepEqual(normalizeEngineSettings(null), DEFAULT_ENGINE_SETTINGS);
+  assert.deepEqual(normalizeEngineSettings({ multiPv: 99, depth: 1, hash: 100, arrows: "yes" }), {
+    multiPv: 5,
+    depth: 8,
+    hash: DEFAULT_ENGINE_SETTINGS.hash,
+    arrows: true,
+    projectorArrows: false,
+  });
+  assert.deepEqual(normalizeEngineSettings({ multiPv: 2, depth: 18.4, hash: 128, arrows: false }), {
+    multiPv: 2,
+    depth: 18,
+    hash: 128,
+    arrows: false,
+    projectorArrows: false,
+  });
+  assert.equal(normalizeEngineSettings({ projectorArrows: true }).projectorArrows, true);
+});
+
+test("lineArrows takes the first move of each line", () => {
+  const lines = [
+    { multipv: 1, score: { type: "cp", value: 10 }, pv: ["e2e4", "e7e5"] },
+    { multipv: 2, score: { type: "cp", value: 5 }, pv: ["g1f3"] },
+    { multipv: 3, score: { type: "cp", value: 0 }, pv: [] },
+  ];
+  assert.deepEqual(lineArrows(lines), [
+    { rank: 1, from: "e2", to: "e4" },
+    { rank: 2, from: "g1", to: "f3" },
+  ]);
 });

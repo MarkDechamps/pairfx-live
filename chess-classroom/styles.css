@@ -495,3 +495,39 @@ body.projector {
 .engine-lines li { display: flex; gap: 0.6rem; align-items: baseline; }
 .engine-score { flex: 0 0 3.6rem; font-weight: 600; text-align: right; }
 .engine-pv { color: var(--text-muted); overflow-wrap: anywhere; }
+
+/* Teacher-only engine settings dialog. */
+.engine-settings {
+  background: var(--panel-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  min-width: 20rem;
+}
+.engine-settings::backdrop { background: rgba(0, 0, 0, 0.45); }
+.engine-settings h2 { margin: 0 0 0.8rem; font-size: 1.05rem; }
+.setting-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 3rem;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.88rem;
+}
+.setting-row.check { display: flex; gap: 0.5rem; }
+.setting-row select { grid-column: 2 / 4; font: inherit; padding: 0.25rem; }
+.setting-hint { margin: 0 0 0.9rem; font-size: 0.78rem; color: var(--text-muted); }
+.setting-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+/* Engine move arrows on the teacher board: best line strongest. */
+.cm-chessboard .arrow-engine-1 .arrow-head { fill: #2a7fd4; }
+.cm-chessboard .arrow-engine-1 .arrow-line { stroke: #2a7fd4; stroke-linecap: round; opacity: 0.75; }
+.cm-chessboard .arrow-engine-2 .arrow-head { fill: #2a7fd4; }
+.cm-chessboard .arrow-engine-2 .arrow-line { stroke: #2a7fd4; stroke-linecap: round; opacity: 0.5; }
+.cm-chessboard .arrow-engine-3 .arrow-head { fill: #2a7fd4; }
+.cm-chessboard .arrow-engine-3 .arrow-line { stroke: #2a7fd4; stroke-linecap: round; opacity: 0.35; }
+.cm-chessboard .arrow-engine-4 .arrow-head,
+.cm-chessboard .arrow-engine-5 .arrow-head { fill: #2a7fd4; }
+.cm-chessboard .arrow-engine-4 .arrow-line,
+.cm-chessboard .arrow-engine-5 .arrow-line { stroke: #2a7fd4; stroke-linecap: round; opacity: 0.25; }

@@ -16,6 +16,55 @@
 export const DEFAULT_MULTI_PV = 3;
 export const DEFAULT_SEARCH_DEPTH = 22;
 export const MAX_PV_PLIES = 10;
+export const DEFAULT_HASH_MB = 16;
+
+// What the teacher can tune from the gear dialog. Threads and memory beyond
+// Hash aren't here on purpose: the vendored build is the single-threaded lite
+// one, so a Threads option would do nothing.
+export const ENGINE_LIMITS = {
+  multiPv: { min: 1, max: 5 },
+  depth: { min: 8, max: 30 },
+};
+export const HASH_CHOICES_MB = [16, 32, 64, 128, 256];
+
+export const DEFAULT_ENGINE_SETTINGS = {
+  multiPv: DEFAULT_MULTI_PV,
+  depth: DEFAULT_SEARCH_DEPTH,
+  hash: DEFAULT_HASH_MB,
+  arrows: true,
+  // Also draw the engine arrows on the projector (students' screen). Off by
+  // default: the teacher opts in deliberately.
+  projectorArrows: false,
+};
+
+function clampInt(value, { min, max }, fallback) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+// Accepts anything (e.g. a parsed localStorage blob) and returns a complete,
+// in-range settings object; unknown/invalid fields fall back to the defaults.
+export function normalizeEngineSettings(raw) {
+  const r = raw && typeof raw === "object" ? raw : {};
+  const hash = Number(r.hash);
+  return {
+    multiPv: clampInt(r.multiPv, ENGINE_LIMITS.multiPv, DEFAULT_ENGINE_SETTINGS.multiPv),
+    depth: clampInt(r.depth, ENGINE_LIMITS.depth, DEFAULT_ENGINE_SETTINGS.depth),
+    hash: HASH_CHOICES_MB.includes(hash) ? hash : DEFAULT_ENGINE_SETTINGS.hash,
+    arrows: typeof r.arrows === "boolean" ? r.arrows : DEFAULT_ENGINE_SETTINGS.arrows,
+    projectorArrows:
+      typeof r.projectorArrows === "boolean" ? r.projectorArrows : DEFAULT_ENGINE_SETTINGS.projectorArrows,
+  };
+}
+
+// The first move of each analysis line, for drawing arrows on the board.
+// Skips lines without a usable move (UCI squares only, e.g. "e2e4"/"e7e8q").
+export function lineArrows(lines) {
+  return lines
+    .filter((line) => line.pv.length > 0 && /^[a-h][1-8][a-h][1-8]/.test(line.pv[0]))
+    .map((line) => ({ rank: line.multipv, from: line.pv[0].slice(0, 2), to: line.pv[0].slice(2, 4) }));
+}
 
 // Returns null for anything that isn't a scored info line (e.g. `info string
 // ...`, `info currmove ...`, `uciok`, `readyok`).
@@ -94,17 +143,31 @@ export function pvToSan(Chess, fen, uciMoves, maxPlies = MAX_PV_PLIES) {
 // position sends `stop` and only starts the next search once the old one's
 // `bestmove` has arrived. Sending `position`/`go` to a still-searching
 // single-threaded stockfish.js crashes its wasm ("unreachable") when the
-// teacher steps through moves quickly — found in browser testing.
-export function createEngineSession({ send, onUpdate, multiPv = DEFAULT_MULTI_PV, depth = DEFAULT_SEARCH_DEPTH }) {
+// teacher steps through moves quickly — found in browser testing. The same
+// goes for `setoption`, so configure() only sends options between searches.
+export function createEngineSession({
+  send,
+  onUpdate,
+  multiPv = DEFAULT_MULTI_PV,
+  depth = DEFAULT_SEARCH_DEPTH,
+  hash = DEFAULT_HASH_MB,
+}) {
   let currentFen = null; // what the teacher wants analyzed (null = engine off)
   let searchFen = null; // what the running search is analyzing (null = idle)
   let stopSent = false;
   let restartPending = false; // start a search for currentFen on the next bestmove
   let linesByPv = new Map();
   let reportedDepth = 0;
+  let optionsDirty = false; // multiPv/hash changed since they were last sent
+
+  function sendOptions() {
+    send(`setoption name MultiPV value ${multiPv}`);
+    send(`setoption name Hash value ${hash}`);
+    optionsDirty = false;
+  }
 
   send("uci");
-  send(`setoption name MultiPV value ${multiPv}`);
+  sendOptions();
   send("isready");
 
   function snapshot() {
@@ -113,6 +176,7 @@ export function createEngineSession({ send, onUpdate, multiPv = DEFAULT_MULTI_PV
   }
 
   function startSearch() {
+    if (optionsDirty) sendOptions();
     searchFen = currentFen;
     send(`position fen ${currentFen}`);
     send(`go depth ${depth}`);
@@ -141,6 +205,33 @@ export function createEngineSession({ send, onUpdate, multiPv = DEFAULT_MULTI_PV
       onUpdate(snapshot());
     },
 
+    // Applies new settings; restarts the current search (if any) so they take
+    // effect. Options reach the engine only while it is idle.
+    configure(settings) {
+      if (settings.multiPv !== undefined && settings.multiPv !== multiPv) {
+        multiPv = settings.multiPv;
+        optionsDirty = true;
+      }
+      if (settings.hash !== undefined && settings.hash !== hash) {
+        hash = settings.hash;
+        optionsDirty = true;
+      }
+      if (settings.depth !== undefined) depth = settings.depth;
+      linesByPv = new Map();
+      reportedDepth = 0;
+      if (currentFen !== null) {
+        if (searchFen === null) {
+          startSearch();
+        } else {
+          restartPending = true;
+          stopRunningSearch();
+        }
+      } else if (searchFen === null && optionsDirty) {
+        sendOptions();
+      }
+      onUpdate(snapshot());
+    },
+
     // Stops searching and forgets the position, so a later analyze() of the
     // same FEN starts afresh rather than being treated as a no-op.
     stop() {
@@ -156,6 +247,8 @@ export function createEngineSession({ send, onUpdate, multiPv = DEFAULT_MULTI_PV
         if (restartPending) {
           restartPending = false;
           startSearch();
+        } else if (optionsDirty) {
+          sendOptions();
         }
         return;
       }
