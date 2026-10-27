@@ -35,5 +35,11 @@
   "someGamesFailed": "{count} van {total} partijen in dit bestand konden niet worden gelezen en zijn overgeslagen.",
   "renamePrompt": "Nieuwe naam voor deze partij:",
   "deleteConfirm": "Weet je zeker dat je \"{name}\" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
-  "lastMoveLabel": "laatste zet"
+  "lastMoveLabel": "laatste zet",
+  "engine": "Engine",
+  "engineHint": "Analyseer de stelling op het lerarenbord met Stockfish. Alleen jij ziet dit, nooit het projectorscherm.",
+  "engineAnalysis": "Analyse",
+  "engineLoading": "engine laden…",
+  "engineDepth": "diepte {depth}",
+  "engineUnavailable": "engine niet beschikbaar"
 }

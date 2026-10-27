@@ -249,7 +249,7 @@ body {
 /* Lives in the dark wood .desk bar now (next to the Sync toggle), not the
    light move-badge row it started in - colors match .desk-group label's
    wood-panel palette instead of the light-card --text-muted it used there. */
-.lock-pgn-toggle {
+.desk-toggle {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -481,3 +481,17 @@ body.projector {
   font-size: 0.7rem;
   color: var(--text-muted);
 }
+
+/* Teacher-only engine analysis card (never shown on the projector). */
+.engine-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0 1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+}
+.engine-lines li { display: flex; gap: 0.6rem; align-items: baseline; }
+.engine-score { flex: 0 0 3.6rem; font-weight: 600; text-align: right; }
+.engine-pv { color: var(--text-muted); overflow-wrap: anywhere; }

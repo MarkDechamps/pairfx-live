@@ -34,5 +34,11 @@
   "invalidPgn": "This PGN file could not be read",
   "someGamesFailed": "{count} of {total} games in this file could not be read and were skipped.",
   "renamePrompt": "New name for this game:",
-  "deleteConfirm": "Delete \"{name}\"? This cannot be undone."
+  "deleteConfirm": "Delete \"{name}\"? This cannot be undone.",
+  "engine": "Engine",
+  "engineHint": "Analyze the teacher board's position with Stockfish. Only you see this, never the projector screen.",
+  "engineAnalysis": "Analysis",
+  "engineLoading": "loading engine…",
+  "engineDepth": "depth {depth}",
+  "engineUnavailable": "engine unavailable"
 }

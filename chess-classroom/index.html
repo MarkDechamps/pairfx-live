@@ -28,9 +28,14 @@
 
     <button class="btn" id="openProjectorBtn" data-i18n="openProjector">Open projectorscherm ↗</button>
 
-    <label class="lock-pgn-toggle" title="Wanneer aan: alleen zetten uit de geladen PGN zijn te spelen. Wanneer uit: elke zet is toegestaan en wordt aan de PGN toegevoegd." data-i18n-title="lockPgnHint">
+    <label class="desk-toggle" title="Wanneer aan: alleen zetten uit de geladen PGN zijn te spelen. Wanneer uit: elke zet is toegestaan en wordt aan de PGN toegevoegd." data-i18n-title="lockPgnHint">
       <input type="checkbox" id="lockPgnCheckbox" checked>
       <span data-i18n="lockPgn">PGN vergrendelen</span>
+    </label>
+
+    <label class="desk-toggle" title="Analyseer de stelling op het lerarenbord met Stockfish. Alleen jij ziet dit, nooit het projectorscherm." data-i18n-title="engineHint">
+      <input type="checkbox" id="engineCheckbox">
+      <span data-i18n="engine">Engine</span>
     </label>
 
     <button class="sync-plunger on" id="syncToggle" title="Synchroniseer lerarenbord met projectorscherm" data-i18n-title="syncTitle">
@@ -68,6 +73,14 @@
     </div>
 
     <div class="side-col">
+      <!-- Teacher-only engine analysis: shown only while the Engine checkbox
+           is on, and never part of the sync pointer — the projector and its
+           preview never see it. -->
+      <details class="card collapsible-card engine-card" id="engineCard" hidden open>
+        <summary><span data-i18n="engineAnalysis">Analyse</span> <span class="tag mono" id="engineStatus"></span></summary>
+        <ol class="engine-lines" id="engineLines"></ol>
+      </details>
+
       <!-- Box 1 (see CLAUDE.md's judgment call: box 1 is "which uploaded PGN
            is open", box 2 below is "which game within it"). Moved here from
            the top bar per direct feedback - upload/rename/delete are

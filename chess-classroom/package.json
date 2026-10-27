@@ -10,8 +10,9 @@
     "vendor": "node scripts/vendor-libs.mjs"
   },
   "devDependencies": {
-    "chess.js": "1.4.0",
     "@mliebelt/pgn-parser": "1.4.19",
-    "cm-chessboard": "8.12.19"
+    "chess.js": "1.4.0",
+    "cm-chessboard": "8.12.19",
+    "stockfish": "18.0.8"
   }
 }
