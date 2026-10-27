@@ -17,6 +17,7 @@ import * as I18n from "./i18n.js";
 import * as Lib from "./pgnLibrary.js";
 import * as MoveTree from "./moveTree.js";
 import * as Sync from "./syncProtocol.js";
+import * as Engine from "./engineAnalysis.js";
 import { getAllLibraryEntries, putLibraryEntry, deleteLibraryEntry } from "./idbLibraryStore.js";
 
 const ASSETS_URL = "vendor/cm-chessboard/assets/";
@@ -28,6 +29,8 @@ const LAST_ENTRY_STORAGE_KEY = "chess-classroom:lastEntryId";
 // not routed through syncProtocol.js's overlay-prefs machinery, which exists
 // specifically to broadcast a *projector-facing* preference (ticket 0003).
 const LOCK_PGN_STORAGE_KEY = "chess-classroom:lockPgn";
+const ENGINE_WORKER_URL = "vendor/stockfish/stockfish-18-lite-single.js";
+const ENGINE_STARTUP_TIMEOUT_MS = 15000;
 const LAST_MOVE_MARKER_TYPE = { class: "marker-last-move", slice: "markerSquare" };
 
 // cm-chessboard's RightClickAnnotator draws with its own ARROW_TYPE/
@@ -89,6 +92,9 @@ const state = {
   cursor: null,
   syncOn: true,
   lockPgn: true,
+  engineOn: false,
+  engineSnapshot: null,
+  engineFailed: false,
   orientation: "white",
   keepAnnotations: false,
   overlays: Sync.defaultOverlayPrefs(),
@@ -119,6 +125,10 @@ const el = {
   varTree: document.getElementById("varTree"),
   freeHint: document.getElementById("freeHint"),
   lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
+  engineCheckbox: document.getElementById("engineCheckbox"),
+  engineCard: document.getElementById("engineCard"),
+  engineStatus: document.getElementById("engineStatus"),
+  engineLines: document.getElementById("engineLines"),
   flipBoardBtn: document.getElementById("flipBoardBtn"),
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
@@ -150,6 +160,7 @@ function applyTranslations() {
   });
   el.notesBody.dataset.emptyLabel = state.t("noNote");
   render();
+  renderEngine();
 }
 
 let currentLang = I18n.DEFAULT_LANGUAGE;
@@ -368,6 +379,7 @@ function render() {
 
   renderPreview(fen, lastMove);
   publishIfSynced(fen, lastMove, moveLabel);
+  analyzeIfEngineOn(fen);
 }
 
 function renderPreview(fen, lastMove) {
@@ -570,6 +582,92 @@ el.lockPgnCheckbox.addEventListener("change", (e) => {
   state.lockPgn = e.target.checked;
   window.localStorage.setItem(LOCK_PGN_STORAGE_KEY, state.lockPgn ? "1" : "0");
 });
+
+// ---- engine (teacher-only analysis) -----------------------------------
+//
+// Deliberately nowhere near publishIfSynced: the evaluation and lines are for
+// the teacher's eyes only, so they're never put in the sync pointer and the
+// projector (and its preview) never sees them.
+
+let engineWorker = null;
+let engineSession = null;
+
+// The Worker (and its ~7MB wasm) is only created the first time the teacher
+// turns the engine on, then kept for the rest of the page's life — turning it
+// off just stops the search, so turning it back on doesn't reload the wasm.
+function ensureEngine() {
+  if (engineSession) return;
+  engineWorker = new Worker(ENGINE_WORKER_URL);
+  engineSession = Engine.createEngineSession({
+    send: (command) => engineWorker.postMessage(command),
+    onUpdate: (snapshot) => {
+      state.engineSnapshot = snapshot;
+      renderEngine();
+    },
+  });
+  let heardFromEngine = false;
+  engineWorker.addEventListener("message", (e) => {
+    heardFromEngine = true;
+    engineSession.handleLine(String(e.data));
+  });
+  // Say "unavailable" instead of "loading engine…" forever when the engine
+  // can't start: a missing worker script fires "error", but a wasm that
+  // fails to fetch is only logged inside the worker — hence the timeout too.
+  const markFailed = () => {
+    state.engineFailed = true;
+    renderEngine();
+  };
+  engineWorker.addEventListener("error", markFailed);
+  setTimeout(() => {
+    if (!heardFromEngine) markFailed();
+  }, ENGINE_STARTUP_TIMEOUT_MS);
+}
+
+function analyzeIfEngineOn(fen) {
+  if (state.engineOn) engineSession.analyze(fen);
+}
+
+function setEngine(on) {
+  state.engineOn = on;
+  el.engineCard.hidden = !on;
+  if (on) {
+    ensureEngine();
+    state.engineSnapshot = null;
+    renderEngine();
+    analyzeIfEngineOn(currentDisplay().fen);
+  } else if (engineSession) {
+    engineSession.stop();
+    state.engineSnapshot = null;
+  }
+}
+
+function renderEngine() {
+  el.engineLines.innerHTML = "";
+  if (!state.engineOn) return;
+  if (state.engineFailed) {
+    el.engineStatus.textContent = state.t("engineUnavailable");
+    return;
+  }
+  const snapshot = state.engineSnapshot;
+  if (!snapshot || snapshot.lines.length === 0) {
+    el.engineStatus.textContent = state.t("engineLoading");
+    return;
+  }
+  el.engineStatus.textContent = state.t("engineDepth", { depth: snapshot.depth });
+  snapshot.lines.forEach((line) => {
+    const li = document.createElement("li");
+    const score = document.createElement("span");
+    score.className = "engine-score mono";
+    score.textContent = Engine.formatScore(Engine.scoreForWhite(line.score, snapshot.fen));
+    const pv = document.createElement("span");
+    pv.className = "engine-pv";
+    pv.textContent = Engine.pvToSan(Chess, snapshot.fen, line.pv);
+    li.append(score, pv);
+    el.engineLines.appendChild(li);
+  });
+}
+
+el.engineCheckbox.addEventListener("change", (e) => setEngine(e.target.checked));
 
 // ---- overlays -------------------------------------------------------
 

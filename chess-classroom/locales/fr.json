@@ -34,5 +34,11 @@
   "invalidPgn": "Ce fichier PGN n'a pas pu être lu",
   "someGamesFailed": "{count} partie(s) sur {total} dans ce fichier n'ont pas pu être lues et ont été ignorées.",
   "renamePrompt": "Nouveau nom pour cette partie :",
-  "deleteConfirm": "Voulez-vous vraiment supprimer « {name} » ? Cette action est irréversible."
+  "deleteConfirm": "Voulez-vous vraiment supprimer « {name} » ? Cette action est irréversible.",
+  "engine": "Moteur",
+  "engineHint": "Analyse la position de l'échiquier du professeur avec Stockfish. Visible uniquement par vous, jamais sur l'écran du projecteur.",
+  "engineAnalysis": "Analyse",
+  "engineLoading": "chargement du moteur…",
+  "engineDepth": "profondeur {depth}",
+  "engineUnavailable": "moteur indisponible"
 }

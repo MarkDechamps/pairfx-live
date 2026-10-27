@@ -19,7 +19,7 @@ resulting architecture, not the product decisions themselves.
 ```bash
 node --test            # run all pure-logic unit tests (no framework, Node's built-in runner)
 python3 -m http.server 8000   # serve the app (fetch() of locales/*.json needs http://, not file://)
-npm run vendor          # re-copy chess.js/pgn-parser/cm-chessboard from node_modules into vendor/
+npm run vendor          # re-copy chess.js/pgn-parser/cm-chessboard/stockfish from node_modules into vendor/
 ```
 
 Run a single test file: `node --test moveTree.test.js`.
@@ -56,6 +56,13 @@ testing mechanism**:
 - `node_modules/` is gitignored as usual. `vendor/` **is committed** — the app must run from a
   fresh clone with nothing but a static file server, no `npm install` required at demo time.
 
+A fourth vendored package, `stockfish` (Stockfish.js, GPLv3 — its `Copying.txt` is vendored
+alongside), backs the teacher-only Engine checkbox. Only its **lite single-threaded** flavor is
+vendored (`vendor/stockfish/stockfish-18-lite-single.{js,wasm}`, ~7MB): the full builds are
+>100MB, and the multi-threaded ones need `SharedArrayBuffer`, i.e. cross-origin-isolation
+headers that `python3 -m http.server` doesn't send. It's loaded as a Web Worker straight from
+`vendor/` and finds its `.wasm` by its own filename, so the two files must keep matching names.
+
 If a library version bumps in `package.json`, run `npm install && npm run vendor` and re-check
 the diff in `vendor/` before committing it.
 
@@ -74,9 +81,10 @@ of one `engine.js`, because there are several genuinely independent concerns:
 | `i18n.js` | `i18n.test.js` | Language detection (first-run default vs. persisted choice), dictionary lookup with Dutch fallback, `{placeholder}` interpolation. |
 | `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming — both of a library *entry* (`nameForEntry`) and of one *game* inside it (`nameForGame`) — the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, and which game within a (possibly multi-game) entry is currently selected/shown (`showGameList`, `gameListChoices`, `clampGameIndex`). |
 | `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, `splitPgnGames`/`parseGames` (splitting/parsing a raw multi-game file), `replaceGameInPgnText` (writing one game's text back into its own slot within a multi-game file without touching the others), and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
+| `engineAnalysis.js` | `engineAnalysis.test.js` | The UCI conversation with the Stockfish worker: parsing `info ... pv ...` lines, White-perspective score formatting (`+0.35`, `#3`, `-#2`), UCI-PV-to-numbered-SAN (`pvToSan`), and the session state machine (`createEngineSession`) that restarts the search when the position changes. `send` is injected, so it's tested with a fake engine. |
 | `syncProtocol.js` | `syncProtocol.test.js` | The teacher/projector message shapes and catch-up-on-startup logic. `BroadcastChannel`/`localStorage` are injected (`{channel, storage}`), so this is tested with fake in-memory stand-ins — no browser needed. |
 
-None of these four modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
+None of these five modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
 `localStorage` directly — they take plain data/injected dependencies in and return plain data
 out, which is what makes `node --test` sufficient for them.
 
@@ -236,6 +244,27 @@ weren't specified and needed a decision during implementation:
   `splitPgnGames` found it. Verified end-to-end (not just unit-tested): deviating from one game in
   a 3-game fixture with Lock PGN off, reloading the page, and reselecting that same game from box
   2 shows the deviation persisted, while the other two games in the same file remain unchanged.
+
+- **Engine checkbox (teacher-only Stockfish analysis).** A checkbox in the top bar starts an
+  in-browser Stockfish (`vendor/stockfish/`, see the vendoring section) on whatever position the
+  teacher board shows, and shows the evaluation plus the top 3 lines (MultiPV 3, depth 22) in an
+  "Analysis" card at the top of the side column. Concretely decided during implementation:
+  - **Teacher-only by construction**: the analysis is never put in the sync pointer
+    (`app.js: analyzeIfEngineOn` sits beside, not inside, `publishIfSynced`), so neither the
+    projector tab nor its preview can show it.
+  - **Unchecking stops the engine** (`stop` is sent if a search is running; anything it prints
+    afterwards is ignored) and hides the card. The Worker itself is kept alive so re-checking
+    doesn't reload the ~7MB wasm.
+  - **Not remembered across reloads, default off** — unlike Lock PGN. It costs a 7MB download and
+    a CPU core, and an eval accidentally left on while preparing a puzzle is easy to miss, so it's
+    a per-session opt-in.
+  - **Depth-limited (22), not `go infinite`**, so a forgotten-on engine doesn't keep a laptop
+    core busy for the whole lesson; depth 22 takes a few seconds with the lite build.
+  - **A new search is never sent while one is still running**: a position change sends `stop`
+    and starts the next search only once the old one's `bestmove` arrives. Sending
+    `position`/`go` to a still-searching single-threaded stockfish.js crashed its wasm
+    (`unreachable`) when stepping quickly through moves — found in browser testing.
+  - Lines are display-only (not clickable/playable); scores are from White's perspective.
 
 ## Language note
 

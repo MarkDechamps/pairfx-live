@@ -68,7 +68,23 @@ function vendorCmChessboard() {
   console.log("vendored cm-chessboard -> vendor/cm-chessboard/{src,assets}");
 }
 
+// Only the lite single-threaded flavor: ~7MB instead of >100MB, and unlike
+// the multi-threaded builds it needs no SharedArrayBuffer, so it runs from a
+// plain static file server without cross-origin-isolation headers. The .js
+// is loaded as a Web Worker and finds its .wasm by its own filename, so the
+// two must keep matching names side by side.
+function vendorStockfish() {
+  const dest = join(vendor, "stockfish");
+  freshDir(dest);
+  for (const file of ["stockfish-18-lite-single.js", "stockfish-18-lite-single.wasm"]) {
+    copyFileSync(join(nodeModules, "stockfish", "bin", file), join(dest, file));
+  }
+  copyFileSync(join(nodeModules, "stockfish", "Copying.txt"), join(dest, "Copying.txt"));
+  console.log("vendored stockfish -> vendor/stockfish/stockfish-18-lite-single.{js,wasm}");
+}
+
 vendorChessJs();
 vendorPgnParser();
 vendorCmChessboard();
+vendorStockfish();
 console.log("done.");
