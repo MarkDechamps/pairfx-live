@@ -71,7 +71,9 @@ function serializeBoardAnnotations(board) {
   return {
     // getAnnotations() returns every arrow on the board, including the
     // teacher-only engine ones - those must not reach state.annotations.
-    arrows: arrows.filter((a) => !ENGINE_ARROW_TYPES.includes(a.type)).map((a) => ({ color: colorKeyFromClassName(a.type.class), from: a.from, to: a.to })),
+    arrows: arrows
+      .filter((a) => !ENGINE_ARROW_TYPES.includes(a.type))
+      .map((a) => ({ color: colorKeyFromClassName(a.type.class), from: a.from, to: a.to })),
     markers: markers.map((m) => ({ color: colorKeyFromClassName(m.type.class), square: m.square })),
   };
 }
@@ -694,7 +696,7 @@ function projectorEngineArrows() {
 
 // Engine output arrives asynchronously, so the projector is re-sent whenever
 // its engine arrows actually change (not on every info line).
-let lastProjectorEngineKey = "";
+let lastProjectorEngineKey = "[]"; // JSON of "no engine arrows"
 function syncProjectorEngineArrows() {
   const key = JSON.stringify(projectorEngineArrows());
   if (key === lastProjectorEngineKey) return;

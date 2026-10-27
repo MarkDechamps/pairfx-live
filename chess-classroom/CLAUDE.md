@@ -204,8 +204,9 @@ weren't specified and needed a decision during implementation:
 - **Rename/delete-confirm use native `prompt()`/`confirm()`**, not custom modal dialogs. (This
   bullet originally carved out an exception for the multi-game upload picker, which *did* get a
   real modal per ticket 0006. That modal is gone — see the "multi-game library entries" bullets
-  below — so there is no longer any modal dialog anywhere in the app; rename/delete-confirm are
-  now simply the *only* two confirmation-style interactions, and both use native dialogs.) A
+  below — so there is no longer any modal dialog for confirmations; rename/delete-confirm are
+  now simply the *only* two confirmation-style interactions, and both use native dialogs. The
+  only custom modal is the engine settings dialog, which is a form, not a confirmation.) A
   pragmatic v1 scoping call, not a spec requirement either way.
 - **Multi-game library entries: reverses ticket 0006's "picked game becomes the library
   entry."** The requester asked for a persistent, always-available way to browse *every* game in
@@ -265,7 +266,7 @@ weren't specified and needed a decision during implementation:
     `position`/`go` to a still-searching single-threaded stockfish.js crashed its wasm
     (`unreachable`) when stepping quickly through moves — found in browser testing.
   - Lines are display-only (not clickable/playable); scores are from White's perspective.
-  - **Gear button next to the checkbox** opens a `<dialog>` (the app's only modal; rename/delete
+  - **Gear button next to the checkbox** opens a `<dialog>` (the app's only custom modal; rename/delete
     still use native prompt/confirm) with Lines (MultiPV 1-5), Depth (8-30), Hash (16-256 MB) and
     a "show arrows" toggle. Defaults are the values above; saved in `localStorage`
     (`chess-classroom:engineSettings`, teacher-only, not synced) and applied live via
