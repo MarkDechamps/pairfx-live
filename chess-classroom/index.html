@@ -37,12 +37,48 @@
       <input type="checkbox" id="engineCheckbox">
       <span data-i18n="engine">Engine</span>
     </label>
+    <button class="icon-btn" id="engineSettingsBtn" type="button" title="Engine-instellingen" data-i18n-title="engineSettings" aria-label="Engine-instellingen">&#9881;</button>
 
     <button class="sync-plunger on" id="syncToggle" title="Synchroniseer lerarenbord met projectorscherm" data-i18n-title="syncTitle">
       <span class="knob"></span>
       <span class="state" id="syncState" data-i18n="syncOn">Sync AAN</span>
     </button>
   </div>
+
+  <!-- Teacher-only engine settings (Lines / Depth / Hash / arrows). Applied
+       live and remembered in localStorage; never sent to the projector. -->
+  <dialog class="engine-settings" id="engineSettingsDialog">
+    <form method="dialog">
+      <h2 data-i18n="engineSettings">Engine-instellingen</h2>
+      <label class="setting-row">
+        <span data-i18n="engineLines">Lijnen</span>
+        <input type="range" id="engineMultiPv" min="1" max="5" step="1">
+        <output id="engineMultiPvValue" class="mono"></output>
+      </label>
+      <label class="setting-row">
+        <span data-i18n="engineSearchDepth">Diepte</span>
+        <input type="range" id="engineDepth" min="8" max="30" step="1">
+        <output id="engineDepthValue" class="mono"></output>
+      </label>
+      <label class="setting-row">
+        <span data-i18n="engineHash">Geheugen (hash)</span>
+        <select id="engineHash"></select>
+      </label>
+      <label class="setting-row check">
+        <input type="checkbox" id="engineArrows">
+        <span data-i18n="engineArrows">Toon pijlen op het lerarenbord</span>
+      </label>
+      <label class="setting-row check">
+        <input type="checkbox" id="engineProjectorArrows">
+        <span data-i18n="engineProjectorArrows">Toon engine-pijlen ook op het projectorscherm (leerlingen)</span>
+      </label>
+      <p class="setting-hint" data-i18n="engineSettingsNote">Alleen jij ziet dit. Een lagere diepte is sneller, een hogere sterker.</p>
+      <div class="setting-actions">
+        <button class="btn" type="button" id="engineSettingsReset" data-i18n="engineReset">Standaard</button>
+        <button class="btn primary" value="close" data-i18n="close">Sluiten</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="workspace">
     <div class="board-col">

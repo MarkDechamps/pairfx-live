@@ -31,6 +31,12 @@ const LAST_ENTRY_STORAGE_KEY = "chess-classroom:lastEntryId";
 const LOCK_PGN_STORAGE_KEY = "chess-classroom:lockPgn";
 const ENGINE_WORKER_URL = "vendor/stockfish/stockfish-18-lite-single.js";
 const ENGINE_STARTUP_TIMEOUT_MS = 15000;
+// Teacher-only preference (Lines/Depth/Hash/arrows), kept like LOCK_PGN above.
+const ENGINE_SETTINGS_STORAGE_KEY = "chess-classroom:engineSettings";
+// One type object per engine line rank. Distinct from RightClickAnnotator's
+// ARROW_TYPE so the teacher's own annotations (which ARE synced) and the
+// engine's suggestions (which must never be) can be told apart by reference.
+const ENGINE_ARROW_TYPES = [1, 2, 3, 4, 5].map((rank) => ({ class: `arrow-engine-${rank}` }));
 const LAST_MOVE_MARKER_TYPE = { class: "marker-last-move", slice: "markerSquare" };
 
 // cm-chessboard's RightClickAnnotator draws with its own ARROW_TYPE/
@@ -63,7 +69,11 @@ const MARKER_TYPE_BY_COLOR = MARKER_TYPE;
 function serializeBoardAnnotations(board) {
   const { arrows, markers } = board.getAnnotations();
   return {
-    arrows: arrows.map((a) => ({ color: colorKeyFromClassName(a.type.class), from: a.from, to: a.to })),
+    // getAnnotations() returns every arrow on the board, including the
+    // teacher-only engine ones - those must not reach state.annotations.
+    arrows: arrows
+      .filter((a) => !ENGINE_ARROW_TYPES.includes(a.type))
+      .map((a) => ({ color: colorKeyFromClassName(a.type.class), from: a.from, to: a.to })),
     markers: markers.map((m) => ({ color: colorKeyFromClassName(m.type.class), square: m.square })),
   };
 }
@@ -93,6 +103,7 @@ const state = {
   syncOn: true,
   lockPgn: true,
   engineOn: false,
+  engineSettings: loadEngineSettings(),
   engineSnapshot: null,
   engineFailed: false,
   orientation: "white",
@@ -129,6 +140,16 @@ const el = {
   engineCard: document.getElementById("engineCard"),
   engineStatus: document.getElementById("engineStatus"),
   engineLines: document.getElementById("engineLines"),
+  engineSettingsBtn: document.getElementById("engineSettingsBtn"),
+  engineSettingsDialog: document.getElementById("engineSettingsDialog"),
+  engineMultiPv: document.getElementById("engineMultiPv"),
+  engineMultiPvValue: document.getElementById("engineMultiPvValue"),
+  engineDepth: document.getElementById("engineDepth"),
+  engineDepthValue: document.getElementById("engineDepthValue"),
+  engineHash: document.getElementById("engineHash"),
+  engineArrows: document.getElementById("engineArrows"),
+  engineProjectorArrows: document.getElementById("engineProjectorArrows"),
+  engineSettingsReset: document.getElementById("engineSettingsReset"),
   flipBoardBtn: document.getElementById("flipBoardBtn"),
   clearAnnotationsBtn: document.getElementById("clearAnnotationsBtn"),
   keepAnnotationsCheckbox: document.getElementById("keepAnnotationsCheckbox"),
@@ -161,6 +182,7 @@ function applyTranslations() {
   el.notesBody.dataset.emptyLabel = state.t("noNote");
   render();
   renderEngine();
+  renderEngineSettingsForm();
 }
 
 let currentLang = I18n.DEFAULT_LANGUAGE;
@@ -400,7 +422,7 @@ function publishIfSynced(fen, lastMove, moveLabel) {
     // badge - read straight off that element rather than re-deriving it,
     // so there's exactly one source of truth for the label.
     gameTitle: el.gameTitle.textContent || null,
-    arrows: state.overlays.arrows ? state.annotations.arrows : [],
+    arrows: state.overlays.arrows ? [...state.annotations.arrows, ...projectorEngineArrows()] : [],
     markers: state.overlays.arrows ? state.annotations.markers : [],
   });
   teacherSync.publishPosition(pointer);
@@ -599,6 +621,7 @@ function ensureEngine() {
   if (engineSession) return;
   engineWorker = new Worker(ENGINE_WORKER_URL);
   engineSession = Engine.createEngineSession({
+    ...state.engineSettings,
     send: (command) => engineWorker.postMessage(command),
     onUpdate: (snapshot) => {
       state.engineSnapshot = snapshot;
@@ -638,10 +661,103 @@ function setEngine(on) {
   } else if (engineSession) {
     engineSession.stop();
     state.engineSnapshot = null;
+    renderEngine(); // clears the arrows
   }
 }
 
+function loadEngineSettings() {
+  try {
+    return Engine.normalizeEngineSettings(JSON.parse(window.localStorage.getItem(ENGINE_SETTINGS_STORAGE_KEY)));
+  } catch {
+    return Engine.normalizeEngineSettings(null);
+  }
+}
+
+// Teacher-board arrows for each analysis line's first move. They live next
+// to (not in) state.annotations, so they are never synced or persisted.
+function paintEngineArrows() {
+  ENGINE_ARROW_TYPES.forEach((type) => teacherBoard.removeArrows(type));
+  const snapshot = state.engineSnapshot;
+  if (!state.engineOn || state.engineFailed || !state.engineSettings.arrows || !snapshot) return;
+  if (snapshot.fen !== currentDisplay().fen) return;
+  Engine.lineArrows(snapshot.lines).forEach(({ rank, from, to }) => {
+    teacherBoard.addArrow(ENGINE_ARROW_TYPES[rank - 1], from, to);
+  });
+}
+
+// Engine arrows as sync-pointer arrows ("engine1".."engine5" colors), only
+// when the teacher opted in. Empty while the snapshot is for another position.
+function projectorEngineArrows() {
+  const snapshot = state.engineSnapshot;
+  if (!state.engineOn || state.engineFailed || !state.engineSettings.projectorArrows || !snapshot) return [];
+  if (snapshot.fen !== currentDisplay().fen) return [];
+  return Engine.lineArrows(snapshot.lines).map(({ rank, from, to }) => ({ color: `engine${rank}`, from, to }));
+}
+
+// Engine output arrives asynchronously, so the projector is re-sent whenever
+// its engine arrows actually change (not on every info line).
+let lastProjectorEngineKey = "[]"; // JSON of "no engine arrows"
+function syncProjectorEngineArrows() {
+  const key = JSON.stringify(projectorEngineArrows());
+  if (key === lastProjectorEngineKey) return;
+  lastProjectorEngineKey = key;
+  republishAnnotations();
+}
+
+function renderEngineSettingsForm() {
+  const { multiPv, depth, hash, arrows } = state.engineSettings;
+  el.engineMultiPv.value = multiPv;
+  el.engineMultiPvValue.textContent = multiPv;
+  el.engineDepth.value = depth;
+  el.engineDepthValue.textContent = depth;
+  el.engineHash.innerHTML = "";
+  Engine.HASH_CHOICES_MB.forEach((mb) => {
+    const option = document.createElement("option");
+    option.value = mb;
+    option.textContent = state.t("engineHashMb", { mb });
+    el.engineHash.appendChild(option);
+  });
+  el.engineHash.value = hash;
+  el.engineArrows.checked = arrows;
+  el.engineProjectorArrows.checked = state.engineSettings.projectorArrows;
+}
+
+function updateEngineSettings(patch) {
+  state.engineSettings = Engine.normalizeEngineSettings({ ...state.engineSettings, ...patch });
+  try {
+    window.localStorage.setItem(ENGINE_SETTINGS_STORAGE_KEY, JSON.stringify(state.engineSettings));
+  } catch {
+    // storage blocked: the settings still apply for this session
+  }
+  renderEngineSettingsForm();
+  if (engineSession) engineSession.configure(state.engineSettings);
+  renderEngine();
+}
+
+el.engineSettingsBtn.addEventListener("click", () => {
+  renderEngineSettingsForm();
+  el.engineSettingsDialog.showModal();
+});
+// A click on the backdrop targets the <dialog> itself.
+el.engineSettingsDialog.addEventListener("click", (e) => {
+  if (e.target === el.engineSettingsDialog) el.engineSettingsDialog.close();
+});
+// "input" only previews the number; "change" (on release) applies it, since
+// every applied change restarts the search.
+el.engineMultiPv.addEventListener("input", () => (el.engineMultiPvValue.textContent = el.engineMultiPv.value));
+el.engineDepth.addEventListener("input", () => (el.engineDepthValue.textContent = el.engineDepth.value));
+el.engineMultiPv.addEventListener("change", () => updateEngineSettings({ multiPv: el.engineMultiPv.value }));
+el.engineDepth.addEventListener("change", () => updateEngineSettings({ depth: el.engineDepth.value }));
+el.engineHash.addEventListener("change", () => updateEngineSettings({ hash: el.engineHash.value }));
+el.engineArrows.addEventListener("change", () => updateEngineSettings({ arrows: el.engineArrows.checked }));
+el.engineProjectorArrows.addEventListener("change", () =>
+  updateEngineSettings({ projectorArrows: el.engineProjectorArrows.checked })
+);
+el.engineSettingsReset.addEventListener("click", () => updateEngineSettings(Engine.DEFAULT_ENGINE_SETTINGS));
+
 function renderEngine() {
+  paintEngineArrows();
+  syncProjectorEngineArrows();
   el.engineLines.innerHTML = "";
   if (!state.engineOn) return;
   if (state.engineFailed) {

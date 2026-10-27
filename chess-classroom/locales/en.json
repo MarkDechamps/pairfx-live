@@ -40,5 +40,15 @@
   "engineAnalysis": "Analysis",
   "engineLoading": "loading engine…",
   "engineDepth": "depth {depth}",
-  "engineUnavailable": "engine unavailable"
+  "engineUnavailable": "engine unavailable",
+  "engineSettings": "Engine settings",
+  "engineLines": "Lines",
+  "engineSearchDepth": "Depth",
+  "engineHash": "Memory (hash)",
+  "engineHashMb": "{mb} MB",
+  "engineArrows": "Show arrows on the teacher board",
+  "engineSettingsNote": "Only you see this. Lower depth is faster, higher is stronger.",
+  "engineReset": "Default",
+  "close": "Close",
+  "engineProjectorArrows": "Also show engine arrows on the projector screen (students)"
 }

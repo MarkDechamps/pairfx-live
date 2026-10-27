@@ -40,5 +40,15 @@
   "engineAnalysis": "Analyse",
   "engineLoading": "chargement du moteur…",
   "engineDepth": "profondeur {depth}",
-  "engineUnavailable": "moteur indisponible"
+  "engineUnavailable": "moteur indisponible",
+  "engineSettings": "Paramètres du moteur",
+  "engineLines": "Lignes",
+  "engineSearchDepth": "Profondeur",
+  "engineHash": "Mémoire (hash)",
+  "engineHashMb": "{mb} Mo",
+  "engineArrows": "Afficher les flèches sur l'échiquier du professeur",
+  "engineSettingsNote": "Visible uniquement par vous. Une profondeur plus faible est plus rapide, plus élevée plus forte.",
+  "engineReset": "Par défaut",
+  "close": "Fermer",
+  "engineProjectorArrows": "Afficher aussi les flèches du moteur sur l'écran du projecteur (élèves)"
 }
