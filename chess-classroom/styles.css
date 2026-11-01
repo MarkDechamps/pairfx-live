@@ -172,7 +172,10 @@ body {
 }
 
 .board-col { display: flex; flex-direction: column; gap: 0.75rem; }
-.board-row { display: flex; gap: 0.6rem; align-items: stretch; }
+.board-row { display: flex; gap: 0.6rem; align-items: stretch; flex-wrap: wrap; }
+/* The engine card sits in the free space right of the board (not in the side
+   column, where its changing height pushed the other cards up and down). */
+.board-row .engine-card { flex: 1 1 14rem; align-self: flex-start; min-width: 0; }
 
 .side-col { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 

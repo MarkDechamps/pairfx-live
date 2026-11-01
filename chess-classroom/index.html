@@ -94,6 +94,14 @@
           </div>
         </div>
         <div class="board-container" id="board"></div>
+        <!-- Teacher-only engine analysis: shown only while the Engine checkbox
+             is on, and never part of the sync pointer — the projector and its
+             preview never see it. Sits right of the board so its changing
+             height doesn't shift the side column. -->
+        <details class="card collapsible-card engine-card" id="engineCard" hidden open>
+          <summary><span data-i18n="engineAnalysis">Analyse</span> <span class="tag mono" id="engineStatus"></span></summary>
+          <ol class="engine-lines" id="engineLines"></ol>
+        </details>
       </div>
 
       <div class="move-badge">
@@ -109,14 +117,6 @@
     </div>
 
     <div class="side-col">
-      <!-- Teacher-only engine analysis: shown only while the Engine checkbox
-           is on, and never part of the sync pointer — the projector and its
-           preview never see it. -->
-      <details class="card collapsible-card engine-card" id="engineCard" hidden open>
-        <summary><span data-i18n="engineAnalysis">Analyse</span> <span class="tag mono" id="engineStatus"></span></summary>
-        <ol class="engine-lines" id="engineLines"></ol>
-      </details>
-
       <!-- Box 1 (see CLAUDE.md's judgment call: box 1 is "which uploaded PGN
            is open", box 2 below is "which game within it"). Moved here from
            the top bar per direct feedback - upload/rename/delete are
