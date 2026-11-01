@@ -540,35 +540,20 @@ teacherBoard.enableMoveInput((event) => {
 function tryPlayBoardMove(from, to) {
   if (!state.gameTree) return false;
   const currentNode = state.cursor.getCurrentNode();
-  const fen = currentNode ? currentNode.fen : state.gameTree.rootFen;
-  const scratch = new Chess(fen);
-  let moveResult;
-  try {
-    moveResult = scratch.move({ from, to, promotion: "q" });
-  } catch {
-    return false; // illegal chess move — always rejected, regardless of Lock PGN
+  const decision = MoveTree.decideBoardMove(Chess, state.gameTree, currentNode, state.lockPgn, from, to);
+  // Always false: render() drives the board position via setPosition, so a
+  // rejected move snaps back and an accepted one is shown by the jump below.
+  if (decision.action === "jump") {
+    jumpTo(decision.pathKey);
+  } else if (decision.action === "add") {
+    // Lock PGN is off: the move is added to the tree as a real node (new
+    // sideline, or extending a line that ended here) — see moveTree.js:
+    // addMove and CLAUDE.md's judgment call on this.
+    const newNode = MoveTree.addMove(state.gameTree, currentNode, decision.moveResult);
+    renderVariations(); // the tree just grew — redraw so the new node is visible/clickable
+    jumpTo(newNode.pathKey);
+    persistGrownTree();
   }
-  const match = MoveTree.findContinuationBySan(currentNode, state.gameTree.mainLine, moveResult.san);
-  if (match) {
-    jumpTo(match.pathKey);
-    return false; // we drive the position via setPosition ourselves in render()
-  }
-  if (state.lockPgn) {
-    return false; // deviates from the loaded PGN and Lock PGN is on — reject (piece snaps back)
-  }
-  // Lock PGN is off: any legal move is playable, and it's added to the tree
-  // as a real node (new sideline, or extending a line that ended here) —
-  // see moveTree.js: addMove and CLAUDE.md's judgment call on this.
-  const newNode = MoveTree.addMove(state.gameTree, currentNode, {
-    san: moveResult.san,
-    from: moveResult.from,
-    to: moveResult.to,
-    fenBefore: fen,
-    fen: scratch.fen(),
-  });
-  renderVariations(); // the tree just grew — redraw so the new node is visible/clickable
-  jumpTo(newNode.pathKey);
-  persistGrownTree();
   return false;
 }
 

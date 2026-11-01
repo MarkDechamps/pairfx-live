@@ -605,6 +605,29 @@ export function findContinuationBySan(node, mainLine, san) {
   return continuationsFrom(node, mainLine).find((candidate) => candidate.san === san) || null;
 }
 
+// What a piece move (dragged/clicked from -> to) at `currentNode` should do:
+// { action: "reject" } for an illegal move, or a legal one that deviates from
+// the loaded tree while Lock PGN is on; { action: "jump", pathKey } when it
+// matches a move already in the tree; { action: "add", moveResult } (the
+// shape addMove takes) when it deviates and Lock PGN is off.
+export function decideBoardMove(ChessCtor, gameTree, currentNode, lockPgn, from, to) {
+  const fenBefore = currentNode ? currentNode.fen : gameTree.rootFen;
+  const scratch = new ChessCtor(fenBefore);
+  let played;
+  try {
+    played = scratch.move({ from, to, promotion: "q" });
+  } catch {
+    return { action: "reject" };
+  }
+  const match = findContinuationBySan(currentNode, gameTree.mainLine, played.san);
+  if (match) return { action: "jump", pathKey: match.pathKey };
+  if (lockPgn) return { action: "reject" };
+  return {
+    action: "add",
+    moveResult: { san: played.san, from: played.from, to: played.to, fenBefore, fen: scratch.fen() },
+  };
+}
+
 // "Lock PGN" off (see CLAUDE.md judgment calls): the teacher played a legal
 // move that findContinuationBySan couldn't match, so it needs to become a
 // real, addressable node in the tree — not just a transient board position —

@@ -27,6 +27,7 @@ import {
   findDiagrams,
   parseDiagramMarker,
   formatNags,
+  decideBoardMove,
 } from "./moveTree.js";
 
 // Plays `san` on a fresh chess.js instance seeded at `fen` and returns the
@@ -855,4 +856,79 @@ test("formatSequentialMoveLabel leaves glyphs to the caller for black-after-whit
 test("serializeGameTree keeps the game's opening comment", () => {
   const again = treeFrom(serializeGameTree(treeFrom("{Intro text} 1. e4 *")));
   assert.equal(again.gameComment, "Intro text");
+});
+
+// ---- cursor edge cases, error paths, board-move decisions -----------------
+
+test("stepBackward from a sideline's first move returns to the branch point", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6) 2... Nc6 *");
+  const cursor = createCursor(tree);
+  cursor.jumpToPathKey("2.v0.0"); // 2.Bc4
+  const back = cursor.stepBackward();
+  assert.equal(back.pathKey, tree.mainLine[1].pathKey); // 1...e5, the move the sideline branches after
+  cursor.jumpToPathKey(tree.mainLine[0].pathKey);
+  assert.equal(cursor.stepBackward(), null); // 1.e4 -> start
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(cursor.stepBackward(), null); // already at start
+});
+
+test("jumpToPathKey throws on an unknown path and leaves the cursor alone", () => {
+  const cursor = createCursor(treeFrom("1. e4 *"));
+  assert.throws(() => cursor.jumpToPathKey("9.v3.1"), /Unknown path/);
+  assert.equal(cursor.getCurrentPathKey(), "start");
+});
+
+test("buildGameTree names the illegal move and where it is", () => {
+  assert.throws(() => treeFrom("1. e4 e5 2. Ke4 *"), /Illegal move "Ke4" at path 2/);
+});
+
+test("promoteLeadingBracketedLine leaves an unclosed comment untouched", () => {
+  const text = '[Event "x"]\n\n{never closed ( 1. e4 )';
+  assert.equal(promoteLeadingBracketedLine(text), text);
+});
+
+test("formatSequentialMoveLabel and formatMoveLabel return null for no node", () => {
+  assert.equal(formatSequentialMoveLabel(null, null), null);
+  assert.equal(formatMoveLabel(null), null);
+});
+
+test("decideBoardMove: illegal move is rejected", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "e2", "e5"), { action: "reject" });
+});
+
+test("decideBoardMove: a move already in the tree jumps, locked or not", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  for (const lock of [true, false]) {
+    assert.deepEqual(decideBoardMove(Chess, tree, null, lock, "e2", "e4"), {
+      action: "jump",
+      pathKey: tree.mainLine[0].pathKey,
+    });
+  }
+});
+
+test("decideBoardMove: a deviating move is rejected when locked, added when unlocked", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "d2", "d4"), { action: "reject" });
+  const decision = decideBoardMove(Chess, tree, null, false, "d2", "d4");
+  assert.equal(decision.action, "add");
+  assert.equal(decision.moveResult.san, "d4");
+  assert.equal(decision.moveResult.fenBefore, tree.rootFen);
+  assert.match(decision.moveResult.fen, /^rnbqkbnr\/pppppppp\/8\/8\/3P4/);
+  // and the result is exactly what addMove accepts
+  const node = addMove(tree, null, decision.moveResult);
+  assert.equal(node.san, "d4");
+});
+
+test("decideBoardMove: a move matching a sideline jumps into it", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 *");
+  const e5 = tree.mainLine[1];
+  const decision = decideBoardMove(Chess, tree, e5, true, "f1", "c4");
+  assert.deepEqual(decision, { action: "jump", pathKey: "2.v0.0" });
+});
+
+test("decideBoardMove from the start of an empty game works", () => {
+  const tree = treeFrom("*");
+  assert.equal(decideBoardMove(Chess, tree, null, true, "e2", "e4").action, "reject");
+  assert.equal(decideBoardMove(Chess, tree, null, false, "e2", "e4").action, "add");
 });

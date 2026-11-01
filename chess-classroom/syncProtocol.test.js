@@ -259,3 +259,25 @@ test("annotations travel inside the same pointer as the position (they follow th
 
   assert.deepEqual(positions[0].arrows, [{ color: "success", from: "e2", to: "e4" }]);
 });
+
+test("readInitialState falls back to defaults when storage is empty, throws, or holds junk", () => {
+  const defaults = { pointer: defaultPointer(), overlays: defaultOverlayPrefs() };
+  assert.deepEqual(readInitialState(fakeStorage()), defaults);
+
+  const throwing = { getItem: () => { throw new Error("blocked"); }, setItem() {} };
+  assert.deepEqual(readInitialState(throwing), defaults);
+
+  const junk = fakeStorage();
+  junk.setItem(POINTER_STORAGE_KEY, "{not json");
+  junk.setItem(OVERLAYS_STORAGE_KEY, "also not json");
+  assert.deepEqual(readInitialState(junk), defaults);
+});
+
+test("teacher sync's readPointer/readOverlays fall back to defaults on a bad store", () => {
+  const storage = fakeStorage();
+  storage.setItem(POINTER_STORAGE_KEY, "{oops");
+  const bus = fakeBroadcastBus();
+  const sync = createTeacherSync({ channel: bus.open(), storage });
+  assert.deepEqual(sync.readPointer(), defaultPointer());
+  assert.deepEqual(sync.readOverlays(), defaultOverlayPrefs());
+});
