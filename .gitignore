@@ -13,3 +13,5 @@ Thumbs.db
 
 .claude/worktrees/
 opening-selector/scripts/research_cache/
+test-results/
+playwright-report/

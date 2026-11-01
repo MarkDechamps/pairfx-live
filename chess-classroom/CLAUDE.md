@@ -20,6 +20,7 @@ resulting architecture, not the product decisions themselves.
 node --test            # run all pure-logic unit tests (no framework, Node's built-in runner)
 python3 -m http.server 8000   # serve the app (fetch() of locales/*.json needs http://, not file://)
 npm run vendor          # re-copy chess.js/pgn-parser/cm-chessboard/stockfish from node_modules into vendor/
+npm run test:e2e        # browser smoke tests (Playwright, dev-only; first run: npx playwright install chromium)
 ```
 
 Run a single test file: `node --test moveTree.test.js`.
@@ -69,6 +70,17 @@ the diff in `vendor/` before committing it.
 `@mliebelt/pgn-parser`'s UMD build is loaded as a classic (non-module) `<script>` tag in both
 HTML files, which attaches `window.PgnParser`; `app.js`/`moveTree.js` read `window.PgnParser.parse`
 rather than importing it, since a UMD build has no ES module exports to import.
+
+## Tests beyond the pure modules
+
+- `locales.test.js` — nl/fr/en have identical keys and placeholders, no key is empty or dead, and
+  every `data-i18n` / `t("…")` key used by the HTML/JS exists.
+- `vendor.test.js` — `vendor/` matches `node_modules` (line endings ignored) and every `vendor/`
+  file the HTML loads exists, since all other tests import `node_modules`, not `vendor/`.
+- `e2e/*.spec.js` (Playwright, `npm run test:e2e`, serves the app itself on port 8123) — browser
+  smoke tests: upload, annotation glyphs, Key positions, language switch, teacher→projector sync,
+  Lock PGN reject/add/persist. Dev-only; `node --test` ignores `*.spec.js`. Wait for the async
+  IndexedDB write (poll it) before reloading in a test — the UI updates before the save finishes.
 
 ## Architecture
 
@@ -137,6 +149,9 @@ on and re-rendering is the resync.
 
 ## Judgment calls made while implementing (things the requester should know about)
 
+The wayfinder tickets settled product behavior at a conceptual level; a few concrete details
+weren't specified and needed a decision during implementation:
+
 - **Move annotations (NAGs) and ChessBase diagram markers.** `moveTree.js` keeps each move's
   parser NAGs on `node.nags` (shown as glyphs via `formatNags`, appended to the badge/variations
   labels, written back as `$n` by `serializeGameTree`; codes outside `NAG_GLYPHS` show nothing but
@@ -146,10 +161,6 @@ on and re-rendering is the resync.
   The board is always visible, so `formatCommentForDisplay` hides the marker (stored text keeps
   it) and `findDiagrams` feeds the "Key positions" card: one button per position+caption, covering
   after-move, before-move, opening-comment and sideline markers.
-
-The wayfinder tickets settled product behavior at a conceptual level; a few concrete details
-weren't specified and needed a decision during implementation:
-
 - **"Sidelines auto-collapse past ~2 ply" (ticket 0005) was read as *within* a sideline, not
   nesting depth.** Implemented as: a sideline's first 2 plies render expanded, the rest of that
   same line collapses behind a "show more" link (`moveTree.js: isCollapsedByDefault`). An
