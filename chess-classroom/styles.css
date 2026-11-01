@@ -172,6 +172,21 @@ body {
 }
 
 .board-col { display: flex; flex-direction: column; gap: 0.75rem; }
+/* Under the board, centred on it: tool rail (~3.15rem) + gap, then the board's width. */
+.board-nav {
+  --sq: min(5.6vw, 3.6rem);
+  display: flex; justify-content: center; gap: 0.4rem;
+  margin-left: 3.75rem;
+  width: calc(var(--sq) * 8 + 8px);
+}
+.nav-btn {
+  flex: 1; max-width: 4rem; height: 2.2rem;
+  border-radius: 6px; border: 1px solid var(--border);
+  background: var(--panel-bg); color: var(--text);
+  font-size: 1rem; cursor: pointer;
+}
+.nav-btn:hover:not(:disabled) { background: var(--panel-bg-2); }
+.nav-btn:disabled { opacity: 0.35; cursor: default; }
 .board-row { display: flex; gap: 0.6rem; align-items: stretch; flex-wrap: wrap; }
 /* The engine card sits in the free space right of the board (not in the side
    column, where its changing height pushed the other cards up and down). */

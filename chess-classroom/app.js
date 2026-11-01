@@ -123,6 +123,10 @@ const el = {
   diagramCard: document.getElementById("diagramCard"),
   diagramList: document.getElementById("diagramList"),
   freeHint: document.getElementById("freeHint"),
+  navFirst: document.getElementById("navFirst"),
+  navPrev: document.getElementById("navPrev"),
+  navNext: document.getElementById("navNext"),
+  navLast: document.getElementById("navLast"),
   lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
   engineCheckbox: document.getElementById("engineCheckbox"),
   engineCard: document.getElementById("engineCard"),
@@ -385,10 +389,19 @@ function render() {
   highlightActiveVariationEntry(node ? node.pathKey : "start");
 
   el.freeHint.hidden = state.syncOn;
+  renderNavButtons();
 
   renderPreview(fen, lastMove);
   publishIfSynced(fen, lastMove, moveLabel);
   analyzeIfEngineOn(fen);
+}
+
+function renderNavButtons() {
+  const { canGoBack, canGoForward } = state.cursor
+    ? MoveTree.navState(state.gameTree, state.cursor)
+    : { canGoBack: false, canGoForward: false };
+  el.navFirst.disabled = el.navPrev.disabled = !canGoBack;
+  el.navNext.disabled = el.navLast.disabled = !canGoForward;
 }
 
 function renderPreview(fen, lastMove) {
@@ -860,6 +873,17 @@ el.langSelect.addEventListener("change", (e) => setLanguage(e.target.value));
 
 el.openProjectorBtn.addEventListener("click", () => {
   window.open("projector.html", "chess-classroom-projector");
+});
+
+[
+  [el.navFirst, "first"],
+  [el.navPrev, "prev"],
+  [el.navNext, "next"],
+  [el.navLast, "last"],
+].forEach(([button, action]) => {
+  button.addEventListener("click", () => {
+    if (state.cursor && MoveTree.navigate(state.cursor, action)) handlePositionChanged();
+  });
 });
 
 document.addEventListener("keydown", (e) => {

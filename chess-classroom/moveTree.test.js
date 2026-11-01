@@ -934,7 +934,7 @@ test("decideBoardMove from the start of an empty game works", () => {
 });
 
 // ---- display + navigation helpers ------------------------------------------
-import { displayFor, visibleMoves, stepForKey, entryWithGrownGame } from "./moveTree.js";
+import { displayFor, visibleMoves, stepForKey, entryWithGrownGame, navigate, navState } from "./moveTree.js";
 
 test("displayFor: start position, a move, and no game at all", () => {
   const tree = treeFrom("1. e4! e5 *");
@@ -1019,4 +1019,50 @@ test("cursor.reset returns to the start position", () => {
   cursor.reset();
   assert.equal(cursor.getCurrentPathKey(), "start");
   assert.equal(cursor.getCurrentNode(), null);
+});
+
+test("navigate: first/prev/next/last move the cursor and say whether anything changed", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 Nc6 *");
+  const cursor = createCursor(tree);
+  assert.equal(navigate(cursor, "first"), false); // already at the start
+  assert.equal(navigate(cursor, "prev"), false);
+  assert.equal(navigate(cursor, "next"), true);
+  assert.equal(navigate(cursor, "last"), true);
+  assert.equal(cursor.getCurrentNode().san, "Nc6");
+  assert.equal(navigate(cursor, "last"), false); // already at the end
+  assert.equal(navigate(cursor, "next"), false);
+  assert.equal(navigate(cursor, "prev"), true);
+  assert.equal(cursor.getCurrentNode().san, "Nf3");
+  assert.equal(navigate(cursor, "first"), true);
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(navigate(cursor, "bogus"), false);
+});
+
+test("navigate 'last' stays within the current sideline", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3) 2... Nc6 *");
+  const cursor = createCursor(tree);
+  cursor.jumpToPathKey("2.v0.0"); // 2.Bc4
+  navigate(cursor, "last");
+  assert.equal(cursor.getCurrentNode().san, "d3");
+});
+
+test("navState reflects the start, the middle, and the end of a line; empty games can't move", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.deepEqual(navState(tree, cursor), { canGoBack: false, canGoForward: true });
+  cursor.stepForward();
+  assert.deepEqual(navState(tree, cursor), { canGoBack: true, canGoForward: true });
+  cursor.stepForward();
+  assert.deepEqual(navState(tree, cursor), { canGoBack: true, canGoForward: false });
+  const empty = treeFrom("*");
+  assert.deepEqual(navState(empty, createCursor(empty)), { canGoBack: false, canGoForward: false });
+});
+
+test("Home and End keys jump to the start and end", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.equal(stepForKey(cursor, "End"), true);
+  assert.equal(cursor.getCurrentNode().san, "e5");
+  assert.equal(stepForKey(cursor, "Home"), true);
+  assert.equal(cursor.getCurrentPathKey(), "start");
 });

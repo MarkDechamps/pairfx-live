@@ -116,3 +116,24 @@ test("Lock PGN rejects a deviating move; unlocked adds it as a sideline", async 
   await page.reload();
   await expect(page.locator("#varTree")).toContainText("d5");
 });
+
+test("the buttons under the board step through the moves and disable at the ends", async ({ page }) => {
+  await openWithGame(page);
+  const [first, prev, next, last] = ["#navFirst", "#navPrev", "#navNext", "#navLast"].map((s) => page.locator(s));
+  await expect(first).toBeDisabled();
+  await expect(prev).toBeDisabled();
+  await expect(next).toBeEnabled();
+
+  await next.click();
+  await expect(page.locator("#currentMove")).toHaveText("1.e4!");
+  await last.click();
+  await expect(page.locator("#currentMove")).toHaveText("2...Nc6");
+  await expect(next).toBeDisabled();
+  await expect(last).toBeDisabled();
+
+  await prev.click();
+  await expect(page.locator("#currentMove")).toHaveText("2.Nf3");
+  await first.click();
+  await expect(page.locator("#currentMove")).toHaveText(""); // start position: empty badge
+  await expect(prev).toBeDisabled();
+});

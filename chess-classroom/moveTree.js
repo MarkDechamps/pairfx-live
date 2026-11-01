@@ -797,12 +797,41 @@ export function visibleMoves(lineNodes, isSideline, forceExpand = false) {
 // Arrow-key stepping. Returns true when the position should be re-rendered:
 // ArrowRight only if there was a next move; ArrowLeft always (as the tab did).
 export function stepForKey(cursor, key) {
-  if (key === "ArrowRight") return Boolean(cursor.stepForward());
+  if (key === "ArrowRight") return navigate(cursor, "next");
   if (key === "ArrowLeft") {
     cursor.stepBackward();
     return true;
   }
+  if (key === "Home") return navigate(cursor, "first");
+  if (key === "End") return navigate(cursor, "last");
   return false;
+}
+
+// The board's navigation buttons: "first" (start position), "prev", "next",
+// "last" (end of the current line). Returns true if the position changed.
+export function navigate(cursor, action) {
+  if (action === "first") {
+    const moved = cursor.getCurrentPathKey() !== "start";
+    cursor.reset();
+    return moved;
+  }
+  if (action === "prev") return Boolean(cursor.stepBackward());
+  if (action === "next") return Boolean(cursor.stepForward());
+  if (action === "last") {
+    let moved = false;
+    while (cursor.stepForward()) moved = true;
+    return moved;
+  }
+  return false;
+}
+
+// Which navigation buttons make sense right now.
+export function navState(gameTree, cursor) {
+  const node = cursor.getCurrentNode();
+  return {
+    canGoBack: node !== null,
+    canGoForward: node ? Boolean(node.lineNodes[node.indexInLine + 1]) : gameTree.mainLine.length > 0,
+  };
 }
 
 // The library entry with one game's text swapped for the (possibly grown)
