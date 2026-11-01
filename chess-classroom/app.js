@@ -454,24 +454,32 @@ function renderVariations() {
 }
 
 // Renders one line (mainline or a variation's own sequence) into a DOM node.
-// `forceExpand` re-renders an already-collapsed tail without re-collapsing it
-// (used by the "show more" click handler below).
 // depth 0 is the mainline; depth 1 a sideline off it (its own indented block);
 // deeper sidelines flow inline, in parentheses, instead of each taking a line.
-function renderLine(lineNodes, depth, forceExpand = false) {
+function renderLine(lineNodes, depth) {
   const container = document.createElement(depth === 0 ? "div" : "span");
   if (depth === 1) container.className = "var-sideline";
   if (depth > 1) container.className = "var-inline";
   if (depth > 1) container.appendChild(document.createTextNode("("));
+  fillLine(container, lineNodes, depth, false);
+  if (depth > 1) container.appendChild(document.createTextNode(")"));
+  return container;
+}
+
+// Appends a line's moves (and its "show more" fold) to `parent`. Expanding a
+// fold fills a fragment in place of the button, so the rest of the line
+// continues inside the same block/parentheses instead of opening new ones.
+// `forceExpand` skips folding (used for that tail).
+function fillLine(parent, lineNodes, depth, forceExpand) {
   const { shown, folded } = MoveTree.visibleMoves(lineNodes, depth > 0, forceExpand);
   // previousNode is the move before in this same rendered line, unless a
   // sideline sits between them or this is the first move or a "show more"
   // resume point - then black's move still needs its "N..." ellipsis (see
   // formatSequentialMoveLabel and visibleMoves).
   shown.forEach(({ node, previousNode }) => {
-    container.appendChild(renderMoveEntry(node, previousNode));
+    parent.appendChild(renderMoveEntry(node, previousNode));
     node.variations.forEach((variation) => {
-      container.appendChild(renderLine(variation, depth + 1));
+      parent.appendChild(renderLine(variation, depth + 1));
     });
   });
   if (folded) {
@@ -479,12 +487,12 @@ function renderLine(lineNodes, depth, forceExpand = false) {
     expandBtn.className = "var-expand";
     expandBtn.textContent = state.t("showMore");
     expandBtn.addEventListener("click", () => {
-      expandBtn.replaceWith(renderLine(folded, depth, true));
+      const tail = document.createDocumentFragment();
+      fillLine(tail, folded, depth, true);
+      expandBtn.replaceWith(tail);
     });
-    container.appendChild(expandBtn);
+    parent.appendChild(expandBtn);
   }
-  if (depth > 1) container.appendChild(document.createTextNode(")"));
-  return container;
 }
 
 function renderMoveEntry(node, previousNode) {
@@ -894,6 +902,8 @@ document.addEventListener("keydown", (e) => {
   if (!state.cursor) return;
   if (document.activeElement && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
   if (MoveTree.stepForKey(state.cursor, e.key)) handlePositionChanged();
+  // Home/End step the line; don't also scroll the page to the top/bottom.
+  if (e.key === "Home" || e.key === "End") e.preventDefault();
 });
 
 // ---- boot -----------------------------------------------------------

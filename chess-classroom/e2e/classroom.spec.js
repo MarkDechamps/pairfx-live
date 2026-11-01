@@ -153,3 +153,66 @@ test("variations: black gets its ellipsis after a sideline, and a nested sidelin
   const nestedRow = (await nested.boundingBox()).y;
   expect(Math.abs(nestedRow - parentRow)).toBeLessThan(8);
 });
+
+const DEEP_PGN =
+  '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3 d6 4. c3 (4. Nc3 Be7 5. Nf3 O-O 6. O-O) 4... Be7) 2... Nc6 *\n';
+
+test("Show more expands a folded sideline in place, without extra block or parentheses", async ({ page }) => {
+  await openWithGame(page, DEEP_PGN);
+  const sideline = page.locator("#varTree .var-sideline");
+  await expect(sideline).toHaveCount(1);
+  await expect(sideline.locator(".var-expand")).toHaveCount(1);
+
+  await sideline.locator(".var-expand").first().click();
+  await expect(page.locator("#varTree .var-sideline")).toHaveCount(1); // no second indented block
+  await expect(sideline).toContainText("3.d3");
+});
+
+test("Show more inside a nested sideline keeps a single pair of parentheses", async ({ page }) => {
+  await openWithGame(page, DEEP_PGN);
+  // expand the top-level sideline fully, then the nested one
+  for (let i = 0; i < 3; i++) {
+    const more = page.locator("#varTree .var-expand");
+    if ((await more.count()) === 0) break;
+    await more.first().click();
+  }
+  const nested = page.locator("#varTree .var-inline");
+  await expect(nested).toHaveCount(1);
+  const text = await nested.innerText();
+  expect(text.match(/\(/g)).toHaveLength(1);
+  expect(text.match(/\)/g)).toHaveLength(1);
+  await expect(nested).toContainText("6.O-O");
+});
+
+test("Home and End keys step to the start and end without scrolling the page", async ({ page }) => {
+  await openWithGame(page);
+  await page.setViewportSize({ width: 1200, height: 300 }); // short window: the page can scroll
+  await page.locator("body").click({ position: { x: 5, y: 5 } });
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(300);
+  await page.keyboard.press("End");
+  await expect(page.locator("#currentMove")).toHaveText("2...Nc6");
+  await page.waitForTimeout(300); // let a (wrongly) default-scrolling End take effect
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await page.keyboard.press("Home");
+  await expect(page.locator("#currentMove")).toHaveText("");
+});
+
+test("engine card is hidden until the engine is switched on, and again after switching it off", async ({ page }) => {
+  await openWithGame(page);
+  await expect(page.locator("#engineCard")).toBeHidden();
+  await page.locator("#engineCheckbox").check();
+  await expect(page.locator("#engineCard")).toBeVisible();
+  await page.locator("#engineCheckbox").uncheck();
+  await expect(page.locator("#engineCard")).toBeHidden();
+});
+
+test("in a narrower window the engine card wraps below the board instead of overlapping it", async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await openWithGame(page);
+  await page.locator("#engineCheckbox").check();
+  const board = await page.locator("#board").boundingBox();
+  const card = await page.locator("#engineCard").boundingBox();
+  const rightOfBoard = card.x >= board.x + board.width - 1;
+  const belowBoard = card.y >= board.y + board.height - 1;
+  expect(rightOfBoard || belowBoard).toBe(true);
+});
