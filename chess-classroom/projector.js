@@ -9,6 +9,7 @@ import { Arrows } from "./vendor/cm-chessboard/src/extensions/arrows/Arrows.js";
 
 import * as I18n from "./i18n.js";
 import * as Sync from "./syncProtocol.js";
+import * as View from "./projectorView.js";
 
 const ASSETS_URL = "vendor/cm-chessboard/assets/";
 const LANG_STORAGE_KEY = "chess-classroom:lang"; // same key as app.js — one shared language preference
@@ -53,27 +54,26 @@ function paintLastMove(lastMove) {
   }
 }
 
-function paintAnnotations(annotations) {
+function paintAnnotations(pointer) {
   // Only clear the annotation-colored marker types here, not every marker on
   // the board — the last-move highlight is also a marker (a different type)
   // and must survive this call regardless of call order.
   board.removeArrows();
   Object.values(MARKER_TYPE_BY_COLOR).forEach((type) => board.removeMarkers(type));
-  if (!overlays.arrows) return;
-  (annotations.arrows || []).forEach((a) => {
-    const type = ARROW_TYPE_BY_COLOR[a.color] || ARROW_TYPE_BY_COLOR.success;
-    board.addArrow(type, a.from, a.to);
-  });
-  (annotations.markers || []).forEach((m) => {
-    const type = MARKER_TYPE_BY_COLOR[m.color] || MARKER_TYPE_BY_COLOR.success;
-    board.addMarker(type, m.square);
-  });
+  const { arrows, markers } = View.annotationsToDraw(
+    pointer,
+    overlays,
+    Object.keys(ARROW_TYPE_BY_COLOR),
+    Object.keys(MARKER_TYPE_BY_COLOR)
+  );
+  arrows.forEach((a) => board.addArrow(ARROW_TYPE_BY_COLOR[a.color], a.from, a.to));
+  markers.forEach((m) => board.addMarker(MARKER_TYPE_BY_COLOR[m.color], m.square));
 }
 
 let lastPointer = Sync.defaultPointer();
 
 function applyOrientation(orientation) {
-  const color = orientation === "black" ? COLOR.black : COLOR.white;
+  const color = View.isBlack(orientation) ? COLOR.black : COLOR.white;
   // setOrientation always enqueues a turn-board animation, even to the
   // color it's already at - skip the call entirely on every ordinary move
   // (which re-renders the whole pointer) so only an actual flip animates.
@@ -93,11 +93,11 @@ function renderPointer(pointer) {
   paintLastMove(pointer.lastMove);
   paintAnnotations(pointer);
 
-  el.ovMoveNumber.hidden = !overlays.moveNumber || !pointer.moveLabel;
-  el.ovMoveNumber.textContent = pointer.moveLabel || "";
-
-  el.ovGameTitle.hidden = !overlays.gameTitle || !pointer.gameTitle;
-  el.ovGameTitle.textContent = pointer.gameTitle || "";
+  const view = View.overlayView(pointer, overlays);
+  el.ovMoveNumber.hidden = view.moveNumber.hidden;
+  el.ovMoveNumber.textContent = view.moveNumber.text;
+  el.ovGameTitle.hidden = view.gameTitle.hidden;
+  el.ovGameTitle.textContent = view.gameTitle.text;
 }
 
 function renderOverlays(prefs) {

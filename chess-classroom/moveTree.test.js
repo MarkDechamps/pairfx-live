@@ -23,6 +23,11 @@ import {
   replaceGameInPgnText,
   addMove,
   serializeGameTree,
+  formatCommentForDisplay,
+  findDiagrams,
+  parseDiagramMarker,
+  formatNags,
+  decideBoardMove,
 } from "./moveTree.js";
 
 // Plays `san` on a fresh chess.js instance seeded at `fen` and returns the
@@ -738,4 +743,338 @@ test("serializeGameTree includes a move added via addMove, so it survives a relo
 
   assert.equal(reparsed.mainLine.length, 11);
   assert.equal(reparsed.mainLine[10].san, "d3");
+});
+
+test("move annotations (!, ?, !?, NAGs) are imported, shown, and round-tripped", () => {
+  const tree = buildGameTree(Chess, parseGame(parse, "1. e4! e5?? 2. Nf3 $1 $14 *"));
+  const [e4, e5, nf3] = tree.mainLine;
+  assert.equal(formatMoveLabel(e4), "1.e4!");
+  assert.equal(formatMoveLabel(e5), "1...e5??");
+  assert.equal(formatMoveLabel(nf3), "2.Nf3!⩲");
+  assert.match(serializeGameTree(tree), /e4 \$1 e5 \$4 Nf3 \$1 \$14/);
+});
+
+test("ChessBase's [#] diagram marker is hidden in displayed comments", () => {
+  assert.equal(formatCommentForDisplay("Key position. [#] White is better."), "Key position. White is better.");
+  assert.equal(formatCommentForDisplay("[#]"), "");
+  assert.equal(formatCommentForDisplay(null), "");
+});
+
+test("parseDiagramMarker recognises [#], leading # and #[caption]", () => {
+  assert.deepEqual(parseDiagramMarker("x [#] y"), { caption: "" });
+  assert.deepEqual(parseDiagramMarker("#[The Petroff]This is"), { caption: "The Petroff" });
+  assert.deepEqual(parseDiagramMarker("# text"), { caption: "" });
+  assert.equal(parseDiagramMarker("plain # in the middle"), null);
+});
+
+test("formatCommentForDisplay drops leading # and caption marker", () => {
+  assert.equal(formatCommentForDisplay("#[The Petroff]This is solid."), "This is solid.");
+});
+
+test("findDiagrams covers after-move, before-move, start comment, and sidelines", () => {
+  const tree = buildGameTree(
+    Chess,
+    parseGame(parse, "{#[Start]} 1. e4 e5 {[#]} 2. Nf3 (2. Bc4 {x [#]}) {# before} 2... Nc6 *")
+  );
+  const found = findDiagrams(tree);
+  assert.deepEqual(
+    found.map((d) => [d.pathKey, d.node ? formatMoveLabel(d.node) : null, d.caption]),
+    [["start", null, "Start"], ["1", "1...e5", ""], ["2.v0.0", "2.Bc4", ""], ["2", "2.Nf3", ""]]
+  );
+});
+
+test("a leading #<digit> is mate notation, not a diagram marker", () => {
+  assert.equal(parseDiagramMarker("#3 mate in three"), null);
+  assert.equal(formatCommentForDisplay("#3 mate in three"), "#3 mate in three");
+});
+
+test("findDiagrams reports one button per position and caption", () => {
+  const tree = buildGameTree(Chess, parseGame(parse, "1. e4 e5 {[#]} {[#]} 2. Nf3 *"));
+  assert.equal(findDiagrams(tree).length, 1);
+});
+
+function treeFrom(pgn) {
+  return buildGameTree(Chess, parseGame(parse, pgn));
+}
+
+test("formatNags: concatenates, ignores unknown codes, tolerates missing nags", () => {
+  assert.equal(formatNags({ nags: ["$1", "$14"] }), "!⩲");
+  assert.equal(formatNags({ nags: ["$22"] }), "");
+  assert.equal(formatNags({}), "");
+  assert.equal(formatNags(null), "");
+});
+
+test("annotations and diagram markers survive serialize -> reparse", () => {
+  const original = treeFrom("{#[Start]} 1. e4! e5 {[#] key} 2. Nf3 $14 (2. Bc4?! {x [#]}) 2... Nc6 *");
+  const again = treeFrom(serializeGameTree(original));
+  assert.deepEqual(again.mainLine.map((n) => n.nags), original.mainLine.map((n) => n.nags));
+  assert.deepEqual(
+    findDiagrams(again).map((d) => [d.pathKey, d.caption]),
+    findDiagrams(original).map((d) => [d.pathKey, d.caption])
+  );
+  assert.deepEqual(again.mainLine[2].variations[0][0].nags, ["$6"]);
+});
+
+test("addMove gives the new node empty nags and serializes next to annotated moves", () => {
+  const tree = treeFrom("1. e4! e5 *");
+  const last = tree.mainLine[1];
+  const chess = new Chess(last.fen);
+  const result = chess.move("Nf3");
+  addMove(tree, last, { san: result.san, from: result.from, to: result.to, fenBefore: last.fen, fen: chess.fen() });
+  const added = tree.mainLine[2];
+  assert.deepEqual(added.nags, []);
+  assert.match(serializeGameTree(tree), /e4 \$1 e5 Nf3/);
+});
+
+test("a marker in the comment after a sideline's first move points at that move", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 {#} Nf6) 2... Nc6 *");
+  const [d] = findDiagrams(tree);
+  assert.equal(d.pathKey, "2.v0.0");
+});
+
+test("a sideline's own first move with a before-comment jumps to the branch point", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 ({[#]} 2. Bc4) 2... Nc6 *");
+  const found = findDiagrams(tree);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].pathKey, tree.mainLine[1].pathKey);
+});
+
+test("a before-move marker on move 1 points at the start position", () => {
+  const found = findDiagrams(treeFrom("1. e4 {[#]} e5 *"));
+  assert.ok(found.every((d) => d.pathKey !== undefined));
+  const first = findDiagrams(treeFrom("{[#]} 1. e4 *"));
+  assert.deepEqual(first.map((d) => [d.pathKey, d.node]), [["start", null]]);
+});
+
+test("formatSequentialMoveLabel leaves glyphs to the caller for black-after-white", () => {
+  const tree = treeFrom("1. e4! e5? *");
+  const [w, b] = tree.mainLine;
+  assert.equal(formatSequentialMoveLabel(b, w), "e5");
+  assert.equal(formatSequentialMoveLabel(w, null), "1.e4!");
+});
+
+test("serializeGameTree keeps the game's opening comment", () => {
+  const again = treeFrom(serializeGameTree(treeFrom("{Intro text} 1. e4 *")));
+  assert.equal(again.gameComment, "Intro text");
+});
+
+// ---- cursor edge cases, error paths, board-move decisions -----------------
+
+test("stepBackward from a sideline's first move returns to the branch point", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6) 2... Nc6 *");
+  const cursor = createCursor(tree);
+  cursor.jumpToPathKey("2.v0.0"); // 2.Bc4
+  const back = cursor.stepBackward();
+  assert.equal(back.pathKey, tree.mainLine[1].pathKey); // 1...e5, the move the sideline branches after
+  cursor.jumpToPathKey(tree.mainLine[0].pathKey);
+  assert.equal(cursor.stepBackward(), null); // 1.e4 -> start
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(cursor.stepBackward(), null); // already at start
+});
+
+test("jumpToPathKey throws on an unknown path and leaves the cursor alone", () => {
+  const cursor = createCursor(treeFrom("1. e4 *"));
+  assert.throws(() => cursor.jumpToPathKey("9.v3.1"), /Unknown path/);
+  assert.equal(cursor.getCurrentPathKey(), "start");
+});
+
+test("buildGameTree names the illegal move and where it is", () => {
+  assert.throws(() => treeFrom("1. e4 e5 2. Ke4 *"), /Illegal move "Ke4" at path 2/);
+});
+
+test("promoteLeadingBracketedLine leaves an unclosed comment untouched", () => {
+  const text = '[Event "x"]\n\n{never closed ( 1. e4 )';
+  assert.equal(promoteLeadingBracketedLine(text), text);
+});
+
+test("formatSequentialMoveLabel and formatMoveLabel return null for no node", () => {
+  assert.equal(formatSequentialMoveLabel(null, null), null);
+  assert.equal(formatMoveLabel(null), null);
+});
+
+test("decideBoardMove: illegal move is rejected", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "e2", "e5"), { action: "reject" });
+});
+
+test("decideBoardMove: a move already in the tree jumps, locked or not", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  for (const lock of [true, false]) {
+    assert.deepEqual(decideBoardMove(Chess, tree, null, lock, "e2", "e4"), {
+      action: "jump",
+      pathKey: tree.mainLine[0].pathKey,
+    });
+  }
+});
+
+test("decideBoardMove: a deviating move is rejected when locked, added when unlocked", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "d2", "d4"), { action: "reject" });
+  const decision = decideBoardMove(Chess, tree, null, false, "d2", "d4");
+  assert.equal(decision.action, "add");
+  assert.equal(decision.moveResult.san, "d4");
+  assert.equal(decision.moveResult.fenBefore, tree.rootFen);
+  assert.match(decision.moveResult.fen, /^rnbqkbnr\/pppppppp\/8\/8\/3P4/);
+  // and the result is exactly what addMove accepts
+  const node = addMove(tree, null, decision.moveResult);
+  assert.equal(node.san, "d4");
+});
+
+test("decideBoardMove: a move matching a sideline jumps into it", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 *");
+  const e5 = tree.mainLine[1];
+  const decision = decideBoardMove(Chess, tree, e5, true, "f1", "c4");
+  assert.deepEqual(decision, { action: "jump", pathKey: "2.v0.0" });
+});
+
+test("decideBoardMove from the start of an empty game works", () => {
+  const tree = treeFrom("*");
+  assert.equal(decideBoardMove(Chess, tree, null, true, "e2", "e4").action, "reject");
+  assert.equal(decideBoardMove(Chess, tree, null, false, "e2", "e4").action, "add");
+});
+
+// ---- display + navigation helpers ------------------------------------------
+import { displayFor, visibleMoves, stepForKey, entryWithGrownGame, navigate, navState } from "./moveTree.js";
+
+test("displayFor: start position, a move, and no game at all", () => {
+  const tree = treeFrom("1. e4! e5 *");
+  const cursor = createCursor(tree);
+  assert.deepEqual(displayFor(tree, cursor, "STARTFEN"), {
+    node: null,
+    fen: tree.rootFen,
+    lastMove: null,
+    moveLabel: null,
+  });
+  cursor.stepForward();
+  const shown = displayFor(tree, cursor, "STARTFEN");
+  assert.equal(shown.moveLabel, "1.e4!");
+  assert.deepEqual(shown.lastMove, { from: "e2", to: "e4" });
+  assert.equal(shown.fen, tree.mainLine[0].fen);
+  assert.deepEqual(displayFor(null, null, "STARTFEN"), { node: null, fen: "STARTFEN", lastMove: null, moveLabel: null });
+});
+
+test("visibleMoves: a mainline is never folded and each move knows its predecessor", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *");
+  const { shown, folded } = visibleMoves(tree.mainLine, false);
+  assert.equal(folded, null);
+  assert.equal(shown.length, 6);
+  assert.equal(shown[0].previousNode, null);
+  assert.equal(shown[1].previousNode, tree.mainLine[0]);
+});
+
+test("visibleMoves: a sideline folds after its first two plies, unless forced open", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3 d6 4. c3) 2... Nc6 *");
+  const sideline = tree.mainLine[2].variations[0];
+  const folded = visibleMoves(sideline, true);
+  assert.equal(folded.shown.length, 2);
+  assert.equal(folded.folded.length, 3);
+  assert.equal(folded.folded[0].san, "d3");
+  const open = visibleMoves(sideline, true, true);
+  assert.equal(open.folded, null);
+  assert.equal(open.shown.length, 5);
+});
+
+test("visibleMoves: a short sideline and an empty line", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 *");
+  assert.equal(visibleMoves(tree.mainLine[2].variations[0], true).folded, null);
+  assert.deepEqual(visibleMoves([], true), { shown: [], folded: null });
+});
+
+test("stepForKey: arrows step, other keys do nothing, end of line does not re-render", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.equal(stepForKey(cursor, "x"), false);
+  assert.equal(stepForKey(cursor, "ArrowRight"), true);
+  assert.equal(cursor.getCurrentPathKey(), "0");
+  assert.equal(stepForKey(cursor, "ArrowRight"), true);
+  assert.equal(stepForKey(cursor, "ArrowRight"), false); // already at the last move
+  assert.equal(stepForKey(cursor, "ArrowLeft"), true);
+  assert.equal(cursor.getCurrentPathKey(), "0");
+});
+
+test("entryWithGrownGame rewrites only that game's slot and remembers the selection", () => {
+  const text = "[Event \"One\"]\n[Result \"*\"]\n\n1. e4 *\n\n[Event \"Two\"]\n[Result \"*\"]\n\n1. d4 *\n";
+  const games = splitPgnGames(text);
+  assert.equal(games.length, 2);
+  const tree = buildGameTree(Chess, parseGame(parse, games[1]));
+  const grown = addMove(tree, tree.mainLine[0], (() => {
+    const c = new Chess(tree.mainLine[0].fen);
+    const r = c.move("d5");
+    return { san: r.san, from: r.from, to: r.to, fenBefore: tree.mainLine[0].fen, fen: c.fen() };
+  })());
+  assert.equal(grown.san, "d5");
+  const entry = { id: "x", name: "n", pgnText: text, selectedGameIndex: 0, createdAt: 1 };
+  const updated = entryWithGrownGame(entry, 1, tree);
+  assert.equal(updated.selectedGameIndex, 1);
+  assert.equal(updated.id, "x");
+  const [first, second] = splitPgnGames(updated.pgnText);
+  assert.equal(first.trim(), games[0].trim());
+  assert.match(second, /d4 d5/);
+  assert.equal(entry.pgnText, text); // the input entry is not mutated
+});
+
+test("cursor.reset returns to the start position", () => {
+  const cursor = createCursor(treeFrom("1. e4 e5 *"));
+  cursor.stepForward();
+  cursor.reset();
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(cursor.getCurrentNode(), null);
+});
+
+test("navigate: first/prev/next/last move the cursor and say whether anything changed", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 Nc6 *");
+  const cursor = createCursor(tree);
+  assert.equal(navigate(cursor, "first"), false); // already at the start
+  assert.equal(navigate(cursor, "prev"), false);
+  assert.equal(navigate(cursor, "next"), true);
+  assert.equal(navigate(cursor, "last"), true);
+  assert.equal(cursor.getCurrentNode().san, "Nc6");
+  assert.equal(navigate(cursor, "last"), false); // already at the end
+  assert.equal(navigate(cursor, "next"), false);
+  assert.equal(navigate(cursor, "prev"), true);
+  assert.equal(cursor.getCurrentNode().san, "Nf3");
+  assert.equal(navigate(cursor, "first"), true);
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(navigate(cursor, "bogus"), false);
+});
+
+test("navigate 'last' stays within the current sideline", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3) 2... Nc6 *");
+  const cursor = createCursor(tree);
+  cursor.jumpToPathKey("2.v0.0"); // 2.Bc4
+  navigate(cursor, "last");
+  assert.equal(cursor.getCurrentNode().san, "d3");
+});
+
+test("navState reflects the start, the middle, and the end of a line; empty games can't move", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.deepEqual(navState(tree, cursor), { canGoBack: false, canGoForward: true });
+  cursor.stepForward();
+  assert.deepEqual(navState(tree, cursor), { canGoBack: true, canGoForward: true });
+  cursor.stepForward();
+  assert.deepEqual(navState(tree, cursor), { canGoBack: true, canGoForward: false });
+  const empty = treeFrom("*");
+  assert.deepEqual(navState(empty, createCursor(empty)), { canGoBack: false, canGoForward: false });
+});
+
+test("Home and End keys jump to the start and end", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.equal(stepForKey(cursor, "End"), true);
+  assert.equal(cursor.getCurrentNode().san, "e5");
+  assert.equal(stepForKey(cursor, "Home"), true);
+  assert.equal(cursor.getCurrentPathKey(), "start");
+});
+
+test("visibleMoves: after a sideline, black's move loses its predecessor so it gets the ellipsis", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 3. Bb5 *");
+  const { shown } = visibleMoves(tree.mainLine, false);
+  const nf3 = shown[2];
+  const nc6 = shown[3];
+  assert.equal(nf3.node.san, "Nf3");
+  assert.equal(nc6.previousNode, null); // Nf3 has a sideline
+  assert.equal(formatSequentialMoveLabel(nc6.node, nc6.previousNode), "2...Nc6");
+  assert.equal(shown[4].previousNode, nc6.node); // plain continuation keeps it
+  assert.equal(formatSequentialMoveLabel(shown[2].node, shown[2].previousNode), "2.Nf3");
 });

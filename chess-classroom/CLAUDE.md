@@ -20,6 +20,7 @@ resulting architecture, not the product decisions themselves.
 node --test            # run all pure-logic unit tests (no framework, Node's built-in runner)
 python3 -m http.server 8000   # serve the app (fetch() of locales/*.json needs http://, not file://)
 npm run vendor          # re-copy chess.js/pgn-parser/cm-chessboard/stockfish from node_modules into vendor/
+npm run test:e2e        # browser smoke tests (Playwright, dev-only; first run: npx playwright install chromium)
 ```
 
 Run a single test file: `node --test moveTree.test.js`.
@@ -70,6 +71,17 @@ the diff in `vendor/` before committing it.
 HTML files, which attaches `window.PgnParser`; `app.js`/`moveTree.js` read `window.PgnParser.parse`
 rather than importing it, since a UMD build has no ES module exports to import.
 
+## Tests beyond the pure modules
+
+- `locales.test.js` — nl/fr/en have identical keys and placeholders, no key is empty or dead, and
+  every `data-i18n` / `t("…")` key used by the HTML/JS exists.
+- `vendor.test.js` — `vendor/` matches `node_modules` (line endings ignored) and every `vendor/`
+  file the HTML loads exists, since all other tests import `node_modules`, not `vendor/`.
+- `e2e/*.spec.js` (Playwright, `npm run test:e2e`, serves the app itself on port 8123) — browser
+  smoke tests: upload, annotation glyphs, Key positions, language switch, teacher→projector sync,
+  Lock PGN reject/add/persist. Dev-only; `node --test` ignores `*.spec.js`. Wait for the async
+  IndexedDB write (poll it) before reloading in a test — the UI updates before the save finishes.
+
 ## Architecture
 
 **Strict separation of pure logic (no DOM) from DOM rendering/wiring**, mirroring
@@ -82,14 +94,21 @@ of one `engine.js`, because there are several genuinely independent concerns:
 | `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming — both of a library *entry* (`nameForEntry`) and of one *game* inside it (`nameForGame`) — the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, and which game within a (possibly multi-game) entry is currently selected/shown (`showGameList`, `gameListChoices`, `clampGameIndex`). |
 | `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, `splitPgnGames`/`parseGames` (splitting/parsing a raw multi-game file), `replaceGameInPgnText` (writing one game's text back into its own slot within a multi-game file without touching the others), and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
 | `engineAnalysis.js` | `engineAnalysis.test.js` | The UCI conversation with the Stockfish worker: parsing `info ... pv ...` lines, White-perspective score formatting (`+0.35`, `#3`, `-#2`), UCI-PV-to-numbered-SAN (`pvToSan`), and the session state machine (`createEngineSession`) that restarts the search when the position changes. `send` is injected, so it's tested with a fake engine. |
+| `boardAnnotations.js` | `boardAnnotations.test.js` | Translating cm-chessboard's reference-typed arrows/markers to and from the plain `{color, from, to}` shape the sync protocol carries, dropping the teacher-only engine arrows. |
+| `projectorView.js` | `projectorView.test.js` | What the projector shows for a pointer + overlay prefs: label visibility/text, which annotations to draw (none when the arrows overlay is off, unknown color -> success). `projector.js` only paints it. |
 | `syncProtocol.js` | `syncProtocol.test.js` | The teacher/projector message shapes and catch-up-on-startup logic. `BroadcastChannel`/`localStorage` are injected (`{channel, storage}`), so this is tested with fake in-memory stand-ins — no browser needed. |
 
-None of these five modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
+(`moveTree.js` also owns the display/navigation decisions `app.js` used to make inline — `decideBoardMove`,
+`displayFor`, `visibleMoves`, `stepForKey`, `entryWithGrownGame`; `pgnLibrary.js` owns `pickEntryToLoad`,
+`resolveGameSelection`, `createEntry` and the Lock PGN preference codec; `engineAnalysis.js` owns
+`parseStoredEngineSettings` and `projectorArrows`; `syncProtocol.js` owns `teacherPointer`.)
+
+None of these modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
 `localStorage` directly — they take plain data/injected dependencies in and return plain data
 out, which is what makes `node --test` sufficient for them.
 
-**Everything DOM/API-facing is thin app-entry wiring, not logic**, and is deliberately not
-unit-tested (there's nothing to meaningfully unit-test — it's glue):
+**Everything DOM/API-facing is thin app-entry wiring, not logic** (the decisions it makes live in the modules above), and is deliberately not
+unit-tested — the e2e smoke tests exercise it instead:
 
 - `app.js` — the teacher tab. Boots i18n, loads the PGN library from IndexedDB, creates the two
   `cm-chessboard` instances (main board + the small projector-preview board) with the
@@ -106,7 +125,7 @@ unit-tested (there's nothing to meaningfully unit-test — it's glue):
   nothing but render whatever `syncProtocol.createProjectorSync(...)` hands it. It never parses a
   PGN and never holds a move tree — the sync pointer is fully render-ready (a FEN + display
   text + squares), specifically so the projector doesn't need one.
-- `idbLibraryStore.js` — a handful of promisified `IndexedDB` calls (`getAllLibraryEntries` /
+- `idbLibraryStore.js` — tested against `fake-indexeddb` (dev-only) in `idbLibraryStore.test.js`. A handful of promisified `IndexedDB` calls (`getAllLibraryEntries` /
   `putLibraryEntry` / `deleteLibraryEntry`). IndexedDB was picked over `localStorage` for the
   library because a school year's worth of PGNs could exceed `localStorage`'s ~5-10MB cap
   (`wayfinder/research/0001`).
@@ -140,6 +159,15 @@ on and re-rendering is the resync.
 The wayfinder tickets settled product behavior at a conceptual level; a few concrete details
 weren't specified and needed a decision during implementation:
 
+- **Move annotations (NAGs) and ChessBase diagram markers.** `moveTree.js` keeps each move's
+  parser NAGs on `node.nags` (shown as glyphs via `formatNags`, appended to the badge/variations
+  labels, written back as `$n` by `serializeGameTree`; codes outside `NAG_GLYPHS` show nothing but
+  round-trip). ChessBase's "insert diagram here" is `[#]` anywhere in a comment, or a leading `#`
+  with an optional `[caption]` (a `#` followed by a digit is mate notation, not a marker) — from
+  third-party docs (Scid, RPB Chessboard, Palview, cbvault), not official ChessBase docs.
+  The board is always visible, so `formatCommentForDisplay` hides the marker (stored text keeps
+  it) and `findDiagrams` feeds the "Key positions" card: one button per position+caption, covering
+  after-move, before-move, opening-comment and sideline markers.
 - **"Sidelines auto-collapse past ~2 ply" (ticket 0005) was read as *within* a sideline, not
   nesting depth.** Implemented as: a sideline's first 2 plies render expanded, the rest of that
   same line collapses behind a "show more" link (`moveTree.js: isCollapsedByDefault`). An

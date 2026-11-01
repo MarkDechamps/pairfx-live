@@ -58,6 +58,20 @@ export function buildPointer({
   return { fen, moveLabel, lastMove, orientation, gameTitle, arrows, markers };
 }
 
+// The pointer the teacher tab publishes. Annotations (and engine arrows for
+// the projector) are only included while the "arrows" overlay is on.
+export function teacherPointer({ display, orientation, gameTitle, overlays, annotations, engineArrows }) {
+  return buildPointer({
+    fen: display.fen,
+    moveLabel: display.moveLabel,
+    lastMove: display.lastMove,
+    orientation,
+    gameTitle: gameTitle || null,
+    arrows: overlays.arrows ? [...annotations.arrows, ...engineArrows] : [],
+    markers: overlays.arrows ? annotations.markers : [],
+  });
+}
+
 function readJson(storage, key) {
   let raw;
   try {

@@ -116,3 +116,42 @@ export function clampGameIndex(parsedGames, index) {
   const safe = Number.isInteger(index) ? index : 0;
   return Math.min(Math.max(safe, 0), max);
 }
+
+// ---- loading / creating entries (used by app.js) ---------------------------
+
+// Which entry to open at startup: the remembered one, else the first, else none.
+export function pickEntryToLoad(entries, lastEntryId) {
+  return findEntry(entries, lastEntryId) || entries[0] || null;
+}
+
+// Which game of `entry` to show, given the `requested` index (undefined = the
+// entry's own remembered one). `changed` says the entry's remembered
+// selection moved and must be persisted; `entries` is the updated list.
+export function resolveGameSelection(entries, entry, parsedGames, requested) {
+  const index = clampGameIndex(parsedGames, requested === undefined ? entry.selectedGameIndex : requested);
+  if (entry.selectedGameIndex === index) return { index, entry, entries, changed: false };
+  const updated = { ...entry, selectedGameIndex: index };
+  return { index, entry: updated, entries: entries.map((e) => (e.id === entry.id ? updated : e)), changed: true };
+}
+
+// A fresh library entry for an uploaded file. `now`/`random` are injected so
+// ids are testable.
+export function createEntry({ parsedGames, pgnText, fallbackName, now, random }) {
+  return {
+    id: `g${now}${Math.floor(random() * 1000)}`,
+    name: nameForEntry(parsedGames, fallbackName),
+    pgnText,
+    selectedGameIndex: 0,
+    createdAt: now,
+  };
+}
+
+// "Lock PGN" is remembered as "1"/"0"; anything unset means locked (the
+// behaviour for anyone who never touched the checkbox).
+export function parseLockPgn(stored) {
+  return stored === null || stored === undefined ? true : stored === "1";
+}
+
+export function serializeLockPgn(locked) {
+  return locked ? "1" : "0";
+}

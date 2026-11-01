@@ -42,6 +42,75 @@ function fullMoveNumberFromFen(fen) {
   return parseInt(fen.split(" ")[5], 10);
 }
 
+// Standard PGN NAG numbers -> the glyphs chess books print after a move.
+const NAG_GLYPHS = {
+  $1: "!", $2: "?", $3: "!!", $4: "??", $5: "!?", $6: "?!", $7: "□", $10: "=", $13: "∞",
+  $14: "⩲", $15: "⩱", $16: "±", $17: "∓", $18: "+−", $19: "−+",
+};
+
+// The annotation glyphs of a move as a string ("!?", "±"...), "" if none.
+export function formatNags(node) {
+  return ((node && node.nags) || []).map((nag) => NAG_GLYPHS[nag] || "").join("");
+}
+
+// ChessBase writes "insert diagram here" as "[#]" anywhere in a comment, or
+// as a leading "#" optionally followed by a "[caption]" ("{#[Petroff] text}").
+// The board is always on screen, so the marker is hidden when showing a
+// comment (the stored text keeps it, so serializing doesn't lose it).
+// A "#" followed by a digit is mate notation ("#3 wins"), not a diagram.
+const LEADING_DIAGRAM_RE = /^\s*#(?!\d)(?:\[([^\]]*)\])?/;
+const INLINE_DIAGRAM_RE = /\[#\]/;
+
+// { caption } when the comment carries a diagram marker, else null.
+export function parseDiagramMarker(text) {
+  if (!text) return null;
+  const leading = LEADING_DIAGRAM_RE.exec(text);
+  if (leading) return { caption: (leading[1] || "").trim() };
+  return INLINE_DIAGRAM_RE.test(text) ? { caption: "" } : null;
+}
+
+export function formatCommentForDisplay(text) {
+  return (text || "")
+    .replace(LEADING_DIAGRAM_RE, "")
+    .replace(/\s*\[#\]\s*/g, " ")
+    .trim();
+}
+
+// Every diagram marker in the game, in reading order (a move, then the
+// sidelines that replace it). Each entry: { pathKey, node, caption } where
+// pathKey is the position to jump to and node is the move that position
+// follows (null = the start position). A marker in a comment *before* a move
+// points at the position before it.
+export function findDiagrams(gameTree) {
+  const found = [];
+  const add = (text, node, pathKeyOfPosition) => {
+    const marker = parseDiagramMarker(text);
+    if (marker) found.push({ pathKey: pathKeyOfPosition, node, caption: marker.caption });
+  };
+  add(gameTree.gameComment, null, "start");
+  const visit = (lineNodes) => {
+    lineNodes.forEach((node, index) => {
+      const previous = index === 0 ? null : lineNodes[index - 1];
+      if (node.commentBefore) {
+        const key = previous ? previous.pathKey : node.entryPointKey;
+        add(node.commentBefore, previous || gameTree.nodesByPath.get(key) || null, key);
+      }
+      add(node.commentAfter, node, node.pathKey);
+      node.variations.forEach(visit);
+    });
+  };
+  visit(gameTree.mainLine);
+  // A before-move comment and the previous move's after-move comment can mark
+  // the same position — keep one button per position and caption.
+  const seen = new Set();
+  return found.filter((d) => {
+    const key = `${d.pathKey}|${d.caption}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // A move's label as teachers expect to read it: "8.c3" for White, "8...d6"
 // for Black (matching the confirmed prototype's notation exactly — no space
 // after the move number) — the badge above the board and the projector's
@@ -50,7 +119,10 @@ export function formatMoveLabel(node) {
   if (!node) {
     return null;
   }
-  return node.turn === "w" ? `${node.moveNumber}.${node.san}` : `${node.moveNumber}...${node.san}`;
+  const glyphs = formatNags(node);
+  return node.turn === "w"
+    ? `${node.moveNumber}.${node.san}${glyphs}`
+    : `${node.moveNumber}...${node.san}${glyphs}`;
 }
 
 // The label to show for one move *inline in a running rendered sequence*
@@ -395,6 +467,7 @@ function buildLine(ChessCtor, startFen, pgnMoves, parentPath, entryPointKey, nod
       // and fullmove number, valid at any nesting depth.
       turn: sideToMoveFromFen(fenBefore),
       moveNumber: fullMoveNumberFromFen(fenBefore),
+      nags: mv.nag || [],
       commentBefore: mv.commentMove || null,
       commentAfter: mv.commentAfter || null,
       arrows: (commentDiag.colorArrows || []).map(parseColorArrow),
@@ -532,6 +605,29 @@ export function findContinuationBySan(node, mainLine, san) {
   return continuationsFrom(node, mainLine).find((candidate) => candidate.san === san) || null;
 }
 
+// What a piece move (dragged/clicked from -> to) at `currentNode` should do:
+// { action: "reject" } for an illegal move, or a legal one that deviates from
+// the loaded tree while Lock PGN is on; { action: "jump", pathKey } when it
+// matches a move already in the tree; { action: "add", moveResult } (the
+// shape addMove takes) when it deviates and Lock PGN is off.
+export function decideBoardMove(ChessCtor, gameTree, currentNode, lockPgn, from, to) {
+  const fenBefore = currentNode ? currentNode.fen : gameTree.rootFen;
+  const scratch = new ChessCtor(fenBefore);
+  let played;
+  try {
+    played = scratch.move({ from, to, promotion: "q" });
+  } catch {
+    return { action: "reject" };
+  }
+  const match = findContinuationBySan(currentNode, gameTree.mainLine, played.san);
+  if (match) return { action: "jump", pathKey: match.pathKey };
+  if (lockPgn) return { action: "reject" };
+  return {
+    action: "add",
+    moveResult: { san: played.san, from: played.from, to: played.to, fenBefore, fen: scratch.fen() },
+  };
+}
+
 // "Lock PGN" off (see CLAUDE.md judgment calls): the teacher played a legal
 // move that findContinuationBySan couldn't match, so it needs to become a
 // real, addressable node in the tree — not just a transient board position —
@@ -589,6 +685,7 @@ export function addMove(gameTree, node, moveResult) {
     fen: moveResult.fen,
     turn: sideToMoveFromFen(moveResult.fenBefore),
     moveNumber: fullMoveNumberFromFen(moveResult.fenBefore),
+    nags: [],
     commentBefore: null,
     commentAfter: null,
     arrows: [],
@@ -635,6 +732,7 @@ function serializeLine(lineNodes) {
   return lineNodes
     .map((node) => {
       let text = node.san;
+      if (node.nags && node.nags.length > 0) text += " " + node.nags.join(" ");
       if (node.commentBefore) text = `{${node.commentBefore}} ${text}`;
       const after = commentAfterText(node);
       if (after) text += ` {${after}}`;
@@ -662,6 +760,89 @@ export function serializeGameTree(gameTree) {
     .map(([key, value]) => `[${key} "${value}"]`)
     .join("\n");
   const result = (gameTree.tags && gameTree.tags.Result) || "*";
-  const moveText = `${serializeLine(gameTree.mainLine)} ${result}`.trim();
+  const opening = gameTree.gameComment ? `{${gameTree.gameComment}} ` : "";
+  const moveText = `${opening}${serializeLine(gameTree.mainLine)} ${result}`.trim();
   return `${tagLines}\n\n${moveText}`.trim();
+}
+
+// ---- display + navigation helpers (used by app.js) ------------------------
+
+// What the board shows for the cursor: the current node's position, its last
+// move and its badge label — or the root/`startFen` when there is no game.
+export function displayFor(gameTree, cursor, startFen) {
+  const node = cursor ? cursor.getCurrentNode() : null;
+  const fen = node ? node.fen : gameTree ? gameTree.rootFen : startFen;
+  return {
+    node,
+    fen,
+    lastMove: node ? { from: node.from, to: node.to } : null,
+    moveLabel: node ? formatMoveLabel(node) : null,
+  };
+}
+
+// How the variations panel renders one line: which moves show (with the move
+// before each, for the "N..." ellipsis rule) and, if a sideline folds behind
+// "show more", the nodes that fold.
+export function visibleMoves(lineNodes, isSideline, forceExpand = false) {
+  const shown = [];
+  for (let i = 0; i < lineNodes.length; i++) {
+    if (!forceExpand && isSideline && isCollapsedByDefault(lineNodes[i])) {
+      return { shown, folded: lineNodes.slice(i) };
+    }
+    // A sideline between two moves breaks the "own white move just before"
+    // reading, so black's move then needs its ellipsis again.
+    const previous = i > 0 && lineNodes[i - 1].variations.length === 0 ? lineNodes[i - 1] : null;
+    shown.push({ node: lineNodes[i], previousNode: previous });
+  }
+  return { shown, folded: null };
+}
+
+// Arrow-key stepping. Returns true when the position should be re-rendered:
+// ArrowRight only if there was a next move; ArrowLeft always (as the tab did).
+export function stepForKey(cursor, key) {
+  if (key === "ArrowRight") return navigate(cursor, "next");
+  if (key === "ArrowLeft") {
+    cursor.stepBackward();
+    return true;
+  }
+  if (key === "Home") return navigate(cursor, "first");
+  if (key === "End") return navigate(cursor, "last");
+  return false;
+}
+
+// The board's navigation buttons: "first" (start position), "prev", "next",
+// "last" (end of the current line). Returns true if the position changed.
+export function navigate(cursor, action) {
+  if (action === "first") {
+    const moved = cursor.getCurrentPathKey() !== "start";
+    cursor.reset();
+    return moved;
+  }
+  if (action === "prev") return Boolean(cursor.stepBackward());
+  if (action === "next") return Boolean(cursor.stepForward());
+  if (action === "last") {
+    let moved = false;
+    while (cursor.stepForward()) moved = true;
+    return moved;
+  }
+  return false;
+}
+
+// Which navigation buttons make sense right now.
+export function navState(gameTree, cursor) {
+  const node = cursor.getCurrentNode();
+  return {
+    canGoBack: node !== null,
+    canGoForward: node ? Boolean(node.lineNodes[node.indexInLine + 1]) : gameTree.mainLine.length > 0,
+  };
+}
+
+// The library entry with one game's text swapped for the (possibly grown)
+// `gameTree`'s serialization, leaving the file's other games untouched.
+export function entryWithGrownGame(entry, gameIndex, gameTree) {
+  return {
+    ...entry,
+    pgnText: replaceGameInPgnText(entry.pgnText, gameIndex, serializeGameTree(gameTree)),
+    selectedGameIndex: gameIndex,
+  };
 }

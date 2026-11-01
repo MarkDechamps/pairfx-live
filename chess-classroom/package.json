@@ -7,12 +7,15 @@
   "scripts": {
     "test": "node --test",
     "serve": "python3 -m http.server 8000",
-    "vendor": "node scripts/vendor-libs.mjs"
+    "vendor": "node scripts/vendor-libs.mjs",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@mliebelt/pgn-parser": "1.4.19",
+    "@playwright/test": "^1.64.1",
     "chess.js": "1.4.0",
     "cm-chessboard": "8.12.19",
+    "fake-indexeddb": "^6.2.7",
     "stockfish": "18.0.8"
   }
 }
