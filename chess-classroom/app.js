@@ -449,8 +449,10 @@ function renderDiagramList() {
 function renderVariations() {
   renderDiagramList();
   el.varTree.innerHTML = "";
+  pendingFolds = [];
   if (!state.gameTree) return;
   el.varTree.appendChild(renderLine(state.gameTree.mainLine, 0));
+  autoExpandShortFolds();
 }
 
 // Renders one line (mainline or a variation's own sequence) into a DOM node.
@@ -465,6 +467,10 @@ function renderLine(lineNodes, depth) {
   if (depth > 1) container.appendChild(document.createTextNode(")"));
   return container;
 }
+
+// "Show more" folds registered while rendering, so renderVariations can open
+// the ones that turn out to fit on a single row (see autoExpandShortFolds).
+let pendingFolds = [];
 
 // Appends a line's moves (and its "show more" fold) to `parent`. Expanding a
 // fold fills a fragment in place of the button, so the rest of the line
@@ -486,13 +492,40 @@ function fillLine(parent, lineNodes, depth, forceExpand) {
     const expandBtn = document.createElement("button");
     expandBtn.className = "var-expand";
     expandBtn.textContent = state.t("showMore");
-    expandBtn.addEventListener("click", () => {
+    // Opens the fold; the returned function puts it back.
+    const expand = () => {
       const tail = document.createDocumentFragment();
       fillLine(tail, folded, depth, true);
+      const tailNodes = [...tail.childNodes];
       expandBtn.replaceWith(tail);
-    });
+      return () => {
+        tailNodes[0].before(expandBtn);
+        tailNodes.forEach((n) => n.remove());
+      };
+    };
+    expandBtn.addEventListener("click", expand);
+    pendingFolds.push({ button: expandBtn, expand });
     parent.appendChild(expandBtn);
   }
+}
+
+// A fold only earns its "Show more" if opening it would wrap the sideline onto
+// a second row. Opens every fold, keeps it open when the whole sideline still
+// sits on one row, and puts it back otherwise. Needs real layout, so it runs
+// after the tree is in the document (and not at all while the panel is closed).
+function autoExpandShortFolds() {
+  while (pendingFolds.length > 0) {
+    const { button, expand } = pendingFolds.shift();
+    if (!button.isConnected || button.offsetParent === null) continue;
+    const block = button.closest(".var-sideline");
+    const undo = expand();
+    if (block && !onOneRow(block)) undo();
+  }
+}
+
+function onOneRow(block) {
+  const rows = new Set([...block.querySelectorAll(".var-line")].map((move) => move.offsetTop));
+  return rows.size <= 1;
 }
 
 function renderMoveEntry(node, previousNode) {
