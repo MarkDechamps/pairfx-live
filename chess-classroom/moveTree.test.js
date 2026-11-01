@@ -26,6 +26,7 @@ import {
   formatCommentForDisplay,
   findDiagrams,
   parseDiagramMarker,
+  formatNags,
 } from "./moveTree.js";
 
 // Plays `san` on a fresh chess.js instance seeded at `fen` and returns the
@@ -789,4 +790,69 @@ test("a leading #<digit> is mate notation, not a diagram marker", () => {
 test("findDiagrams reports one button per position and caption", () => {
   const tree = buildGameTree(Chess, parseGame(parse, "1. e4 e5 {[#]} {[#]} 2. Nf3 *"));
   assert.equal(findDiagrams(tree).length, 1);
+});
+
+function treeFrom(pgn) {
+  return buildGameTree(Chess, parseGame(parse, pgn));
+}
+
+test("formatNags: concatenates, ignores unknown codes, tolerates missing nags", () => {
+  assert.equal(formatNags({ nags: ["$1", "$14"] }), "!⩲");
+  assert.equal(formatNags({ nags: ["$22"] }), "");
+  assert.equal(formatNags({}), "");
+  assert.equal(formatNags(null), "");
+});
+
+test("annotations and diagram markers survive serialize -> reparse", () => {
+  const original = treeFrom("{#[Start]} 1. e4! e5 {[#] key} 2. Nf3 $14 (2. Bc4?! {x [#]}) 2... Nc6 *");
+  const again = treeFrom(serializeGameTree(original));
+  assert.deepEqual(again.mainLine.map((n) => n.nags), original.mainLine.map((n) => n.nags));
+  assert.deepEqual(
+    findDiagrams(again).map((d) => [d.pathKey, d.caption]),
+    findDiagrams(original).map((d) => [d.pathKey, d.caption])
+  );
+  assert.deepEqual(again.mainLine[2].variations[0][0].nags, ["$6"]);
+});
+
+test("addMove gives the new node empty nags and serializes next to annotated moves", () => {
+  const tree = treeFrom("1. e4! e5 *");
+  const last = tree.mainLine[1];
+  const chess = new Chess(last.fen);
+  const result = chess.move("Nf3");
+  addMove(tree, last, { san: result.san, from: result.from, to: result.to, fenBefore: last.fen, fen: chess.fen() });
+  const added = tree.mainLine[2];
+  assert.deepEqual(added.nags, []);
+  assert.match(serializeGameTree(tree), /e4 \$1 e5 Nf3/);
+});
+
+test("a marker in the comment after a sideline's first move points at that move", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 {#} Nf6) 2... Nc6 *");
+  const [d] = findDiagrams(tree);
+  assert.equal(d.pathKey, "2.v0.0");
+});
+
+test("a sideline's own first move with a before-comment jumps to the branch point", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 ({[#]} 2. Bc4) 2... Nc6 *");
+  const found = findDiagrams(tree);
+  assert.equal(found.length, 1);
+  assert.equal(found[0].pathKey, tree.mainLine[1].pathKey);
+});
+
+test("a before-move marker on move 1 points at the start position", () => {
+  const found = findDiagrams(treeFrom("1. e4 {[#]} e5 *"));
+  assert.ok(found.every((d) => d.pathKey !== undefined));
+  const first = findDiagrams(treeFrom("{[#]} 1. e4 *"));
+  assert.deepEqual(first.map((d) => [d.pathKey, d.node]), [["start", null]]);
+});
+
+test("formatSequentialMoveLabel leaves glyphs to the caller for black-after-white", () => {
+  const tree = treeFrom("1. e4! e5? *");
+  const [w, b] = tree.mainLine;
+  assert.equal(formatSequentialMoveLabel(b, w), "e5");
+  assert.equal(formatSequentialMoveLabel(w, null), "1.e4!");
+});
+
+test("serializeGameTree keeps the game's opening comment", () => {
+  const again = treeFrom(serializeGameTree(treeFrom("{Intro text} 1. e4 *")));
+  assert.equal(again.gameComment, "Intro text");
 });

@@ -737,6 +737,7 @@ export function serializeGameTree(gameTree) {
     .map(([key, value]) => `[${key} "${value}"]`)
     .join("\n");
   const result = (gameTree.tags && gameTree.tags.Result) || "*";
-  const moveText = `${serializeLine(gameTree.mainLine)} ${result}`.trim();
+  const opening = gameTree.gameComment ? `{${gameTree.gameComment}} ` : "";
+  const moveText = `${opening}${serializeLine(gameTree.mainLine)} ${result}`.trim();
   return `${tagLines}\n\n${moveText}`.trim();
 }
