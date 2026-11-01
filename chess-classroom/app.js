@@ -134,6 +134,8 @@ const el = {
   notesBody: document.getElementById("notesBody"),
   previewCaption: document.getElementById("previewCaption"),
   varTree: document.getElementById("varTree"),
+  diagramCard: document.getElementById("diagramCard"),
+  diagramList: document.getElementById("diagramList"),
   freeHint: document.getElementById("freeHint"),
   lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
   engineCheckbox: document.getElementById("engineCheckbox"),
@@ -180,6 +182,7 @@ function applyTranslations() {
     elm.title = state.t(elm.dataset.i18nTitle);
   });
   el.notesBody.dataset.emptyLabel = state.t("noNote");
+  renderDiagramList();
   render();
   renderEngine();
   renderEngineSettingsForm();
@@ -391,7 +394,9 @@ function render() {
   // reported as confusing/unnecessary; the empty board already says that.
   el.currentMove.hidden = !moveLabel;
   el.currentMove.textContent = moveLabel || "";
-  el.notesBody.textContent = node ? node.commentAfter || "" : (state.gameTree && state.gameTree.gameComment) || "";
+  el.notesBody.textContent = MoveTree.formatCommentForDisplay(
+    node ? node.commentAfter : state.gameTree && state.gameTree.gameComment
+  );
 
   applyAnnotationsToBoard(teacherBoard, state.annotations);
 
@@ -430,7 +435,25 @@ function publishIfSynced(fen, lastMove, moveLabel) {
 
 // ---- variations panel -------------------------------------------------
 
+function renderDiagramList() {
+  el.diagramList.innerHTML = "";
+  const diagrams = state.gameTree ? MoveTree.findDiagrams(state.gameTree) : [];
+  el.diagramCard.hidden = diagrams.length === 0;
+  diagrams.forEach(({ pathKey, node, caption }) => {
+    const btn = document.createElement("button");
+    btn.className = "btn diagram-btn";
+    btn.dataset.pathKey = pathKey;
+    const position = node
+      ? state.t("positionAfter", { move: MoveTree.formatMoveLabel(node) })
+      : state.t("startPosition");
+    btn.textContent = caption ? `${caption} · ${position}` : position;
+    btn.addEventListener("click", () => jumpTo(pathKey));
+    el.diagramList.appendChild(btn);
+  });
+}
+
 function renderVariations() {
+  renderDiagramList();
   el.varTree.innerHTML = "";
   if (!state.gameTree) return;
   el.varTree.appendChild(renderLine(state.gameTree.mainLine, false));
@@ -478,8 +501,8 @@ function renderMoveEntry(node, previousNode) {
   num.className = "num";
   num.textContent = MoveTree.formatSequentialMoveLabel(node, previousNode).split(node.san)[0];
   btn.appendChild(num);
-  btn.appendChild(document.createTextNode(node.san));
-  btn.title = node.commentAfter || "";
+  btn.appendChild(document.createTextNode(node.san + MoveTree.formatNags(node)));
+  btn.title = MoveTree.formatCommentForDisplay(node.commentAfter);
   btn.addEventListener("click", () => jumpTo(node.pathKey));
   return btn;
 }
@@ -864,6 +887,7 @@ el.deleteBtn.addEventListener("click", async () => {
     state.currentGameIndex = 0;
     el.gameTitle.textContent = "";
     el.varTree.innerHTML = "";
+    renderDiagramList();
     renderGameList();
     render();
   }

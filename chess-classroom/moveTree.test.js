@@ -23,6 +23,9 @@ import {
   replaceGameInPgnText,
   addMove,
   serializeGameTree,
+  formatCommentForDisplay,
+  findDiagrams,
+  parseDiagramMarker,
 } from "./moveTree.js";
 
 // Plays `san` on a fresh chess.js instance seeded at `fen` and returns the
@@ -738,4 +741,42 @@ test("serializeGameTree includes a move added via addMove, so it survives a relo
 
   assert.equal(reparsed.mainLine.length, 11);
   assert.equal(reparsed.mainLine[10].san, "d3");
+});
+
+test("move annotations (!, ?, !?, NAGs) are imported, shown, and round-tripped", () => {
+  const tree = buildGameTree(Chess, parseGame(parse, "1. e4! e5?? 2. Nf3 $1 $14 *"));
+  const [e4, e5, nf3] = tree.mainLine;
+  assert.equal(formatMoveLabel(e4), "1.e4!");
+  assert.equal(formatMoveLabel(e5), "1...e5??");
+  assert.equal(formatMoveLabel(nf3), "2.Nf3!⩲");
+  assert.match(serializeGameTree(tree), /e4 \$1 e5 \$4 Nf3 \$1 \$14/);
+});
+
+test("ChessBase's [#] diagram marker is hidden in displayed comments", () => {
+  assert.equal(formatCommentForDisplay("Key position. [#] White is better."), "Key position. White is better.");
+  assert.equal(formatCommentForDisplay("[#]"), "");
+  assert.equal(formatCommentForDisplay(null), "");
+});
+
+test("parseDiagramMarker recognises [#], leading # and #[caption]", () => {
+  assert.deepEqual(parseDiagramMarker("x [#] y"), { caption: "" });
+  assert.deepEqual(parseDiagramMarker("#[The Petroff]This is"), { caption: "The Petroff" });
+  assert.deepEqual(parseDiagramMarker("# text"), { caption: "" });
+  assert.equal(parseDiagramMarker("plain # in the middle"), null);
+});
+
+test("formatCommentForDisplay drops leading # and caption marker", () => {
+  assert.equal(formatCommentForDisplay("#[The Petroff]This is solid."), "This is solid.");
+});
+
+test("findDiagrams covers after-move, before-move, start comment, and sidelines", () => {
+  const tree = buildGameTree(
+    Chess,
+    parseGame(parse, "{#[Start]} 1. e4 e5 {[#]} 2. Nf3 (2. Bc4 {x [#]}) {# before} 2... Nc6 *")
+  );
+  const found = findDiagrams(tree);
+  assert.deepEqual(
+    found.map((d) => [d.pathKey, d.node ? formatMoveLabel(d.node) : null, d.caption]),
+    [["start", null, "Start"], ["1", "1...e5", ""], ["2.v0.0", "2.Bc4", ""], ["2", "2.Nf3", ""]]
+  );
 });

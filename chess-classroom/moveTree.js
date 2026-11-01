@@ -42,6 +42,66 @@ function fullMoveNumberFromFen(fen) {
   return parseInt(fen.split(" ")[5], 10);
 }
 
+// Standard PGN NAG numbers -> the glyphs chess books print after a move.
+const NAG_GLYPHS = {
+  $1: "!", $2: "?", $3: "!!", $4: "??", $5: "!?", $6: "?!", $7: "□", $10: "=", $13: "∞",
+  $14: "⩲", $15: "⩱", $16: "±", $17: "∓", $18: "+−", $19: "−+",
+};
+
+// The annotation glyphs of a move as a string ("!?", "±"...), "" if none.
+export function formatNags(node) {
+  return ((node && node.nags) || []).map((nag) => NAG_GLYPHS[nag] || "").join("");
+}
+
+// ChessBase writes "insert diagram here" as "[#]" anywhere in a comment, or
+// as a leading "#" optionally followed by a "[caption]" ("{#[Petroff] text}").
+// The board is always on screen, so the marker is hidden when showing a
+// comment (the stored text keeps it, so serializing doesn't lose it).
+const LEADING_DIAGRAM_RE = /^\s*#(?:\[([^\]]*)\])?/;
+const INLINE_DIAGRAM_RE = /\[#\]/;
+
+// { caption } when the comment carries a diagram marker, else null.
+export function parseDiagramMarker(text) {
+  if (!text) return null;
+  const leading = LEADING_DIAGRAM_RE.exec(text);
+  if (leading) return { caption: (leading[1] || "").trim() };
+  return INLINE_DIAGRAM_RE.test(text) ? { caption: "" } : null;
+}
+
+export function formatCommentForDisplay(text) {
+  return (text || "")
+    .replace(LEADING_DIAGRAM_RE, "")
+    .replace(/\s*\[#\]\s*/g, " ")
+    .trim();
+}
+
+// Every diagram marker in the game, in reading order (a move, then the
+// sidelines that replace it). Each entry: { pathKey, node, caption } where
+// pathKey is the position to jump to and node is the move that position
+// follows (null = the start position). A marker in a comment *before* a move
+// points at the position before it.
+export function findDiagrams(gameTree) {
+  const found = [];
+  const add = (text, node, pathKeyOfPosition) => {
+    const marker = parseDiagramMarker(text);
+    if (marker) found.push({ pathKey: pathKeyOfPosition, node, caption: marker.caption });
+  };
+  add(gameTree.gameComment, null, "start");
+  const visit = (lineNodes) => {
+    lineNodes.forEach((node, index) => {
+      const previous = index === 0 ? null : lineNodes[index - 1];
+      if (node.commentBefore) {
+        const key = previous ? previous.pathKey : node.entryPointKey;
+        add(node.commentBefore, previous || gameTree.nodesByPath.get(key) || null, key);
+      }
+      add(node.commentAfter, node, node.pathKey);
+      node.variations.forEach(visit);
+    });
+  };
+  visit(gameTree.mainLine);
+  return found;
+}
+
 // A move's label as teachers expect to read it: "8.c3" for White, "8...d6"
 // for Black (matching the confirmed prototype's notation exactly — no space
 // after the move number) — the badge above the board and the projector's
@@ -50,7 +110,10 @@ export function formatMoveLabel(node) {
   if (!node) {
     return null;
   }
-  return node.turn === "w" ? `${node.moveNumber}.${node.san}` : `${node.moveNumber}...${node.san}`;
+  const glyphs = formatNags(node);
+  return node.turn === "w"
+    ? `${node.moveNumber}.${node.san}${glyphs}`
+    : `${node.moveNumber}...${node.san}${glyphs}`;
 }
 
 // The label to show for one move *inline in a running rendered sequence*
@@ -395,6 +458,7 @@ function buildLine(ChessCtor, startFen, pgnMoves, parentPath, entryPointKey, nod
       // and fullmove number, valid at any nesting depth.
       turn: sideToMoveFromFen(fenBefore),
       moveNumber: fullMoveNumberFromFen(fenBefore),
+      nags: mv.nag || [],
       commentBefore: mv.commentMove || null,
       commentAfter: mv.commentAfter || null,
       arrows: (commentDiag.colorArrows || []).map(parseColorArrow),
@@ -589,6 +653,7 @@ export function addMove(gameTree, node, moveResult) {
     fen: moveResult.fen,
     turn: sideToMoveFromFen(moveResult.fenBefore),
     moveNumber: fullMoveNumberFromFen(moveResult.fenBefore),
+    nags: [],
     commentBefore: null,
     commentAfter: null,
     arrows: [],
@@ -635,6 +700,7 @@ function serializeLine(lineNodes) {
   return lineNodes
     .map((node) => {
       let text = node.san;
+      if (node.nags && node.nags.length > 0) text += " " + node.nags.join(" ");
       if (node.commentBefore) text = `{${node.commentBefore}} ${text}`;
       const after = commentAfterText(node);
       if (after) text += ` {${after}}`;

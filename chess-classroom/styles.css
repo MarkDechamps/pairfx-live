@@ -531,3 +531,6 @@ body.projector {
 .cm-chessboard .arrow-engine-5 .arrow-head { fill: #2a7fd4; }
 .cm-chessboard .arrow-engine-4 .arrow-line,
 .cm-chessboard .arrow-engine-5 .arrow-line { stroke: #2a7fd4; stroke-linecap: round; opacity: 0.25; }
+
+.diagram-card > .diagram-list { padding: 0 1rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; align-items: stretch; }
+.diagram-btn { text-align: left; }
