@@ -278,3 +278,40 @@ test("lineArrows takes the first move of each line", () => {
     { rank: 2, from: "g1", to: "f3" },
   ]);
 });
+
+// ---- teacher-tab helpers -------------------------------------------------------
+import { parseStoredEngineSettings, projectorArrows } from "./engineAnalysis.js";
+
+test("parseStoredEngineSettings: valid JSON, clamped values, junk and null", () => {
+  assert.deepEqual(parseStoredEngineSettings(JSON.stringify({ multiPv: 2, depth: 99, hash: 64 })), {
+    ...DEFAULT_ENGINE_SETTINGS,
+    multiPv: 2,
+    depth: 30,
+    hash: 64,
+  });
+  assert.deepEqual(parseStoredEngineSettings("{not json"), DEFAULT_ENGINE_SETTINGS);
+  assert.deepEqual(parseStoredEngineSettings(null), DEFAULT_ENGINE_SETTINGS);
+});
+
+const ARROW_CASE = {
+  engineOn: true,
+  engineFailed: false,
+  settings: { ...DEFAULT_ENGINE_SETTINGS, projectorArrows: true },
+  snapshot: { fen: "FEN1", lines: [{ multipv: 1, pv: ["e2e4"] }, { multipv: 2, pv: ["d2d4"] }] },
+  currentFen: "FEN1",
+};
+
+test("projectorArrows maps engine lines to engineN-colored arrows", () => {
+  assert.deepEqual(projectorArrows(ARROW_CASE), [
+    { color: "engine1", from: "e2", to: "e4" },
+    { color: "engine2", from: "d2", to: "d4" },
+  ]);
+});
+
+test("projectorArrows is empty unless on, working, opted in, and for the shown position", () => {
+  assert.deepEqual(projectorArrows({ ...ARROW_CASE, engineOn: false }), []);
+  assert.deepEqual(projectorArrows({ ...ARROW_CASE, engineFailed: true }), []);
+  assert.deepEqual(projectorArrows({ ...ARROW_CASE, settings: DEFAULT_ENGINE_SETTINGS }), []);
+  assert.deepEqual(projectorArrows({ ...ARROW_CASE, snapshot: null }), []);
+  assert.deepEqual(projectorArrows({ ...ARROW_CASE, currentFen: "OTHER" }), []);
+});

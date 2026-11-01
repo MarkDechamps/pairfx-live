@@ -281,3 +281,36 @@ test("teacher sync's readPointer/readOverlays fall back to defaults on a bad sto
   assert.deepEqual(sync.readPointer(), defaultPointer());
   assert.deepEqual(sync.readOverlays(), defaultOverlayPrefs());
 });
+
+// ---- teacher pointer ---------------------------------------------------------------
+import { teacherPointer } from "./syncProtocol.js";
+
+const TP = {
+  display: { fen: "FEN", moveLabel: "1.e4", lastMove: { from: "e2", to: "e4" } },
+  orientation: "black",
+  gameTitle: "A vs B",
+  overlays: { moveNumber: true, gameTitle: true, arrows: true },
+  annotations: { arrows: [{ color: "danger", from: "a1", to: "a2" }], markers: [{ color: "info", square: "c3" }] },
+  engineArrows: [{ color: "engine1", from: "e2", to: "e4" }],
+};
+
+test("teacherPointer combines annotation and engine arrows while the arrows overlay is on", () => {
+  assert.deepEqual(teacherPointer(TP), {
+    fen: "FEN",
+    moveLabel: "1.e4",
+    lastMove: { from: "e2", to: "e4" },
+    orientation: "black",
+    gameTitle: "A vs B",
+    arrows: [TP.annotations.arrows[0], TP.engineArrows[0]],
+    markers: TP.annotations.markers,
+  });
+});
+
+test("teacherPointer sends no arrows or markers when the arrows overlay is off", () => {
+  const pointer = teacherPointer({ ...TP, overlays: { ...TP.overlays, arrows: false } });
+  assert.deepEqual([pointer.arrows, pointer.markers], [[], []]);
+});
+
+test("teacherPointer turns an empty title into null", () => {
+  assert.equal(teacherPointer({ ...TP, gameTitle: "" }).gameTitle, null);
+});

@@ -932,3 +932,91 @@ test("decideBoardMove from the start of an empty game works", () => {
   assert.equal(decideBoardMove(Chess, tree, null, true, "e2", "e4").action, "reject");
   assert.equal(decideBoardMove(Chess, tree, null, false, "e2", "e4").action, "add");
 });
+
+// ---- display + navigation helpers ------------------------------------------
+import { displayFor, visibleMoves, stepForKey, entryWithGrownGame } from "./moveTree.js";
+
+test("displayFor: start position, a move, and no game at all", () => {
+  const tree = treeFrom("1. e4! e5 *");
+  const cursor = createCursor(tree);
+  assert.deepEqual(displayFor(tree, cursor, "STARTFEN"), {
+    node: null,
+    fen: tree.rootFen,
+    lastMove: null,
+    moveLabel: null,
+  });
+  cursor.stepForward();
+  const shown = displayFor(tree, cursor, "STARTFEN");
+  assert.equal(shown.moveLabel, "1.e4!");
+  assert.deepEqual(shown.lastMove, { from: "e2", to: "e4" });
+  assert.equal(shown.fen, tree.mainLine[0].fen);
+  assert.deepEqual(displayFor(null, null, "STARTFEN"), { node: null, fen: "STARTFEN", lastMove: null, moveLabel: null });
+});
+
+test("visibleMoves: a mainline is never folded and each move knows its predecessor", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 *");
+  const { shown, folded } = visibleMoves(tree.mainLine, false);
+  assert.equal(folded, null);
+  assert.equal(shown.length, 6);
+  assert.equal(shown[0].previousNode, null);
+  assert.equal(shown[1].previousNode, tree.mainLine[0]);
+});
+
+test("visibleMoves: a sideline folds after its first two plies, unless forced open", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3 d6 4. c3) 2... Nc6 *");
+  const sideline = tree.mainLine[2].variations[0];
+  const folded = visibleMoves(sideline, true);
+  assert.equal(folded.shown.length, 2);
+  assert.equal(folded.folded.length, 3);
+  assert.equal(folded.folded[0].san, "d3");
+  const open = visibleMoves(sideline, true, true);
+  assert.equal(open.folded, null);
+  assert.equal(open.shown.length, 5);
+});
+
+test("visibleMoves: a short sideline and an empty line", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 *");
+  assert.equal(visibleMoves(tree.mainLine[2].variations[0], true).folded, null);
+  assert.deepEqual(visibleMoves([], true), { shown: [], folded: null });
+});
+
+test("stepForKey: arrows step, other keys do nothing, end of line does not re-render", () => {
+  const tree = treeFrom("1. e4 e5 *");
+  const cursor = createCursor(tree);
+  assert.equal(stepForKey(cursor, "x"), false);
+  assert.equal(stepForKey(cursor, "ArrowRight"), true);
+  assert.equal(cursor.getCurrentPathKey(), "0");
+  assert.equal(stepForKey(cursor, "ArrowRight"), true);
+  assert.equal(stepForKey(cursor, "ArrowRight"), false); // already at the last move
+  assert.equal(stepForKey(cursor, "ArrowLeft"), true);
+  assert.equal(cursor.getCurrentPathKey(), "0");
+});
+
+test("entryWithGrownGame rewrites only that game's slot and remembers the selection", () => {
+  const text = "[Event \"One\"]\n[Result \"*\"]\n\n1. e4 *\n\n[Event \"Two\"]\n[Result \"*\"]\n\n1. d4 *\n";
+  const games = splitPgnGames(text);
+  assert.equal(games.length, 2);
+  const tree = buildGameTree(Chess, parseGame(parse, games[1]));
+  const grown = addMove(tree, tree.mainLine[0], (() => {
+    const c = new Chess(tree.mainLine[0].fen);
+    const r = c.move("d5");
+    return { san: r.san, from: r.from, to: r.to, fenBefore: tree.mainLine[0].fen, fen: c.fen() };
+  })());
+  assert.equal(grown.san, "d5");
+  const entry = { id: "x", name: "n", pgnText: text, selectedGameIndex: 0, createdAt: 1 };
+  const updated = entryWithGrownGame(entry, 1, tree);
+  assert.equal(updated.selectedGameIndex, 1);
+  assert.equal(updated.id, "x");
+  const [first, second] = splitPgnGames(updated.pgnText);
+  assert.equal(first.trim(), games[0].trim());
+  assert.match(second, /d4 d5/);
+  assert.equal(entry.pgnText, text); // the input entry is not mutated
+});
+
+test("cursor.reset returns to the start position", () => {
+  const cursor = createCursor(treeFrom("1. e4 e5 *"));
+  cursor.stepForward();
+  cursor.reset();
+  assert.equal(cursor.getCurrentPathKey(), "start");
+  assert.equal(cursor.getCurrentNode(), null);
+});

@@ -263,3 +263,23 @@ export function createEngineSession({
     isSearching: () => searchFen !== null,
   };
 }
+
+// ---- teacher-tab helpers (used by app.js) ---------------------------------
+
+// Settings from a raw localStorage string; anything unreadable -> defaults.
+export function parseStoredEngineSettings(raw) {
+  try {
+    return normalizeEngineSettings(JSON.parse(raw));
+  } catch {
+    return normalizeEngineSettings(null);
+  }
+}
+
+// Engine arrows as sync-pointer arrows ("engine1".."engine5" colors): only
+// when the engine is on and working, the teacher opted in, and the analysis
+// is for the position actually shown.
+export function projectorArrows({ engineOn, engineFailed, settings, snapshot, currentFen }) {
+  if (!engineOn || engineFailed || !settings.projectorArrows || !snapshot) return [];
+  if (snapshot.fen !== currentFen) return [];
+  return lineArrows(snapshot.lines).map(({ rank, from, to }) => ({ color: `engine${rank}`, from, to }));
+}

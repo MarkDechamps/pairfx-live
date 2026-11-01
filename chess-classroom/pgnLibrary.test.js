@@ -157,3 +157,62 @@ test("clampGameIndex always returns 0 for a single-game file, regardless of the 
   const games = [{ tags: {} }];
   assert.equal(clampGameIndex(games, 5), 0);
 });
+
+// ---- loading / creating entries ----------------------------------------------
+import { pickEntryToLoad, resolveGameSelection, createEntry, parseLockPgn, serializeLockPgn } from "./pgnLibrary.js";
+
+const E1 = { id: "a", name: "A", pgnText: "", selectedGameIndex: 0, createdAt: 1 };
+const E2 = { id: "b", name: "B", pgnText: "", selectedGameIndex: 1, createdAt: 2 };
+const THREE_GAMES = [{ tags: {} }, { tags: {} }, { tags: {} }];
+
+test("pickEntryToLoad: remembered entry, else the first, else null", () => {
+  assert.equal(pickEntryToLoad([E1, E2], "b"), E2);
+  assert.equal(pickEntryToLoad([E1, E2], "gone"), E1);
+  assert.equal(pickEntryToLoad([E1, E2], null), E1);
+  assert.equal(pickEntryToLoad([], "a"), null);
+});
+
+test("resolveGameSelection keeps the remembered game and reports no change", () => {
+  const result = resolveGameSelection([E1, E2], E2, THREE_GAMES, undefined);
+  assert.deepEqual([result.index, result.changed, result.entry], [1, false, E2]);
+});
+
+test("resolveGameSelection moves the selection immutably and updates the list", () => {
+  const result = resolveGameSelection([E1, E2], E2, THREE_GAMES, 2);
+  assert.equal(result.index, 2);
+  assert.equal(result.changed, true);
+  assert.equal(result.entry.selectedGameIndex, 2);
+  assert.equal(E2.selectedGameIndex, 1); // original untouched
+  assert.deepEqual(result.entries.map((e) => e.selectedGameIndex), [0, 2]);
+});
+
+test("resolveGameSelection clamps an out-of-range remembered index and flags it for saving", () => {
+  const stale = { ...E1, selectedGameIndex: 9 };
+  const result = resolveGameSelection([stale], stale, THREE_GAMES, undefined);
+  assert.equal(result.index, 2);
+  assert.equal(result.changed, true);
+});
+
+test("createEntry builds an entry with an injected clock and random", () => {
+  const entry = createEntry({
+    parsedGames: [{ tags: { White: "Leraar", Black: "Leerling" } }],
+    pgnText: "RAW",
+    fallbackName: "file.pgn",
+    now: 1700000000000,
+    random: () => 0.5,
+  });
+  assert.equal(entry.id, "g1700000000000500");
+  assert.equal(entry.pgnText, "RAW");
+  assert.equal(entry.selectedGameIndex, 0);
+  assert.equal(entry.createdAt, 1700000000000);
+  assert.ok(entry.name.length > 0);
+});
+
+test("Lock PGN preference: unset means locked, and it round-trips", () => {
+  assert.equal(parseLockPgn(null), true);
+  assert.equal(parseLockPgn(undefined), true);
+  assert.equal(parseLockPgn("1"), true);
+  assert.equal(parseLockPgn("0"), false);
+  assert.equal(parseLockPgn(serializeLockPgn(false)), false);
+  assert.equal(parseLockPgn(serializeLockPgn(true)), true);
+});

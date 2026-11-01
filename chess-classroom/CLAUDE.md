@@ -94,14 +94,21 @@ of one `engine.js`, because there are several genuinely independent concerns:
 | `pgnLibrary.js` | `pgnLibrary.test.js` | Auto-naming — both of a library *entry* (`nameForEntry`) and of one *game* inside it (`nameForGame`) — the 50-entry cap (`LibraryFullError`, no silent eviction), rename/remove, and which game within a (possibly multi-game) entry is currently selected/shown (`showGameList`, `gameListChoices`, `clampGameIndex`). |
 | `moveTree.js` | `moveTree.test.js` | Glues `@mliebelt/pgn-parser`'s output to `chess.js`: walks the parsed variation tree, replays each move to attach a FEN/from/to to every node, builds addressable paths (`pathKey`, e.g. `"5.v0.2.v0.0"` for a variation nested inside a variation) and a cursor (`createCursor`: `jumpTo`/`stepForward`/`stepBackward`) that is the one shared "current move" pointer driving the board, notes, and variations panel together. Also `continuationsFrom`/`findContinuationBySan` (matching a board move against the loaded tree), `isCollapsedByDefault`/`formatMoveLabel`, `splitPgnGames`/`parseGames` (splitting/parsing a raw multi-game file), `replaceGameInPgnText` (writing one game's text back into its own slot within a multi-game file without touching the others), and (for "Lock PGN" off) `addMove` (grows the tree with a move that deviated from it) plus `serializeGameTree` (turns a — possibly grown — tree back into PGN text for persistence). |
 | `engineAnalysis.js` | `engineAnalysis.test.js` | The UCI conversation with the Stockfish worker: parsing `info ... pv ...` lines, White-perspective score formatting (`+0.35`, `#3`, `-#2`), UCI-PV-to-numbered-SAN (`pvToSan`), and the session state machine (`createEngineSession`) that restarts the search when the position changes. `send` is injected, so it's tested with a fake engine. |
+| `boardAnnotations.js` | `boardAnnotations.test.js` | Translating cm-chessboard's reference-typed arrows/markers to and from the plain `{color, from, to}` shape the sync protocol carries, dropping the teacher-only engine arrows. |
+| `projectorView.js` | `projectorView.test.js` | What the projector shows for a pointer + overlay prefs: label visibility/text, which annotations to draw (none when the arrows overlay is off, unknown color -> success). `projector.js` only paints it. |
 | `syncProtocol.js` | `syncProtocol.test.js` | The teacher/projector message shapes and catch-up-on-startup logic. `BroadcastChannel`/`localStorage` are injected (`{channel, storage}`), so this is tested with fake in-memory stand-ins — no browser needed. |
 
-None of these five modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
+(`moveTree.js` also owns the display/navigation decisions `app.js` used to make inline — `decideBoardMove`,
+`displayFor`, `visibleMoves`, `stepForKey`, `entryWithGrownGame`; `pgnLibrary.js` owns `pickEntryToLoad`,
+`resolveGameSelection`, `createEntry` and the Lock PGN preference codec; `engineAnalysis.js` owns
+`parseStoredEngineSettings` and `projectorArrows`; `syncProtocol.js` owns `teacherPointer`.)
+
+None of these modules touch the DOM, `fetch`, `IndexedDB`, `BroadcastChannel`, or
 `localStorage` directly — they take plain data/injected dependencies in and return plain data
 out, which is what makes `node --test` sufficient for them.
 
-**Everything DOM/API-facing is thin app-entry wiring, not logic**, and is deliberately not
-unit-tested (there's nothing to meaningfully unit-test — it's glue):
+**Everything DOM/API-facing is thin app-entry wiring, not logic** (the decisions it makes live in the modules above), and is deliberately not
+unit-tested — the e2e smoke tests exercise it instead:
 
 - `app.js` — the teacher tab. Boots i18n, loads the PGN library from IndexedDB, creates the two
   `cm-chessboard` instances (main board + the small projector-preview board) with the
@@ -118,7 +125,7 @@ unit-tested (there's nothing to meaningfully unit-test — it's glue):
   nothing but render whatever `syncProtocol.createProjectorSync(...)` hands it. It never parses a
   PGN and never holds a move tree — the sync pointer is fully render-ready (a FEN + display
   text + squares), specifically so the projector doesn't need one.
-- `idbLibraryStore.js` — a handful of promisified `IndexedDB` calls (`getAllLibraryEntries` /
+- `idbLibraryStore.js` — tested against `fake-indexeddb` (dev-only) in `idbLibraryStore.test.js`. A handful of promisified `IndexedDB` calls (`getAllLibraryEntries` /
   `putLibraryEntry` / `deleteLibraryEntry`). IndexedDB was picked over `localStorage` for the
   library because a school year's worth of PGNs could exceed `localStorage`'s ~5-10MB cap
   (`wayfinder/research/0001`).

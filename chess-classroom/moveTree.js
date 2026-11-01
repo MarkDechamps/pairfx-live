@@ -764,3 +764,53 @@ export function serializeGameTree(gameTree) {
   const moveText = `${opening}${serializeLine(gameTree.mainLine)} ${result}`.trim();
   return `${tagLines}\n\n${moveText}`.trim();
 }
+
+// ---- display + navigation helpers (used by app.js) ------------------------
+
+// What the board shows for the cursor: the current node's position, its last
+// move and its badge label — or the root/`startFen` when there is no game.
+export function displayFor(gameTree, cursor, startFen) {
+  const node = cursor ? cursor.getCurrentNode() : null;
+  const fen = node ? node.fen : gameTree ? gameTree.rootFen : startFen;
+  return {
+    node,
+    fen,
+    lastMove: node ? { from: node.from, to: node.to } : null,
+    moveLabel: node ? formatMoveLabel(node) : null,
+  };
+}
+
+// How the variations panel renders one line: which moves show (with the move
+// before each, for the "N..." ellipsis rule) and, if a sideline folds behind
+// "show more", the nodes that fold.
+export function visibleMoves(lineNodes, isSideline, forceExpand = false) {
+  const shown = [];
+  for (let i = 0; i < lineNodes.length; i++) {
+    if (!forceExpand && isSideline && isCollapsedByDefault(lineNodes[i])) {
+      return { shown, folded: lineNodes.slice(i) };
+    }
+    shown.push({ node: lineNodes[i], previousNode: i > 0 ? lineNodes[i - 1] : null });
+  }
+  return { shown, folded: null };
+}
+
+// Arrow-key stepping. Returns true when the position should be re-rendered:
+// ArrowRight only if there was a next move; ArrowLeft always (as the tab did).
+export function stepForKey(cursor, key) {
+  if (key === "ArrowRight") return Boolean(cursor.stepForward());
+  if (key === "ArrowLeft") {
+    cursor.stepBackward();
+    return true;
+  }
+  return false;
+}
+
+// The library entry with one game's text swapped for the (possibly grown)
+// `gameTree`'s serialization, leaving the file's other games untouched.
+export function entryWithGrownGame(entry, gameIndex, gameTree) {
+  return {
+    ...entry,
+    pgnText: replaceGameInPgnText(entry.pgnText, gameIndex, serializeGameTree(gameTree)),
+    selectedGameIndex: gameIndex,
+  };
+}

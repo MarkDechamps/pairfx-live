@@ -18,6 +18,7 @@ import * as Lib from "./pgnLibrary.js";
 import * as MoveTree from "./moveTree.js";
 import * as Sync from "./syncProtocol.js";
 import * as Engine from "./engineAnalysis.js";
+import * as BoardAnnotations from "./boardAnnotations.js";
 import { getAllLibraryEntries, putLibraryEntry, deleteLibraryEntry } from "./idbLibraryStore.js";
 
 const ASSETS_URL = "vendor/cm-chessboard/assets/";
@@ -43,13 +44,7 @@ const LAST_MOVE_MARKER_TYPE = { class: "marker-last-move", slice: "markerSquare"
 // MARKER_TYPE class-name objects; the sync protocol only ever carries plain
 // "success"/"info"/"danger"/"warning" strings (matching moveTree.js's %cal
 // color mapping), so these two small codecs translate between the two at
-// the DOM boundary — this is wiring, not logic worth unit-testing on its own.
-function colorKeyFromClassName(className) {
-  if (className.includes("danger")) return "danger";
-  if (className.includes("info")) return "info";
-  if (className.includes("warning")) return "warning";
-  return "success";
-}
+// the DOM boundary (boardAnnotations.js).
 // Must be the *exact same* objects RightClickAnnotator draws with, not
 // merely identically-shaped look-alikes - cm-chessboard's Arrows/Markers
 // extensions identify a type by object reference (Arrow.matches()/
@@ -67,22 +62,13 @@ const ARROW_TYPE_BY_COLOR = ARROW_TYPE;
 const MARKER_TYPE_BY_COLOR = MARKER_TYPE;
 
 function serializeBoardAnnotations(board) {
-  const { arrows, markers } = board.getAnnotations();
-  return {
-    // getAnnotations() returns every arrow on the board, including the
-    // teacher-only engine ones - those must not reach state.annotations.
-    arrows: arrows
-      .filter((a) => !ENGINE_ARROW_TYPES.includes(a.type))
-      .map((a) => ({ color: colorKeyFromClassName(a.type.class), from: a.from, to: a.to })),
-    markers: markers.map((m) => ({ color: colorKeyFromClassName(m.type.class), square: m.square })),
-  };
+  // getAnnotations() returns every arrow on the board, including the
+  // teacher-only engine ones - those must not reach state.annotations.
+  return BoardAnnotations.annotationsFromBoard(board.getAnnotations(), ENGINE_ARROW_TYPES);
 }
 
 function applyAnnotationsToBoard(board, annotations) {
-  board.setAnnotations({
-    arrows: (annotations.arrows || []).map((a) => ({ type: ARROW_TYPE_BY_COLOR[a.color], from: a.from, to: a.to })),
-    markers: (annotations.markers || []).map((m) => ({ type: MARKER_TYPE_BY_COLOR[m.color], square: m.square })),
-  });
+  board.setAnnotations(BoardAnnotations.annotationsForBoard(annotations, ARROW_TYPE_BY_COLOR, MARKER_TYPE_BY_COLOR));
 }
 
 // ---- state -----------------------------------------------------------
@@ -252,7 +238,7 @@ async function loadLibrary() {
   state.entries = await getAllLibraryEntries();
   refreshLibrarySelect();
   const lastId = window.localStorage.getItem(LAST_ENTRY_STORAGE_KEY);
-  const toLoad = Lib.findEntry(state.entries, lastId) || state.entries[0] || null;
+  const toLoad = Lib.pickEntryToLoad(state.entries, lastId);
   if (toLoad) loadEntry(toLoad.id);
 }
 
@@ -281,22 +267,22 @@ function loadEntry(id, gameIndex) {
 
   const { games } = MoveTree.parseGames(window.PgnParser.parse, entry.pgnText);
   state.currentEntryGames = games;
-  const index = Lib.clampGameIndex(games, gameIndex === undefined ? entry.selectedGameIndex : gameIndex);
+  const selection = Lib.resolveGameSelection(state.entries, entry, games, gameIndex);
+  const index = selection.index;
   state.currentGameIndex = index;
-  if (entry.selectedGameIndex !== index) {
+  if (selection.changed) {
     // Remember which game within this entry was last opened, the same way
     // LAST_ENTRY_STORAGE_KEY remembers which entry — so re-selecting this
     // entry later (including after a reload) resumes on the same game.
-    entry.selectedGameIndex = index;
-    state.entries = state.entries.map((e) => (e.id === entry.id ? entry : e));
-    putLibraryEntry(entry);
+    state.entries = selection.entries;
+    putLibraryEntry(selection.entry);
   }
 
   state.gameTree = MoveTree.buildGameTree(Chess, games[index]);
   state.cursor = MoveTree.createCursor(state.gameTree);
   state.annotations = { arrows: [], markers: [] };
   state.orientation = "white"; // fresh per game/puzzle - flip as needed, doesn't carry over
-  el.gameTitle.textContent = currentGameLabel(entry);
+  el.gameTitle.textContent = currentGameLabel(selection.entry);
   refreshLibrarySelect();
   renderGameList();
   renderVariations();
@@ -315,13 +301,13 @@ async function addGameToLibrary(pgnText, games, fallbackName) {
     alert(state.t("libraryFullWarning"));
     return;
   }
-  const entry = {
-    id: `g${Date.now()}${Math.floor(Math.random() * 1000)}`,
-    name: Lib.nameForEntry(games, fallbackName),
+  const entry = Lib.createEntry({
+    parsedGames: games,
     pgnText,
-    selectedGameIndex: 0,
-    createdAt: Date.now(),
-  };
+    fallbackName,
+    now: Date.now(),
+    random: Math.random,
+  });
   state.entries = Lib.addEntry(state.entries, entry);
   await putLibraryEntry(entry);
   refreshLibrarySelect();
@@ -378,11 +364,7 @@ function renderGameList() {
 // ---- rendering ------------------------------------------------------
 
 function currentDisplay() {
-  const node = state.cursor ? state.cursor.getCurrentNode() : null;
-  const fen = node ? node.fen : state.gameTree ? state.gameTree.rootFen : Sync.START_FEN;
-  const lastMove = node ? { from: node.from, to: node.to } : null;
-  const moveLabel = node ? MoveTree.formatMoveLabel(node) : null;
-  return { node, fen, lastMove, moveLabel };
+  return MoveTree.displayFor(state.gameTree, state.cursor, Sync.START_FEN);
 }
 
 function render() {
@@ -418,17 +400,16 @@ function renderPreview(fen, lastMove) {
 
 function publishIfSynced(fen, lastMove, moveLabel) {
   if (!state.syncOn) return;
-  const pointer = Sync.buildPointer({
-    fen,
-    moveLabel,
-    lastMove,
+  const pointer = Sync.teacherPointer({
+    display: { fen, moveLabel, lastMove },
     orientation: state.orientation,
     // Same "White vs Black - Event" text already shown next to the move
     // badge - read straight off that element rather than re-deriving it,
     // so there's exactly one source of truth for the label.
-    gameTitle: el.gameTitle.textContent || null,
-    arrows: state.overlays.arrows ? [...state.annotations.arrows, ...projectorEngineArrows()] : [],
-    markers: state.overlays.arrows ? state.annotations.markers : [],
+    gameTitle: el.gameTitle.textContent,
+    overlays: state.overlays,
+    annotations: state.annotations,
+    engineArrows: projectorEngineArrows(),
   });
   teacherSync.publishPosition(pointer);
 }
@@ -465,31 +446,27 @@ function renderVariations() {
 function renderLine(lineNodes, isSideline, forceExpand = false) {
   const container = document.createElement(isSideline ? "span" : "div");
   if (isSideline) container.className = "var-sideline";
-  lineNodes.forEach((node, i) => {
-    if (!forceExpand && isSideline && MoveTree.isCollapsedByDefault(node)) {
-      if (!container.querySelector(".var-expand")) {
-        const remaining = lineNodes.slice(i);
-        const expandBtn = document.createElement("button");
-        expandBtn.className = "var-expand";
-        expandBtn.textContent = state.t("showMore");
-        expandBtn.addEventListener("click", () => {
-          expandBtn.replaceWith(renderLine(remaining, isSideline, true));
-        });
-        container.appendChild(expandBtn);
-      }
-      return;
-    }
-    // Previous move *in this same rendered line*, not across a sideline
-    // boundary or a "show more" fold - i === 0 correctly has no previous
-    // node here, which is exactly when black's move still needs its "N..."
-    // ellipsis (see formatSequentialMoveLabel).
-    const previousNode = i > 0 ? lineNodes[i - 1] : null;
+  const { shown, folded } = MoveTree.visibleMoves(lineNodes, isSideline, forceExpand);
+  // previousNode is the move before in this same rendered line, not across a
+  // sideline boundary or a "show more" fold - the first move correctly has
+  // none, which is exactly when black's move still needs its "N..."
+  // ellipsis (see formatSequentialMoveLabel).
+  shown.forEach(({ node, previousNode }) => {
     container.appendChild(renderMoveEntry(node, previousNode));
     node.variations.forEach((variation) => {
       container.appendChild(document.createElement("br"));
       container.appendChild(renderLine(variation, true));
     });
   });
+  if (folded) {
+    const expandBtn = document.createElement("button");
+    expandBtn.className = "var-expand";
+    expandBtn.textContent = state.t("showMore");
+    expandBtn.addEventListener("click", () => {
+      expandBtn.replaceWith(renderLine(folded, isSideline, true));
+    });
+    container.appendChild(expandBtn);
+  }
   return container;
 }
 
@@ -569,9 +546,7 @@ function tryPlayBoardMove(from, to) {
 function persistGrownTree() {
   const entry = Lib.findEntry(state.entries, state.currentEntryId);
   if (!entry) return;
-  const newGameText = MoveTree.serializeGameTree(state.gameTree);
-  const updatedPgnText = MoveTree.replaceGameInPgnText(entry.pgnText, state.currentGameIndex, newGameText);
-  const updated = { ...entry, pgnText: updatedPgnText, selectedGameIndex: state.currentGameIndex };
+  const updated = MoveTree.entryWithGrownGame(entry, state.currentGameIndex, state.gameTree);
   state.entries = state.entries.map((e) => (e.id === updated.id ? updated : e));
   putLibraryEntry(updated);
 }
@@ -610,7 +585,7 @@ el.keepAnnotationsCheckbox.addEventListener("change", (e) => {
 
 el.lockPgnCheckbox.addEventListener("change", (e) => {
   state.lockPgn = e.target.checked;
-  window.localStorage.setItem(LOCK_PGN_STORAGE_KEY, state.lockPgn ? "1" : "0");
+  window.localStorage.setItem(LOCK_PGN_STORAGE_KEY, Lib.serializeLockPgn(state.lockPgn));
 });
 
 // ---- engine (teacher-only analysis) -----------------------------------
@@ -675,9 +650,9 @@ function setEngine(on) {
 
 function loadEngineSettings() {
   try {
-    return Engine.normalizeEngineSettings(JSON.parse(window.localStorage.getItem(ENGINE_SETTINGS_STORAGE_KEY)));
+    return Engine.parseStoredEngineSettings(window.localStorage.getItem(ENGINE_SETTINGS_STORAGE_KEY));
   } catch {
-    return Engine.normalizeEngineSettings(null);
+    return Engine.parseStoredEngineSettings(null);
   }
 }
 
@@ -696,10 +671,13 @@ function paintEngineArrows() {
 // Engine arrows as sync-pointer arrows ("engine1".."engine5" colors), only
 // when the teacher opted in. Empty while the snapshot is for another position.
 function projectorEngineArrows() {
-  const snapshot = state.engineSnapshot;
-  if (!state.engineOn || state.engineFailed || !state.engineSettings.projectorArrows || !snapshot) return [];
-  if (snapshot.fen !== currentDisplay().fen) return [];
-  return Engine.lineArrows(snapshot.lines).map(({ rank, from, to }) => ({ color: `engine${rank}`, from, to }));
+  return Engine.projectorArrows({
+    engineOn: state.engineOn,
+    engineFailed: state.engineFailed,
+    settings: state.engineSettings,
+    snapshot: state.engineSnapshot,
+    currentFen: currentDisplay().fen,
+  });
 }
 
 // Engine output arrives asynchronously, so the projector is re-sent whenever
@@ -887,12 +865,7 @@ el.openProjectorBtn.addEventListener("click", () => {
 document.addEventListener("keydown", (e) => {
   if (!state.cursor) return;
   if (document.activeElement && ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
-  if (e.key === "ArrowRight") {
-    if (state.cursor.stepForward()) handlePositionChanged();
-  } else if (e.key === "ArrowLeft") {
-    state.cursor.stepBackward();
-    handlePositionChanged();
-  }
+  if (MoveTree.stepForKey(state.cursor, e.key)) handlePositionChanged();
 });
 
 // ---- boot -----------------------------------------------------------
@@ -910,8 +883,7 @@ async function boot() {
   // PGN" behavior for anyone who never touches the checkbox) — but a
   // teacher's explicit choice is remembered across reloads, same as the
   // language and last-opened-library-entry preferences above.
-  const storedLockPgn = window.localStorage.getItem(LOCK_PGN_STORAGE_KEY);
-  state.lockPgn = storedLockPgn === null ? true : storedLockPgn === "1";
+  state.lockPgn = Lib.parseLockPgn(window.localStorage.getItem(LOCK_PGN_STORAGE_KEY));
   el.lockPgnCheckbox.checked = state.lockPgn;
   await loadLibrary();
   render();
