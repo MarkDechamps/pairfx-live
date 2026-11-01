@@ -607,7 +607,8 @@ export function findContinuationBySan(node, mainLine, san) {
 
 // What a piece move (dragged/clicked from -> to) at `currentNode` should do:
 // { action: "reject" } for an illegal move, or a legal one that deviates from
-// the loaded tree while Lock PGN is on; { action: "jump", pathKey } when it
+// the loaded tree while Lock PGN is on (`reason` says which: "illegal" or
+// "locked"); { action: "jump", pathKey } when it
 // matches a move already in the tree; { action: "add", moveResult } (the
 // shape addMove takes) when it deviates and Lock PGN is off.
 export function decideBoardMove(ChessCtor, gameTree, currentNode, lockPgn, from, to) {
@@ -617,11 +618,11 @@ export function decideBoardMove(ChessCtor, gameTree, currentNode, lockPgn, from,
   try {
     played = scratch.move({ from, to, promotion: "q" });
   } catch {
-    return { action: "reject" };
+    return { action: "reject", reason: "illegal" };
   }
   const match = findContinuationBySan(currentNode, gameTree.mainLine, played.san);
   if (match) return { action: "jump", pathKey: match.pathKey };
-  if (lockPgn) return { action: "reject" };
+  if (lockPgn) return { action: "reject", reason: "locked" };
   return {
     action: "add",
     moveResult: { san: played.san, from: played.from, to: played.to, fenBefore, fen: scratch.fen() },

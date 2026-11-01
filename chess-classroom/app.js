@@ -128,6 +128,7 @@ const el = {
   navNext: document.getElementById("navNext"),
   navLast: document.getElementById("navLast"),
   lockPgnCheckbox: document.getElementById("lockPgnCheckbox"),
+  lockPgnToggle: document.getElementById("lockPgnToggle"),
   engineCheckbox: document.getElementById("engineCheckbox"),
   engineCard: document.getElementById("engineCard"),
   engineStatus: document.getElementById("engineStatus"),
@@ -572,13 +573,25 @@ teacherBoard.enableMoveInput((event) => {
   return true;
 });
 
+// Briefly highlights the Lock PGN toggle (a move was blocked by it).
+let lockNudgeTimer = null;
+function nudgeLockToggle() {
+  clearTimeout(lockNudgeTimer);
+  el.lockPgnToggle.classList.remove("nudge");
+  void el.lockPgnToggle.offsetWidth; // restart the animation if it was already running
+  el.lockPgnToggle.classList.add("nudge");
+  lockNudgeTimer = setTimeout(() => el.lockPgnToggle.classList.remove("nudge"), 1500);
+}
+
 function tryPlayBoardMove(from, to) {
   if (!state.gameTree) return false;
   const currentNode = state.cursor.getCurrentNode();
   const decision = MoveTree.decideBoardMove(Chess, state.gameTree, currentNode, state.lockPgn, from, to);
   // Always false: render() drives the board position via setPosition, so a
   // rejected move snaps back and an accepted one is shown by the jump below.
-  if (decision.action === "jump") {
+  if (decision.action === "reject" && decision.reason === "locked") {
+    nudgeLockToggle();
+  } else if (decision.action === "jump") {
     jumpTo(decision.pathKey);
   } else if (decision.action === "add") {
     // Lock PGN is off: the move is added to the tree as a real node (new

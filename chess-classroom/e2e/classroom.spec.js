@@ -240,3 +240,29 @@ test("a sideline too long for one line still folds behind Show more", async ({ p
   await page.locator("#varTree .var-expand").click();
   await expect(page.locator("#varTree .var-sideline")).toContainText("11.Ne4");
 });
+
+test("a move blocked by Lock PGN draws attention to the Lock PGN toggle", async ({ page }) => {
+  await openWithGame(page);
+  await page.locator("#varTree .var-line", { hasText: "e4" }).first().click();
+  const toggle = page.locator("#lockPgnToggle");
+  await expect(toggle).not.toHaveClass(/nudge/);
+
+  await dragPiece(page, "d7", "d5"); // deviates from the PGN while locked
+  await expect(toggle).toHaveClass(/nudge/);
+  await expect(toggle).not.toHaveClass(/nudge/, { timeout: 4000 }); // fades again by itself
+});
+
+test("an illegal move, or a move with Lock PGN off, does not nudge the Lock PGN toggle", async ({ page }) => {
+  await openWithGame(page);
+  await page.locator("#varTree .var-line", { hasText: "e4" }).first().click();
+  const toggle = page.locator("#lockPgnToggle");
+
+  await dragPiece(page, "d7", "d4"); // illegal: a pawn cannot jump four ranks
+  await page.waitForTimeout(300);
+  await expect(toggle).not.toHaveClass(/nudge/);
+
+  await page.locator("#lockPgnCheckbox").uncheck();
+  await dragPiece(page, "d7", "d5");
+  await page.waitForTimeout(300);
+  await expect(toggle).not.toHaveClass(/nudge/);
+});

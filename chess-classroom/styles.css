@@ -268,6 +268,8 @@ body {
    light move-badge row it started in - colors match .desk-group label's
    wood-panel palette instead of the light-card --text-muted it used there. */
 .desk-toggle {
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -553,3 +555,14 @@ body.projector {
 
 .diagram-card > .diagram-list { padding: 0 1rem 0.9rem; display: flex; flex-direction: column; gap: 0.35rem; align-items: stretch; }
 .diagram-btn { text-align: left; }
+
+/* Draws the eye to the Lock PGN toggle when a move was blocked by it. */
+.desk-toggle.nudge { animation: lock-nudge 1.5s ease-out; color: var(--wood-panel-fg); }
+@keyframes lock-nudge {
+  0%   { box-shadow: 0 0 0 0 rgba(231, 168, 74, 0.95); background: rgba(231, 168, 74, 0.35); }
+  60%  { box-shadow: 0 0 0 10px rgba(231, 168, 74, 0); background: rgba(231, 168, 74, 0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 168, 74, 0); background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .desk-toggle.nudge { animation: none; background: rgba(231, 168, 74, 0.35); }
+}
