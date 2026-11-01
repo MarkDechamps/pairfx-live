@@ -57,7 +57,8 @@ export function formatNags(node) {
 // as a leading "#" optionally followed by a "[caption]" ("{#[Petroff] text}").
 // The board is always on screen, so the marker is hidden when showing a
 // comment (the stored text keeps it, so serializing doesn't lose it).
-const LEADING_DIAGRAM_RE = /^\s*#(?:\[([^\]]*)\])?/;
+// A "#" followed by a digit is mate notation ("#3 wins"), not a diagram.
+const LEADING_DIAGRAM_RE = /^\s*#(?!\d)(?:\[([^\]]*)\])?/;
 const INLINE_DIAGRAM_RE = /\[#\]/;
 
 // { caption } when the comment carries a diagram marker, else null.
@@ -99,7 +100,15 @@ export function findDiagrams(gameTree) {
     });
   };
   visit(gameTree.mainLine);
-  return found;
+  // A before-move comment and the previous move's after-move comment can mark
+  // the same position — keep one button per position and caption.
+  const seen = new Set();
+  return found.filter((d) => {
+    const key = `${d.pathKey}|${d.caption}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // A move's label as teachers expect to read it: "8.c3" for White, "8...d6"

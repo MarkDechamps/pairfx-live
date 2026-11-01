@@ -137,6 +137,16 @@ on and re-rendering is the resync.
 
 ## Judgment calls made while implementing (things the requester should know about)
 
+- **Move annotations (NAGs) and ChessBase diagram markers.** `moveTree.js` keeps each move's
+  parser NAGs on `node.nags` (shown as glyphs via `formatNags`, appended to the badge/variations
+  labels, written back as `$n` by `serializeGameTree`; codes outside `NAG_GLYPHS` show nothing but
+  round-trip). ChessBase's "insert diagram here" is `[#]` anywhere in a comment, or a leading `#`
+  with an optional `[caption]` (a `#` followed by a digit is mate notation, not a marker) — from
+  third-party docs (Scid, RPB Chessboard, Palview, cbvault), not official ChessBase docs.
+  The board is always visible, so `formatCommentForDisplay` hides the marker (stored text keeps
+  it) and `findDiagrams` feeds the "Key positions" card: one button per position+caption, covering
+  after-move, before-move, opening-comment and sideline markers.
+
 The wayfinder tickets settled product behavior at a conceptual level; a few concrete details
 weren't specified and needed a decision during implementation:
 

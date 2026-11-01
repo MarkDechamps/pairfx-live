@@ -780,3 +780,13 @@ test("findDiagrams covers after-move, before-move, start comment, and sidelines"
     [["start", null, "Start"], ["1", "1...e5", ""], ["2.v0.0", "2.Bc4", ""], ["2", "2.Nf3", ""]]
   );
 });
+
+test("a leading #<digit> is mate notation, not a diagram marker", () => {
+  assert.equal(parseDiagramMarker("#3 mate in three"), null);
+  assert.equal(formatCommentForDisplay("#3 mate in three"), "#3 mate in three");
+});
+
+test("findDiagrams reports one button per position and caption", () => {
+  const tree = buildGameTree(Chess, parseGame(parse, "1. e4 e5 {[#]} {[#]} 2. Nf3 *"));
+  assert.equal(findDiagrams(tree).length, 1);
+});
