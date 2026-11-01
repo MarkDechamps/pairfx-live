@@ -154,10 +154,12 @@ test("variations: black gets its ellipsis after a sideline, and a nested sidelin
   expect(Math.abs(nestedRow - parentRow)).toBeLessThan(8);
 });
 
+// Long enough that its sideline cannot fit on one row (so "Show more" stays), with a nested sideline.
 const DEEP_PGN =
-  '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3 d6 4. c3 (4. Nc3 Be7 5. Nf3 O-O 6. O-O) 4... Be7) 2... Nc6 *\n';
+  '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 3. d3 d6 4. c3 (4. Nc3 Be7 5. Nf3 O-O 6. O-O) 4... Be7 5. Nbd2 O-O 6. Nb3 Nc6 7. Be3 Bg4 8. h3 Bh5 9. g4 Bg6 10. Qe2 a6) 2... Nc6 *\n';
 
 test("Show more expands a folded sideline in place, without extra block or parentheses", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await openWithGame(page, DEEP_PGN);
   const sideline = page.locator("#varTree .var-sideline");
   await expect(sideline).toHaveCount(1);
@@ -169,7 +171,9 @@ test("Show more expands a folded sideline in place, without extra block or paren
 });
 
 test("Show more inside a nested sideline keeps a single pair of parentheses", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await openWithGame(page, DEEP_PGN);
+  await expect(page.locator("#varTree .var-expand").first()).toBeVisible(); // there is a fold to open
   // expand the top-level sideline fully, then the nested one
   for (let i = 0; i < 3; i++) {
     const more = page.locator("#varTree .var-expand");
@@ -215,4 +219,24 @@ test("in a narrower window the engine card wraps below the board instead of over
   const rightOfBoard = card.x >= board.x + board.width - 1;
   const belowBoard = card.y >= board.y + board.height - 1;
   expect(rightOfBoard || belowBoard).toBe(true);
+});
+
+test("a sideline that fits on one line is shown in full, with no Show more", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 800 });
+  await openWithGame(page, '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 (3... Nf6 4. O-O Nxe4) 4. Ba4 *\n');
+  const sideline = page.locator("#varTree .var-sideline");
+  await expect(sideline).toContainText("4.O-O");
+  await expect(sideline).toContainText("Nxe4");
+  await expect(page.locator("#varTree .var-expand")).toHaveCount(0);
+});
+
+test("a sideline too long for one line still folds behind Show more", async ({ page }) => {
+  await page.setViewportSize({ width: 1500, height: 800 });
+  await openWithGame(
+    page,
+    '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 (3... Nf6 4. O-O Nxe4 5. d4 Nd6 6. Bxc6 dxc6 7. dxe5 Nf5 8. Qxd8+ Kxd8 9. Nc3 Ke8 10. Rd1 Be7 11. Ne4 Nd4) 4. Ba4 *\n'
+  );
+  await expect(page.locator("#varTree .var-expand")).toHaveCount(1);
+  await page.locator("#varTree .var-expand").click();
+  await expect(page.locator("#varTree .var-sideline")).toContainText("11.Ne4");
 });
