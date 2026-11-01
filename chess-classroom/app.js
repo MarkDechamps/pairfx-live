@@ -450,25 +450,28 @@ function renderVariations() {
   renderDiagramList();
   el.varTree.innerHTML = "";
   if (!state.gameTree) return;
-  el.varTree.appendChild(renderLine(state.gameTree.mainLine, false));
+  el.varTree.appendChild(renderLine(state.gameTree.mainLine, 0));
 }
 
 // Renders one line (mainline or a variation's own sequence) into a DOM node.
 // `forceExpand` re-renders an already-collapsed tail without re-collapsing it
 // (used by the "show more" click handler below).
-function renderLine(lineNodes, isSideline, forceExpand = false) {
-  const container = document.createElement(isSideline ? "span" : "div");
-  if (isSideline) container.className = "var-sideline";
-  const { shown, folded } = MoveTree.visibleMoves(lineNodes, isSideline, forceExpand);
-  // previousNode is the move before in this same rendered line, not across a
-  // sideline boundary or a "show more" fold - the first move correctly has
-  // none, which is exactly when black's move still needs its "N..."
-  // ellipsis (see formatSequentialMoveLabel).
+// depth 0 is the mainline; depth 1 a sideline off it (its own indented block);
+// deeper sidelines flow inline, in parentheses, instead of each taking a line.
+function renderLine(lineNodes, depth, forceExpand = false) {
+  const container = document.createElement(depth === 0 ? "div" : "span");
+  if (depth === 1) container.className = "var-sideline";
+  if (depth > 1) container.className = "var-inline";
+  if (depth > 1) container.appendChild(document.createTextNode("("));
+  const { shown, folded } = MoveTree.visibleMoves(lineNodes, depth > 0, forceExpand);
+  // previousNode is the move before in this same rendered line, unless a
+  // sideline sits between them or this is the first move or a "show more"
+  // resume point - then black's move still needs its "N..." ellipsis (see
+  // formatSequentialMoveLabel and visibleMoves).
   shown.forEach(({ node, previousNode }) => {
     container.appendChild(renderMoveEntry(node, previousNode));
     node.variations.forEach((variation) => {
-      container.appendChild(document.createElement("br"));
-      container.appendChild(renderLine(variation, true));
+      container.appendChild(renderLine(variation, depth + 1));
     });
   });
   if (folded) {
@@ -476,10 +479,11 @@ function renderLine(lineNodes, isSideline, forceExpand = false) {
     expandBtn.className = "var-expand";
     expandBtn.textContent = state.t("showMore");
     expandBtn.addEventListener("click", () => {
-      expandBtn.replaceWith(renderLine(folded, isSideline, true));
+      expandBtn.replaceWith(renderLine(folded, depth, true));
     });
     container.appendChild(expandBtn);
   }
+  if (depth > 1) container.appendChild(document.createTextNode(")"));
   return container;
 }
 

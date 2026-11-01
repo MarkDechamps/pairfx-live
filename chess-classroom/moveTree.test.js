@@ -1066,3 +1066,15 @@ test("Home and End keys jump to the start and end", () => {
   assert.equal(stepForKey(cursor, "Home"), true);
   assert.equal(cursor.getCurrentPathKey(), "start");
 });
+
+test("visibleMoves: after a sideline, black's move loses its predecessor so it gets the ellipsis", () => {
+  const tree = treeFrom("1. e4 e5 2. Nf3 (2. Bc4) 2... Nc6 3. Bb5 *");
+  const { shown } = visibleMoves(tree.mainLine, false);
+  const nf3 = shown[2];
+  const nc6 = shown[3];
+  assert.equal(nf3.node.san, "Nf3");
+  assert.equal(nc6.previousNode, null); // Nf3 has a sideline
+  assert.equal(formatSequentialMoveLabel(nc6.node, nc6.previousNode), "2...Nc6");
+  assert.equal(shown[4].previousNode, nc6.node); // plain continuation keeps it
+  assert.equal(formatSequentialMoveLabel(shown[2].node, shown[2].previousNode), "2.Nf3");
+});

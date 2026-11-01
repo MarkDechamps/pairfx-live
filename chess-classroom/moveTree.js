@@ -789,7 +789,10 @@ export function visibleMoves(lineNodes, isSideline, forceExpand = false) {
     if (!forceExpand && isSideline && isCollapsedByDefault(lineNodes[i])) {
       return { shown, folded: lineNodes.slice(i) };
     }
-    shown.push({ node: lineNodes[i], previousNode: i > 0 ? lineNodes[i - 1] : null });
+    // A sideline between two moves breaks the "own white move just before"
+    // reading, so black's move then needs its ellipsis again.
+    const previous = i > 0 && lineNodes[i - 1].variations.length === 0 ? lineNodes[i - 1] : null;
+    shown.push({ node: lineNodes[i], previousNode: previous });
   }
   return { shown, folded: null };
 }

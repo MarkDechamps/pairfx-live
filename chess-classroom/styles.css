@@ -370,7 +370,8 @@ body {
 .var-line.active .num { color: var(--felt-fg); }
 .var-row { margin: 0.1rem 0; }
 .var-sideline { margin-left: 1.1rem; color: var(--text-muted); font-size: 0.85rem; display: block; }
-.var-sideline .var-line { color: inherit; }
+.var-inline { color: var(--text-muted); font-size: 0.85rem; }
+.var-sideline .var-line, .var-inline .var-line { color: inherit; }
 .var-expand {
   font-size: 0.78rem;
   color: var(--felt-bright);

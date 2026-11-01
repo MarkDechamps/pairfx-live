@@ -137,3 +137,19 @@ test("the buttons under the board step through the moves and disable at the ends
   await expect(page.locator("#currentMove")).toHaveText(""); // start position: empty badge
   await expect(prev).toBeDisabled();
 });
+
+test("variations: black gets its ellipsis after a sideline, and a nested sideline flows inline in parentheses", async ({ page }) => {
+  await openWithGame(
+    page,
+    '[Event "x"]\n[Result "*"]\n\n1. e4 e5 2. Nf3 (2. Bc4 Nf6 (2... Bc5 3. Nf3) 3. d3) 2... Nc6 3. Bb5 *\n'
+  );
+  const tree = page.locator("#varTree");
+  await expect(tree).toContainText("2...Nc6"); // ellipsis after the sideline
+  const nested = tree.locator(".var-inline");
+  await expect(nested).toHaveCount(1);
+  await expect(nested).toHaveText(/^\(2\.\.\.Bc5\s*3\.Nf3\)$/);
+  // inline: the nested line sits on the same row as its parent sideline's first move
+  const parentRow = (await tree.locator(".var-sideline .var-line").first().boundingBox()).y;
+  const nestedRow = (await nested.boundingBox()).y;
+  expect(Math.abs(nestedRow - parentRow)).toBeLessThan(8);
+});
