@@ -894,7 +894,7 @@ test("formatSequentialMoveLabel and formatMoveLabel return null for no node", ()
 
 test("decideBoardMove: illegal move is rejected", () => {
   const tree = treeFrom("1. e4 e5 *");
-  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "e2", "e5"), { action: "reject" });
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "e2", "e5"), { action: "reject", reason: "illegal" });
 });
 
 test("decideBoardMove: a move already in the tree jumps, locked or not", () => {
@@ -909,7 +909,7 @@ test("decideBoardMove: a move already in the tree jumps, locked or not", () => {
 
 test("decideBoardMove: a deviating move is rejected when locked, added when unlocked", () => {
   const tree = treeFrom("1. e4 e5 *");
-  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "d2", "d4"), { action: "reject" });
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "d2", "d4"), { action: "reject", reason: "locked" });
   const decision = decideBoardMove(Chess, tree, null, false, "d2", "d4");
   assert.equal(decision.action, "add");
   assert.equal(decision.moveResult.san, "d4");
@@ -929,7 +929,7 @@ test("decideBoardMove: a move matching a sideline jumps into it", () => {
 
 test("decideBoardMove from the start of an empty game works", () => {
   const tree = treeFrom("*");
-  assert.equal(decideBoardMove(Chess, tree, null, true, "e2", "e4").action, "reject");
+  assert.deepEqual(decideBoardMove(Chess, tree, null, true, "e2", "e4"), { action: "reject", reason: "locked" });
   assert.equal(decideBoardMove(Chess, tree, null, false, "e2", "e4").action, "add");
 });
 
